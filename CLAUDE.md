@@ -22,6 +22,7 @@ This is an "all-singing, all-dancing" capacity planning and management tool for 
 - **Multi-Skill Routing:** Complex skill-based routing calculations
 - **Real-Time Recalculation:** Instant results as parameters change
 - **Comprehensive Outputs:** FTE requirements, service levels, occupancy, costs, exportable reports, visual dashboards
+- **Built-in Help & Training:** Contextual tooltips, interactive tutorials, glossary, and educational mode explaining all formulas
 
 ### Current State
 - **Status:** Initial development phase
@@ -53,7 +54,12 @@ OdeToErlang/
 │   │   ├── configuration/  # Parameter/assumption editors
 │   │   ├── calculations/   # Calculation display components
 │   │   ├── results/        # Results visualization
-│   │   └── export/         # Export functionality
+│   │   ├── export/         # Export functionality
+│   │   └── help/           # Help system components
+│   │       ├── Tooltip.jsx       # Contextual tooltip component
+│   │       ├── Glossary.jsx      # Glossary sidebar/modal
+│   │       ├── Tutorial.jsx      # Interactive tutorial system
+│   │       └── HelpSearch.jsx    # Searchable help
 │   ├── lib/                # Core libraries
 │   │   ├── calculations/   # Mathematically correct Erlang formulas
 │   │   │   ├── erlangB.js        # Erlang B (blocking probability)
@@ -66,6 +72,12 @@ OdeToErlang/
 │   │   ├── parsers/        # CSV and data parsing
 │   │   ├── models/         # Data models and state
 │   │   └── utils/          # Utilities and helpers
+│   ├── content/            # Help and training content
+│   │   ├── glossary.json   # Terminology definitions
+│   │   ├── tooltips.json   # Field-level help text
+│   │   ├── tutorials/      # Tutorial configurations
+│   │   ├── scenarios/      # Example scenarios
+│   │   └── faq.md          # Frequently asked questions
 │   ├── styles/             # CSS/styling
 │   ├── App.js              # Main application component
 │   └── index.js            # Application entry point
@@ -507,7 +519,256 @@ The tool must allow users to adjust:
 - [ ] **User-friendly interface:** Accessible to non-technical users
 - [ ] **Professional accuracy:** WFM professional-grade precision
 - [ ] **Educational mode:** Show formulas and calculations for learning
+- [ ] **Comprehensive help system:** Tooltips, tutorials, glossary, examples
 - [ ] **Mobile-responsive:** Optional, but valuable for field access
+
+---
+
+## Help & Training System
+
+A comprehensive help and training system is essential for making this tool accessible to both WFM professionals and newcomers to contact center analytics.
+
+### Contextual Help Features
+
+#### 1. Hover Tooltips
+**Every field, parameter, and term should have contextual help:**
+
+```javascript
+// Example tooltip content structure
+{
+  field: "Service Level Target",
+  shortHelp: "% of contacts answered within threshold time",
+  example: "80/20 means 80% answered in 20 seconds",
+  typical: "Voice: 80/20, Email: 90/24hrs, Chat: 85/60sec",
+  formula: "SL = 1 - P(wait > threshold)"
+}
+```
+
+**Tooltip Categories:**
+- **Input Fields:** What this field controls
+- **Calculations:** How this value is calculated
+- **Results:** What this output means
+- **Terminology:** Contact center jargon explained
+- **Best Practices:** Industry standards and recommendations
+
+**Implementation:**
+- Hover-over popovers for desktop
+- Tap/long-press for mobile
+- Info (i) icons next to technical terms
+- "What's this?" links for complex concepts
+
+#### 2. Interactive Glossary
+
+**Built-in glossary accessible via:**
+- Global search/help button
+- Sidebar glossary panel
+- Inline term links (click any highlighted term)
+
+**Glossary Entries Should Include:**
+```markdown
+**Service Level (SL)**
+- Definition: The percentage of contacts answered within a target time
+- Example: "80/20" means 80% of contacts answered in 20 seconds
+- Common Targets:
+  - Voice: 80/20, 90/30
+  - Email: 90% in 24 hours
+  - Chat: 85% in 60 seconds
+- Related Terms: ASA, Threshold, Queue Time
+- Formula: SL = (Contacts answered within threshold) / (Total contacts)
+```
+
+**Key Terms to Include:**
+- Erlang B, C, A, X (with history and use cases)
+- Service Level, ASA, AHT, ACW
+- Occupancy, Utilization, Shrinkage
+- Traffic Intensity, Erlangs
+- Abandonment, Patience, Retrial
+- FTE, Interval, Concurrency
+- Multi-skill, Blending, Routing
+
+#### 3. Educational Mode
+
+**Toggle-able "Show Me How It Works" mode:**
+- Displays formulas next to results
+- Shows calculation steps in expandable sections
+- Highlights which inputs affect which outputs
+- Provides mathematical notation
+- Links to academic papers
+
+**Example Display:**
+```
+FTE Required: 58.5
+
+[Show Calculation Steps ▼]
+  1. Traffic Intensity: A = (Volume × AHT) / Interval
+     A = (1000 × 240) / 1800 = 133.33 Erlangs
+
+  2. Erlang C Service Level Calculation:
+     Using Erlang C formula with A=133.33, target SL=80/20
+     Minimum agents = 145
+
+  3. Apply Shrinkage:
+     Total FTE = 145 / (1 - 0.25) = 193.33
+
+  [View Full Formula] [Why This Matters] [Common Issues]
+```
+
+#### 4. Interactive Tutorials/Walkthroughs
+
+**First-Time User Onboarding:**
+- "Quick Start" tutorial (5 minutes)
+- Guided tour of interface
+- Sample scenario walkthrough
+- CSV import demonstration
+
+**Tutorial Topics:**
+- "Your First Staffing Calculation" (Erlang C basics)
+- "Importing Historical Data via CSV"
+- "Understanding Service Level Targets"
+- "Multi-Channel Planning"
+- "Comparing Erlang C vs. A vs. X"
+- "What-If Scenarios"
+- "Exporting Reports for Management"
+
+**Implementation:**
+- Step-by-step overlay highlights
+- Progress indicator (Step 3 of 7)
+- Skippable but replayable
+- Context-sensitive help offers
+
+#### 5. Example Scenarios Library
+
+**Pre-loaded realistic scenarios:**
+
+**Scenario 1: Small Voice Queue**
+```
+Name: "Tech Support Hotline"
+Volume: 500 calls/day
+AHT: 360 seconds (6 minutes)
+Target: 80/20
+Shrinkage: 25%
+Result: ~8-10 FTE
+```
+
+**Scenario 2: Multi-Channel Contact Center**
+```
+Name: "E-commerce Customer Service"
+Channels:
+  - Voice: 1000/day, AHT 240s, 80/20
+  - Chat: 500/day, AHT 180s, 85/60s
+  - Email: 300/day, AHT 300s, 90/24hrs
+Multi-skill: 60% blended agents
+Result: Complex multi-skill calculation
+```
+
+**Scenario 3: High-Volume Sales Center**
+```
+Name: "Inbound Sales Campaign"
+Volume: 5000 calls/day
+AHT: 480 seconds
+Target: 90/30
+Abandonment: 15%
+Compare: Erlang C vs. Erlang A vs. Erlang X
+Shows accuracy differences
+```
+
+**Each Scenario Includes:**
+- Problem description
+- Pre-filled inputs
+- Expected results
+- Learning objectives
+- "Try changing X to see Y effect"
+
+#### 6. Inline Help Text
+
+**Subtle guidance throughout the interface:**
+- Placeholder text with examples: `"e.g., 80 for 80% in 80/20"`
+- Input validation messages that teach: `"Shrinkage typically ranges from 20-35%. Your value of 5% seems low - did you mean 25%?"`
+- Range indicators: `"Occupancy: 85% (typical range: 80-90% for voice)"`
+- Warning badges: `⚠️ High abandonment rate may indicate understaffing`
+
+#### 7. Video Tutorials (Optional Future Enhancement)
+
+**Short video library:**
+- "What is Erlang C?" (2 min)
+- "Understanding Service Levels" (3 min)
+- "CSV Import Walkthrough" (4 min)
+- "Multi-Skill Staffing Explained" (5 min)
+
+**Could be:**
+- Embedded YouTube videos
+- Animated explainers
+- Screen recordings with voiceover
+
+### Help System UI Components
+
+**Recommended Implementation:**
+
+1. **Help Icon (?) in Top Navigation**
+   - Opens help sidebar or modal
+   - Quick access to glossary and tutorials
+
+2. **Info Icons (ⓘ) Next to Fields**
+   - Hover for tooltip
+   - Click for detailed help
+
+3. **"Need Help?" Floating Button**
+   - Always accessible in bottom-right corner
+   - Context-aware suggestions
+
+4. **Search-Powered Help**
+   - "Ask a question..." search bar
+   - Searches glossary, tutorials, FAQ
+
+5. **Tooltips with Rich Content**
+   - Not just text - include diagrams, formulas, examples
+   - "Learn More" links to detailed docs
+
+### Help Content Structure
+
+**Recommended File Organization:**
+```
+src/
+  content/
+    help/
+      glossary.json          # All term definitions
+      tooltips.json          # Field-level help text
+      tutorials/             # Interactive tutorial configs
+        quick-start.json
+        csv-import.json
+        multi-channel.json
+      scenarios/             # Example scenario data
+        small-voice.json
+        multi-channel.json
+        high-volume.json
+      faq.md                 # Frequently asked questions
+```
+
+### Accessibility Considerations
+
+- **Keyboard Navigation:** All help features accessible via keyboard
+- **Screen Readers:** Proper ARIA labels on info icons and tooltips
+- **High Contrast:** Help text readable in all themes
+- **Multi-Language Ready:** Help content structure supports i18n
+- **Print-Friendly:** Help content can be printed/exported
+
+### Help Content Maintenance
+
+**Keep Help Up-to-Date:**
+- Review help text when features change
+- Add tooltips for all new fields
+- Update examples with current industry standards
+- Gather user feedback on confusing areas
+- A/B test help text effectiveness
+
+### Success Metrics
+
+**Measure help system effectiveness:**
+- % of users completing tutorial
+- Most-accessed help topics
+- Field abandonment rates (users give up)
+- Time to first successful calculation
+- Support ticket reduction
 
 ---
 
@@ -740,6 +1001,11 @@ Cost_Per_Hour,25.00
   - ASA calculation
   - Agent requirement solver
 - [ ] Create simple UI for single-skill voice calculations
+- [ ] **Basic help system foundation**
+  - Tooltip component with hover/click support
+  - Info icons (ⓘ) next to all input fields
+  - Initial glossary content (core terms)
+  - Field-level help text for all inputs
 - [ ] Add CSV import for volume data
 - [ ] **Unit tests against published Erlang C tables**
 - [ ] Validation against commercial tool results
@@ -752,6 +1018,11 @@ Cost_Per_Hour,25.00
 - [ ] Enhanced CSV import (AHT, shrinkage, SLA targets)
 - [ ] Results visualization (charts, tables, staffing curves)
 - [ ] Basic cost calculations
+- [ ] **Enhanced help system**
+  - Interactive glossary with search
+  - Expand tooltip content (add examples, typical values)
+  - "Quick Start" tutorial (first-time user onboarding)
+  - 2-3 pre-loaded example scenarios
 
 ### Phase 3: Erlang A & Advanced Calculations
 - [ ] **Implement Erlang A (with abandonment)**
@@ -766,6 +1037,12 @@ Cost_Per_Hour,25.00
 - [ ] Enhanced cost calculations and projections
 - [ ] Occupancy and utilization dashboards
 - [ ] **Formula selector:** Allow user to choose B, C, or A
+- [ ] **Educational mode implementation**
+  - Toggle "Show Calculation Steps"
+  - Display formulas with mathematical notation
+  - Explain which inputs affect which outputs
+  - Add more tutorial topics (multi-channel, Erlang A vs C)
+  - Expand example scenario library to 5-7 scenarios
 
 ### Phase 4: Erlang X & Professional Features
 - [ ] **Implement Erlang X (most accurate)**
@@ -774,13 +1051,20 @@ Cost_Per_Hour,25.00
   - Time-dependent abandonment
   - Equilibrium solver for staffing
 - [ ] **Validation suite:** Compare B, C, A, X results side-by-side
-- [ ] **Educational mode:** Show formulas and calculation steps
 - [ ] Export to CSV, Excel, PDF with detailed reports
 - [ ] Save/load configurations (localStorage/IndexedDB)
 - [ ] What-if scenario comparison (multiple configurations)
 - [ ] Mobile-responsive design
-- [ ] Comprehensive user documentation
 - [ ] Performance optimization for large datasets (workers/WASM)
+- [ ] **Complete help system**
+  - Context-aware help suggestions ("Need Help?" floating button)
+  - Searchable help with "Ask a question..." bar
+  - Complete tutorial library (7+ topics)
+  - 10+ example scenarios covering all use cases
+  - FAQ section based on user feedback
+  - Video tutorials (optional - links to external content)
+  - Print/export help documentation
+  - Help usage analytics (track most-accessed topics)
 
 ### Technical Decisions Needed
 - [ ] **Framework:** React (most popular), Vue (easier), or Svelte (fastest)?
@@ -791,6 +1075,8 @@ Cost_Per_Hour,25.00
 - [ ] **Testing:** Vitest (modern) or Jest (established)?
 - [ ] **Decimal Library:** decimal.js or big.js for precise calculations?
 - [ ] **CSV Export:** Custom or library like json2csv?
+- [ ] **Tooltip/Popover Library:** Tippy.js, Floating UI, Radix UI, or build custom?
+- [ ] **Tutorial System:** Intro.js, Shepherd.js, Driver.js, or custom implementation?
 
 ### Open Questions
 - Should we support real-time data feeds (WebSocket, API polling)?
