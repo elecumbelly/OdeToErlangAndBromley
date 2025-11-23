@@ -3,6 +3,7 @@ import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
 import ChartsPanel from './components/ChartsPanel';
 import CSVImport from './components/CSVImport';
+import ACDImport from './components/ACDImport';
 import ExportPanel from './components/ExportPanel';
 import MultiChannelPanel from './components/MultiChannelPanel';
 import EducationalMode from './components/EducationalMode';
@@ -139,7 +140,12 @@ function App() {
 
           {activeTab === 'scenarios' && <ScenarioComparison />}
 
-          {activeTab === 'import' && <CSVImport onDataImported={handleDataImported} />}
+          {activeTab === 'import' && (
+            <div className="space-y-8">
+              <ACDImport />
+              <CSVImport onDataImported={handleDataImported} />
+            </div>
+          )}
 
           {activeTab === 'export' && <ExportPanel />}
 
