@@ -4,9 +4,16 @@ import { calculateStaffingMetrics, calculateTrafficIntensity, calculateFTE, calc
 import { calculateErlangAMetrics } from '../lib/calculations/erlangA';
 import { calculateErlangXMetrics } from '../lib/calculations/erlangX';
 
+interface ActualStaff {
+  totalFTE: number;
+  productiveAgents: number;
+  useAsConstraint: boolean;
+}
+
 interface CalculatorState {
   inputs: CalculationInputs;
   results: CalculationResults | null;
+  actualStaff: ActualStaff;
   abandonmentMetrics?: {
     abandonmentRate: number;
     expectedAbandonments: number;
@@ -15,6 +22,7 @@ interface CalculatorState {
     virtualTraffic?: number;
   } | null;
   setInput: <K extends keyof CalculationInputs>(key: K, value: CalculationInputs[K]) => void;
+  setActualStaff: <K extends keyof ActualStaff>(key: K, value: ActualStaff[K]) => void;
   calculate: () => void;
   reset: () => void;
 }
@@ -34,6 +42,11 @@ const DEFAULT_INPUTS: CalculationInputs = {
 export const useCalculatorStore = create<CalculatorState>((set, get) => ({
   inputs: DEFAULT_INPUTS,
   results: null,
+  actualStaff: {
+    totalFTE: 0,
+    productiveAgents: 0,
+    useAsConstraint: false
+  },
   abandonmentMetrics: null,
 
   setInput: (key, value) => {
@@ -42,6 +55,12 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     }));
     // Auto-calculate on input change
     setTimeout(() => get().calculate(), 0);
+  },
+
+  setActualStaff: (key, value) => {
+    set((state) => ({
+      actualStaff: { ...state.actualStaff, [key]: value }
+    }));
   },
 
   calculate: () => {

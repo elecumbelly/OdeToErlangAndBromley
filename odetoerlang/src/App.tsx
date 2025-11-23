@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
+import ActualStaffPanel from './components/ActualStaffPanel';
 import ChartsPanel from './components/ChartsPanel';
 import CSVImport from './components/CSVImport';
 import ACDImport from './components/ACDImport';
@@ -129,7 +130,10 @@ function App() {
         {/* Tab Content */}
         <div className="animate-in fade-in duration-300">
           {activeTab === 'calculator' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div>
+                <ActualStaffPanel />
+              </div>
               <div>
                 <InputPanel />
               </div>
