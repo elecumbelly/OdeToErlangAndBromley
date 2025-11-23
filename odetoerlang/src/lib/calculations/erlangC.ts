@@ -53,6 +53,12 @@ export function erlangC(agents: number, trafficIntensity: number): number {
     return 1.0;
   }
 
+  // Special case for single agent (M/M/1 queue)
+  // For c=1, the Erlang C formula simplifies to P(wait) = ρ = A/c = A
+  if (agents === 1) {
+    return trafficIntensity;
+  }
+
   // Calculate using iterative method to avoid factorial overflow
   let inverseProbability = 1.0;
   for (let k = 1; k < agents; k++) {
@@ -181,7 +187,12 @@ export function solveAgents(
 
   // Start with minimum agents needed for target occupancy
   const minAgents = Math.ceil(trafficIntensity / maxOccupancy);
-  const maxAgents = Math.ceil(trafficIntensity * 3); // Safety limit
+
+  // Safety limit: ensure we check enough agents even for very low traffic
+  // For low traffic (<1), check at least 10 agents; otherwise 3x traffic
+  const maxAgents = trafficIntensity < 1
+    ? Math.max(10, Math.ceil(trafficIntensity * 3))
+    : Math.ceil(trafficIntensity * 3);
 
   for (let agents = minAgents; agents <= maxAgents; agents++) {
     const sl = calculateServiceLevel(agents, trafficIntensity, aht, thresholdSeconds);
