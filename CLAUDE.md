@@ -10,13 +10,24 @@
 ## Repository Overview
 
 ### Purpose
-OdeToErlang is a project exploring Erlang programming concepts, functional programming principles, and distributed systems architecture. The name suggests this may be a learning resource, tribute, or implementation inspired by Erlang's philosophy.
+**OdeToErlang** is a comprehensive contact center capacity planning calculator. The name is a tribute to the **Erlang C formula**, the foundational queuing theory calculation used for staffing contact centers.
+
+This is an "all-singing, all-dancing" capacity planning and management tool for calculating staffing requirements in modern, multi-skill, multi-channel contact center environments.
+
+### Key Features
+- **100% Browser-Based:** Client-side web application, no backend required
+- **Fully Configurable:** Every assumption, parameter, and variable is adjustable
+- **CSV Import:** Load historical data, forecasts, and configurations via CSV files
+- **Multi-Channel Support:** Voice, email, chat, social media, video, and custom channels
+- **Multi-Skill Routing:** Complex skill-based routing calculations
+- **Real-Time Recalculation:** Instant results as parameters change
+- **Comprehensive Outputs:** FTE requirements, service levels, occupancy, costs, exportable reports, visual dashboards
 
 ### Current State
-- **Status:** Initial setup phase
-- **Files:** LICENSE (MIT)
+- **Status:** Initial development phase
+- **Architecture:** Client-side only (HTML, CSS, JavaScript)
 - **Branch Strategy:** Feature branches prefixed with `claude/`
-- **Primary Language:** TBD (Likely Erlang/Elixir or related functional languages)
+- **Primary Technologies:** Modern JavaScript framework + visualization libraries
 
 ---
 
@@ -29,19 +40,76 @@ OdeToErlang/
 └── CLAUDE.md        # This file (AI assistant guide)
 ```
 
-### Expected Future Structure
+### Expected Web Application Structure
 ```
 OdeToErlang/
-├── src/             # Source code
-├── test/            # Test suites
-├── docs/            # Documentation
-├── examples/        # Example code and tutorials
-├── scripts/         # Build and utility scripts
-├── .github/         # GitHub workflows and configurations
-├── LICENSE          # MIT License
-├── README.md        # User-facing documentation
-└── CLAUDE.md        # AI assistant guide (this file)
+├── public/                  # Static assets
+│   ├── index.html          # Main HTML entry point
+│   ├── favicon.ico         # App icon
+│   └── assets/             # Images, fonts, etc.
+├── src/
+│   ├── components/         # UI components
+│   │   ├── import/         # CSV import components
+│   │   ├── configuration/  # Parameter/assumption editors
+│   │   ├── calculations/   # Calculation display components
+│   │   ├── results/        # Results visualization
+│   │   └── export/         # Export functionality
+│   ├── lib/                # Core libraries
+│   │   ├── calculations/   # Erlang C/A formulas and algorithms
+│   │   │   ├── erlangC.js        # Erlang C implementation
+│   │   │   ├── erlangA.js        # Erlang A (with abandonment)
+│   │   │   ├── multiSkill.js     # Multi-skill routing
+│   │   │   └── serviceLevels.js  # SLA calculations
+│   │   ├── parsers/        # CSV and data parsing
+│   │   ├── models/         # Data models and state
+│   │   └── utils/          # Utilities and helpers
+│   ├── styles/             # CSS/styling
+│   ├── App.js              # Main application component
+│   └── index.js            # Application entry point
+├── tests/                  # Unit and integration tests
+├── docs/                   # Documentation
+│   ├── formulas.md         # Mathematical formulas reference
+│   ├── csv-formats.md      # CSV file format specifications
+│   └── user-guide.md       # End-user documentation
+├── examples/               # Sample CSV files and configurations
+│   ├── sample-volumes.csv
+│   ├── sample-aht.csv
+│   └── sample-config.json
+├── .github/                # GitHub workflows
+├── package.json            # Dependencies and scripts
+├── LICENSE                 # MIT License
+├── README.md               # User-facing documentation
+└── CLAUDE.md               # AI assistant guide (this file)
 ```
+
+### Core Modules
+
+#### 1. Calculation Engine (`src/lib/calculations/`)
+Mathematical formulas and algorithms:
+- **Erlang C:** Queue waiting time with infinite patience
+- **Erlang A:** Queue with abandonment/patience modeling
+- **Multi-skill routing:** Skill-based distribution algorithms
+- **Service level calculations:** ASA, SLA, occupancy, utilization
+- **Shrinkage modeling:** Break time, training, absenteeism
+
+#### 2. Data Management (`src/lib/parsers/`, `src/lib/models/`)
+- CSV parsing and validation
+- Data normalization and transformation
+- State management (intervals, skills, channels)
+- Configuration persistence (localStorage/IndexedDB)
+
+#### 3. UI Components (`src/components/`)
+- **Import:** Drag-and-drop CSV upload, data preview, validation
+- **Configuration:** Editable assumption panels (SLA targets, shrinkage, occupancy)
+- **Calculations:** Live calculation display, formula visualization
+- **Results:** Charts, tables, FTE schedules, cost projections
+- **Export:** CSV, PDF, Excel export functionality
+
+#### 4. Visualization (`results/`)
+- Interactive charts (line, bar, heatmaps)
+- Interval-based staffing schedules
+- Service level vs. staffing trade-off curves
+- Occupancy and utilization dashboards
 
 ---
 
@@ -196,45 +264,136 @@ Closes #123
 
 ## Language-Specific Conventions
 
-### Erlang (Expected Primary Language)
+### JavaScript/Web Development
 
 #### File Organization
-- **Module files:** One module per file
-- **File naming:** `module_name.erl`
-- **Test files:** `module_name_tests.erl`
+- **Component files:** One component per file
+- **File naming:**
+  - Components: `PascalCase.jsx` or `PascalCase.vue`
+  - Utilities: `camelCase.js`
+  - Tests: `*.test.js` or `*.spec.js`
+- **Module structure:** ES6 modules with named exports preferred
 
-#### Code Style (To be established)
-- **Indentation:** TBD (typically 4 spaces)
-- **Line length:** TBD (typically 80-100 characters)
+#### Code Style
+- **Indentation:** 2 spaces
+- **Line length:** 100 characters max
 - **Naming conventions:**
-  - Functions: `snake_case`
-  - Variables: `CamelCase`
-  - Atoms: `lowercase_with_underscores`
+  - Functions: `camelCase`
+  - Components: `PascalCase`
+  - Constants: `UPPER_SNAKE_CASE`
+  - Files: match exported component/function name
+- **Quotes:** Single quotes for strings, template literals for interpolation
+- **Semicolons:** Consistent usage (use or don't use, pick one)
+
+#### Technology Stack
+- **Framework Options:** React, Vue, or Svelte (TBD)
+- **Build Tool:** Vite or Create React App
+- **Styling:** CSS Modules or Tailwind CSS
+- **Charts:** Chart.js, Recharts, or D3.js
+- **CSV Parsing:** Papa Parse or csv-parser
+- **State Management:** Context API, Zustand, or Pinia (framework-dependent)
+- **Testing:** Vitest or Jest + Testing Library
+- **TypeScript:** Optional but recommended for type safety in calculations
+
+#### Mathematical Precision
+- **Use decimal libraries** for financial calculations (avoid floating point errors)
+- **Round consistently:** Define rounding rules for FTE calculations
+- **Validate inputs:** Check for reasonable ranges (e.g., 0-100% for shrinkage)
+- **Document formulas:** Include mathematical notation in comments or separate docs
 
 #### Testing
-- **Framework:** TBD (likely EUnit or Common Test)
-- **Test coverage:** Aim for meaningful coverage, not 100%
-- **Test naming:** Descriptive names that explain what's being tested
+- **Framework:** Vitest or Jest
+- **Test categories:**
+  - Unit tests for calculation functions (critical!)
+  - Component tests for UI behavior
+  - Integration tests for CSV parsing → calculation → display flow
+- **Calculation tests:** Verify against known results (e.g., published Erlang C tables)
+- **Edge cases:** Test with 0 volumes, 100% occupancy, extreme AHT values
+- **Test naming:** Descriptive names that explain scenario being tested
 
 ---
 
 ## Project-Specific Guidelines
 
-### Philosophy
-Given the name "OdeToErlang," this project should embrace:
-- **Functional programming principles**
-- **Immutability by default**
-- **Concurrent and distributed thinking**
-- **Let it crash philosophy**
-- **Pattern matching over conditionals**
-- **Message passing for communication**
+### Domain Knowledge: Contact Center Operations
 
-### Design Goals (To be refined)
-- [ ] Demonstrate Erlang/OTP principles
-- [ ] Provide clear, educational examples
-- [ ] Maintain clean, idiomatic code
-- [ ] Foster understanding of concurrent systems
-- [ ] Build fault-tolerant applications
+#### Core Concepts
+- **Erlang C Formula:** Calculates probability of waiting in queue (assumes infinite patience)
+- **Erlang A Formula:** Extends Erlang C to include abandonment/patience modeling
+- **Service Level:** % of contacts answered within threshold (e.g., 80/20 = 80% in 20 seconds)
+- **Average Speed of Answer (ASA):** Mean wait time for answered contacts
+- **Occupancy:** % of time agents spend handling contacts vs. idle
+- **Shrinkage:** % of paid time not available for handling contacts (breaks, training, etc.)
+- **Average Handle Time (AHT):** Mean duration of a contact (talk time + after-call work)
+- **Full-Time Equivalent (FTE):** Standard unit of staffing (1 FTE = full-time schedule)
+
+#### Contact Center Calculations
+
+**Basic Erlang C:**
+```
+Traffic Intensity (A) = (Call Volume × AHT) / Interval Length
+Agents Required = f(A, Service Level Target, AHT)
+```
+
+**With Shrinkage:**
+```
+Productive FTE = Erlang C Result
+Total FTE = Productive FTE / (1 - Shrinkage%)
+```
+
+**Multi-Channel Considerations:**
+- Different channels have different AHT patterns
+- Concurrent chat/email handling (occupancy > 100% possible)
+- Priority routing between channels
+- Skill-based routing complexity
+
+#### Configurable Assumptions
+The tool must allow users to adjust:
+1. **Service Level Targets:** 80/20, 90/30, custom thresholds
+2. **Shrinkage %:** Breaks, lunch, training, meetings, absenteeism
+3. **Occupancy Targets:** Typically 85-90% for voice, can be higher for digital
+4. **AHT by Channel/Skill:** Voice, email, chat, social media
+5. **Arrival Patterns:** Intraday, day-of-week, seasonal variations
+6. **Abandonment Rates:** % of contacts abandoned before answer
+7. **Patience Distribution:** How long customers wait before abandoning
+8. **Skill Proficiency:** Agent efficiency by skill level
+9. **Multi-skill Overlap:** % of agents with multiple skills
+10. **Cost Parameters:** Hourly rates, overhead, technology costs
+
+### Design Principles
+
+#### User Experience
+- **Everything is editable:** No hard-coded assumptions
+- **Instant feedback:** Calculations update as parameters change
+- **Visual clarity:** Clear display of inputs, calculations, and results
+- **Guidance:** Tooltips and help text explaining contact center terms
+- **Flexibility:** Support both simple (single-skill voice) and complex scenarios
+
+#### Accuracy and Validation
+- **Mathematical correctness:** Implement formulas precisely
+- **Input validation:** Reasonable ranges, clear error messages
+- **Edge case handling:** Zero volumes, 100% shrinkage, impossible SLAs
+- **Verification:** Compare results to industry-standard tools
+- **Documentation:** Explain formulas and assumptions used
+
+#### Data Import/Export
+- **Flexible CSV formats:** Support common WFM tool exports
+- **Clear templates:** Provide sample CSVs with documentation
+- **Error handling:** Validate data, report issues clearly
+- **Export options:** Results in multiple formats for different audiences
+- **Persistence:** Save configurations locally for reuse
+
+### Design Goals
+- [ ] Accurate Erlang C and Erlang A implementations
+- [ ] Support for multi-skill, multi-channel environments
+- [ ] Flexible CSV import for all data types
+- [ ] Real-time recalculation as assumptions change
+- [ ] Comprehensive output (FTE, service levels, occupancy, costs)
+- [ ] Visual dashboards and charts
+- [ ] Export to CSV, Excel, PDF
+- [ ] User-friendly interface for non-technical users
+- [ ] Professional-grade accuracy for WFM professionals
+- [ ] Mobile-responsive design (optional, but nice to have)
 
 ---
 
@@ -335,12 +494,25 @@ git log --oneline -10
 
 ## Resources
 
-### Erlang Documentation
-- [Official Erlang Documentation](https://www.erlang.org/docs)
-- [Learn You Some Erlang](https://learnyousomeerlang.com/)
-- [Erlang/OTP Design Principles](https://www.erlang.org/doc/design_principles/users_guide.html)
+### Contact Center & Workforce Management
+- **Erlang C Formula:** [Wikipedia](https://en.wikipedia.org/wiki/Erlang_(unit)#Erlang_C_formula)
+- **Queuing Theory:** Understanding call center mathematics
+- **WFM Best Practices:** Industry standards for forecasting and scheduling
+- **Service Level Standards:** Common SLA targets (80/20, 90/30, etc.)
 
-### Git Resources
+### Mathematical References
+- **Erlang C Calculator:** Reference implementations for verification
+- **Queuing Theory Papers:** Academic sources for advanced formulas
+- **Statistical Methods:** Forecasting and time series analysis
+
+### Technical Documentation
+- **JavaScript/Framework Docs:** React, Vue, or Svelte official documentation
+- **Chart.js/D3.js:** Data visualization libraries
+- **Papa Parse:** CSV parsing library
+- **Testing Library:** Component and integration testing
+
+### Development Resources
+- [MDN Web Docs](https://developer.mozilla.org/) - JavaScript and Web APIs
 - [Git Documentation](https://git-scm.com/doc)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 
@@ -351,24 +523,123 @@ git log --oneline -10
 
 ---
 
+## CSV Input Formats
+
+### Expected CSV Files
+
+The application should support importing the following data via CSV:
+
+#### 1. Volume Data (`volumes.csv`)
+Expected columns:
+```csv
+Date,Time,Channel,Skill,Volume
+2025-01-15,09:00,Voice,Sales,120
+2025-01-15,09:30,Voice,Sales,145
+2025-01-15,09:00,Chat,Support,45
+```
+
+#### 2. Average Handle Time (`aht.csv`)
+Expected columns:
+```csv
+Channel,Skill,AHT_Seconds
+Voice,Sales,420
+Voice,Support,360
+Chat,Sales,180
+Email,Support,300
+```
+
+#### 3. Service Level Targets (`sla.csv`)
+Expected columns:
+```csv
+Channel,Skill,Target_Percent,Threshold_Seconds
+Voice,Sales,80,20
+Voice,Support,90,30
+Chat,*,85,60
+```
+
+#### 4. Shrinkage Configuration (`shrinkage.csv`)
+Expected columns:
+```csv
+Category,Percentage
+Breaks,8.33
+Lunch,4.17
+Training,5.00
+Meetings,3.00
+Absenteeism,4.00
+```
+
+#### 5. Staffing Assumptions (`assumptions.csv`)
+Expected columns:
+```csv
+Parameter,Value
+Target_Occupancy,0.85
+Interval_Minutes,30
+Hours_Per_FTE,40
+Cost_Per_Hour,25.00
+```
+
+### CSV Import Guidelines
+- **Flexible headers:** Support variations in column naming (case-insensitive)
+- **Optional columns:** Allow partial data (fill defaults for missing values)
+- **Date formats:** Support ISO 8601 and common formats (MM/DD/YYYY, DD/MM/YYYY)
+- **Time intervals:** Support 15-min, 30-min, 60-min intervals
+- **Wildcards:** Support `*` for "all skills" or "all channels"
+- **Validation:** Check for required columns, reasonable value ranges
+- **Error reporting:** Clear messages about what's wrong and where
+
+---
+
 ## Notes for Future Development
 
-### Areas to Define
-- [ ] Primary programming language confirmation
-- [ ] Build system and tooling
-- [ ] Testing framework
-- [ ] CI/CD pipeline
-- [ ] Documentation generation
-- [ ] Dependency management
-- [ ] Release process
-- [ ] Contributing guidelines
+### Phase 1: Foundation (Core Calculator)
+- [ ] Choose JavaScript framework (React, Vue, or Svelte)
+- [ ] Set up project structure and build system
+- [ ] Implement basic Erlang C formula
+- [ ] Create simple UI for single-skill voice calculations
+- [ ] Add CSV import for volume data
+- [ ] Unit tests for calculation accuracy
 
-### Questions to Address
-- What specific Erlang concepts will be explored?
-- Is this a learning resource, library, or application?
-- What's the target audience (beginners, experts)?
-- Will this include OTP patterns and supervision trees?
-- Are there specific performance or scalability goals?
+### Phase 2: Configuration & Multi-Channel
+- [ ] Configurable assumptions (SLA, shrinkage, occupancy)
+- [ ] Multi-channel support (voice, email, chat, etc.)
+- [ ] Channel-specific AHT and handling rules
+- [ ] Enhanced CSV import (AHT, shrinkage, targets)
+- [ ] Results visualization (charts, tables)
+
+### Phase 3: Advanced Features
+- [ ] Erlang A (abandonment modeling)
+- [ ] Multi-skill routing calculations
+- [ ] Skill proficiency and overlap modeling
+- [ ] Interval-based forecasting (15/30-minute intervals)
+- [ ] Cost calculations and projections
+- [ ] Occupancy and utilization dashboards
+
+### Phase 4: Export & Refinement
+- [ ] Export to CSV, Excel, PDF
+- [ ] Save/load configurations (localStorage/IndexedDB)
+- [ ] What-if scenario comparison
+- [ ] Mobile-responsive design
+- [ ] User documentation and help system
+- [ ] Performance optimization for large datasets
+
+### Technical Decisions Needed
+- [ ] **Framework:** React (most popular), Vue (easier), or Svelte (fastest)?
+- [ ] **TypeScript:** Yes (recommended for calculations) or vanilla JavaScript?
+- [ ] **Styling:** CSS Modules, Tailwind, or styled-components?
+- [ ] **Charts:** Chart.js (simple), Recharts (React-native), or D3.js (powerful)?
+- [ ] **State Management:** Context API, Zustand, Redux, or Pinia?
+- [ ] **Testing:** Vitest (modern) or Jest (established)?
+- [ ] **Decimal Library:** decimal.js or big.js for precise calculations?
+- [ ] **CSV Export:** Custom or library like json2csv?
+
+### Open Questions
+- Should we support real-time data feeds (WebSocket, API polling)?
+- Include forecasting algorithms (moving average, regression, seasonality)?
+- Support for shift scheduling/rostering (beyond FTE calculations)?
+- Multi-language support for international users?
+- Dark mode theme?
+- Integration with external WFM tools (import/export formats)?
+- Historical scenario storage (database vs. local storage)?
 
 ---
 
