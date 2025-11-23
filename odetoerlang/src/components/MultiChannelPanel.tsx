@@ -89,7 +89,7 @@ export default function MultiChannelPanel() {
       intervalSeconds: intervalMinutes * 60,
       targetSL: channel.targetSL / 100,
       thresholdSeconds: channel.threshold,
-      shrinkagePercent: shrinkage,
+      shrinkagePercent: shrinkage / 100,
       maxOccupancy: maxOccupancy / 100
     });
 
