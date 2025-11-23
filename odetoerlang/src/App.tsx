@@ -105,6 +105,11 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* ABSOLUTE TOP LEVEL TEST */}
+        <div className="mb-6 p-8 bg-red-500 text-white text-3xl font-bold border-8 border-black">
+          🚨 URGENT TEST: CAN YOU SEE THIS RED BOX? 🚨
+        </div>
+
         {/* Welcome Banner - Only show on calculator tab */}
         {activeTab === 'calculator' && (
           <div className="mb-8 p-6 bg-gradient-to-r from-primary-600 to-blue-600 text-white rounded-xl shadow-lg">
