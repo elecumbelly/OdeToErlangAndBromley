@@ -2,7 +2,7 @@ import React from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
 
 const ResultsDisplay: React.FC = () => {
-  const { results, inputs } = useCalculatorStore();
+  const { results, inputs, abandonmentMetrics } = useCalculatorStore();
 
   if (!results) {
     return (
@@ -149,6 +149,101 @@ const ResultsDisplay: React.FC = () => {
         </div>
       </div>
 
+      {/* Abandonment Metrics - Only for Erlang A/X */}
+      {abandonmentMetrics && (inputs.model === 'erlangA' || inputs.model === 'erlangX') && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Abandonment Analysis</h3>
+          <div className="space-y-4">
+            {/* Abandonment Rate */}
+            <div className="flex justify-between items-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Abandonment Rate</p>
+                <p className="text-xs text-gray-500">% of contacts that hang up</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatNumber(abandonmentMetrics.abandonmentRate * 100, 1)}%
+                </p>
+                <p className="text-xs text-gray-500">
+                  {formatNumber(abandonmentMetrics.expectedAbandonments, 0)} contacts
+                </p>
+              </div>
+            </div>
+
+            {/* Answered Contacts */}
+            <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Answered Contacts</p>
+                <p className="text-xs text-gray-500">Successfully handled</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-green-600">
+                  {formatNumber(abandonmentMetrics.answeredContacts, 0)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {formatNumber((abandonmentMetrics.answeredContacts / inputs.volume) * 100, 1)}% of total
+                </p>
+              </div>
+            </div>
+
+            {/* Erlang X specific metrics */}
+            {inputs.model === 'erlangX' && abandonmentMetrics.retrialProbability !== undefined && (
+              <>
+                <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Retrial Probability</p>
+                    <p className="text-xs text-gray-500">Abandoned customers who call back</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-purple-600">
+                      {formatNumber(abandonmentMetrics.retrialProbability * 100, 1)}%
+                    </p>
+                  </div>
+                </div>
+
+                {abandonmentMetrics.virtualTraffic !== undefined && (
+                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Virtual Traffic</p>
+                      <p className="text-xs text-gray-500">Including retrials</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {formatNumber(abandonmentMetrics.virtualTraffic, 2)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Erlangs (vs {formatNumber(results.trafficIntensity, 2)} base)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-md">
+            <p className="text-xs text-orange-800">
+              <strong>📊 {inputs.model === 'erlangX' ? 'Erlang X' : 'Erlang A'} Analysis:</strong>{' '}
+              {inputs.model === 'erlangX' ? (
+                <>
+                  This model accounts for customer abandonment AND retrials. About{' '}
+                  {formatNumber(abandonmentMetrics.abandonmentRate * 100, 1)}% of customers hang up,
+                  but {formatNumber((abandonmentMetrics.retrialProbability || 0) * 100, 1)}% of them call back.
+                  Virtual traffic is {formatNumber((abandonmentMetrics.virtualTraffic! / results.trafficIntensity - 1) * 100, 1)}% higher
+                  than base traffic due to this retrial feedback loop.
+                </>
+              ) : (
+                <>
+                  This model accounts for customer abandonment. With {formatNumber(inputs.averagePatience, 0)}s average patience,
+                  about {formatNumber(abandonmentMetrics.abandonmentRate * 100, 1)}% of customers hang up before being answered.
+                  Staffing requirements are based on serving {formatNumber(abandonmentMetrics.answeredContacts, 0)} contacts.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Calculation Formula Breakdown */}
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h4 className="text-sm font-semibold text-gray-700 mb-2">📐 Calculation Breakdown</h4>
@@ -160,7 +255,12 @@ const ResultsDisplay: React.FC = () => {
             = ({inputs.volume} × {inputs.aht}s) / {inputs.intervalMinutes * 60}s = {formatNumber(results.trafficIntensity, 2)} Erlangs
           </p>
           <p className="mt-2">
-            <strong>2. Erlang C Formula:</strong> Calculate minimum agents for target SL
+            <strong>2. {inputs.model === 'erlangC' ? 'Erlang C' : inputs.model === 'erlangA' ? 'Erlang A' : 'Erlang X'} Formula:</strong> Calculate minimum agents for target SL
+          </p>
+          <p className="ml-4 text-gray-500">
+            {inputs.model === 'erlangC' && 'Assumes infinite patience (no abandonment)'}
+            {inputs.model === 'erlangA' && `Accounts for ${formatNumber(inputs.averagePatience, 0)}s customer patience`}
+            {inputs.model === 'erlangX' && `Accounts for abandonment, retrials, and virtual traffic`}
           </p>
           <p className="ml-4 text-gray-500">
             For {inputs.targetSLPercent}/{inputs.thresholdSeconds} target = {results.requiredAgents} agents

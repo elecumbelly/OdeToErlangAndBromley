@@ -90,6 +90,69 @@ const InputPanel: React.FC = () => {
           </p>
         </div>
 
+        {/* Model Selection */}
+        <div className="border-t pt-6 mt-6">
+          <label htmlFor="model" className={labelClass}>
+            Mathematical Model
+            <span className="text-gray-500 text-xs ml-2">(calculation method)</span>
+          </label>
+          <select
+            id="model"
+            value={inputs.model}
+            onChange={(e) => setInput('model', e.target.value as any)}
+            className={inputClass}
+          >
+            <option value="erlangC">Erlang C (infinite patience)</option>
+            <option value="erlangA">Erlang A (with abandonment)</option>
+            <option value="erlangX">Erlang X (most accurate)</option>
+          </select>
+          <div className="mt-2 p-3 bg-gray-50 rounded-md">
+            <p className="text-xs text-gray-700">
+              {inputs.model === 'erlangC' && (
+                <>
+                  <strong>Erlang C:</strong> Classic formula. Assumes customers never hang up.
+                  Simple and widely understood, but overestimates service level by 5-15%.
+                </>
+              )}
+              {inputs.model === 'erlangA' && (
+                <>
+                  <strong>Erlang A:</strong> Accounts for customer abandonment.
+                  More accurate than Erlang C (~5% error). Requires patience parameter.
+                </>
+              )}
+              {inputs.model === 'erlangX' && (
+                <>
+                  <strong>Erlang X:</strong> Most accurate model (±2% error).
+                  Includes abandonment, retrials, and virtual waiting time. Industry best practice.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Average Patience - Only show for Erlang A/X */}
+        {(inputs.model === 'erlangA' || inputs.model === 'erlangX') && (
+          <div>
+            <label htmlFor="averagePatience" className={labelClass}>
+              Average Customer Patience
+              <span className="text-gray-500 text-xs ml-2">(seconds)</span>
+            </label>
+            <input
+              id="averagePatience"
+              type="number"
+              min="0"
+              step="1"
+              value={inputs.averagePatience}
+              onChange={handleChange('averagePatience')}
+              className={inputClass}
+              placeholder="e.g., 120 (2 minutes)"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              How long customers wait before hanging up. Typical range: 60-180 seconds (1-3 minutes)
+            </p>
+          </div>
+        )}
+
         {/* Service Level Target */}
         <div className="grid grid-cols-2 gap-4">
           <div>

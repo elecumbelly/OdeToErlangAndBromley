@@ -2,6 +2,8 @@
  * Type definitions for OdeToErlang
  */
 
+export type ErlangModel = 'erlangC' | 'erlangA' | 'erlangX';
+
 export interface CalculationInputs {
   volume: number;
   aht: number; // Average Handle Time in seconds
@@ -10,6 +12,8 @@ export interface CalculationInputs {
   thresholdSeconds: number; // Target threshold in seconds (e.g., 20 for 80/20)
   shrinkagePercent: number; // Shrinkage % (e.g., 25 for 25%)
   maxOccupancy: number; // Maximum occupancy % (e.g., 90 for 90%)
+  model: ErlangModel; // Which Erlang formula to use
+  averagePatience: number; // Average customer patience in seconds (for Erlang A/X)
 }
 
 export interface CalculationResults {
