@@ -131,6 +131,11 @@ function App() {
         <div className="animate-in fade-in duration-300">
           {activeTab === 'calculator' && (
             <>
+              {/* DEBUG TEST */}
+              <div className="mb-6 p-8 bg-red-500 text-white text-2xl font-bold border-4 border-black">
+                DEBUG: CAN YOU SEE THIS RED BOX?
+              </div>
+
               {/* TEST: ActualStaffPanel standalone */}
               <div className="mb-6">
                 <ActualStaffPanel />
