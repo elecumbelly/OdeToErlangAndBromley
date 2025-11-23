@@ -65,7 +65,7 @@ export default function ScenarioComparison() {
         intervalSeconds: scenario.inputs.intervalMinutes * 60,
         targetSL: scenario.inputs.targetSLPercent / 100,
         thresholdSeconds: scenario.inputs.thresholdSeconds,
-        shrinkagePercent: scenario.inputs.shrinkagePercent,
+        shrinkagePercent: scenario.inputs.shrinkagePercent / 100,
         maxOccupancy: scenario.inputs.maxOccupancy / 100
       })
     }));
