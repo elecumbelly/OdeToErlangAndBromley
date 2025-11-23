@@ -4,6 +4,7 @@ import ResultsDisplay from './components/ResultsDisplay';
 import ChartsPanel from './components/ChartsPanel';
 import CSVImport from './components/CSVImport';
 import ACDImport from './components/ACDImport';
+import SmartCSVImport from './components/SmartCSVImport';
 import ExportPanel from './components/ExportPanel';
 import MultiChannelPanel from './components/MultiChannelPanel';
 import EducationalMode from './components/EducationalMode';
@@ -150,8 +151,14 @@ function App() {
 
           {activeTab === 'import' && (
             <div className="space-y-8">
-              <ACDImport />
-              <CSVImport onDataImported={handleDataImported} />
+              <SmartCSVImport />
+              <div className="border-t pt-8">
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Legacy Importers</h3>
+                <div className="space-y-8 opacity-75">
+                  <ACDImport />
+                  <CSVImport onDataImported={handleDataImported} />
+                </div>
+              </div>
             </div>
           )}
 
