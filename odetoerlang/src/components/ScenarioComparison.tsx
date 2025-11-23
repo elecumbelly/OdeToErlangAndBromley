@@ -22,7 +22,9 @@ export default function ScenarioComparison() {
         targetSLPercent: 80,
         thresholdSeconds: 20,
         shrinkagePercent: 25,
-        maxOccupancy: 90
+        maxOccupancy: 90,
+        model: 'erlangC',
+        averagePatience: 120
       },
       results: null
     },
@@ -36,7 +38,9 @@ export default function ScenarioComparison() {
         targetSLPercent: 90,
         thresholdSeconds: 20,
         shrinkagePercent: 25,
-        maxOccupancy: 90
+        maxOccupancy: 90,
+        model: 'erlangC',
+        averagePatience: 120
       },
       results: null
     },
@@ -50,7 +54,9 @@ export default function ScenarioComparison() {
         targetSLPercent: 80,
         thresholdSeconds: 20,
         shrinkagePercent: 25,
-        maxOccupancy: 90
+        maxOccupancy: 90,
+        model: 'erlangC',
+        averagePatience: 120
       },
       results: null
     }
@@ -83,7 +89,9 @@ export default function ScenarioComparison() {
         targetSLPercent: 80,
         thresholdSeconds: 20,
         shrinkagePercent: 25,
-        maxOccupancy: 90
+        maxOccupancy: 90,
+        model: 'erlangC',
+        averagePatience: 120
       },
       results: null
     };

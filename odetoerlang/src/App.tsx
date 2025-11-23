@@ -8,9 +8,11 @@ import ExportPanel from './components/ExportPanel';
 import MultiChannelPanel from './components/MultiChannelPanel';
 import EducationalMode from './components/EducationalMode';
 import ScenarioComparison from './components/ScenarioComparison';
+import ModelComparison from './components/ModelComparison';
+import ReverseCalculator from './components/ReverseCalculator';
 import { useCalculatorStore } from './store/calculatorStore';
 
-type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'import' | 'export' | 'learn';
+type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'import' | 'export' | 'learn';
 
 function App() {
   const calculate = useCalculatorStore((state) => state.calculate);
@@ -26,6 +28,8 @@ function App() {
     { id: 'charts' as Tab, name: 'Charts & Analytics', icon: '📊' },
     { id: 'multichannel' as Tab, name: 'Multi-Channel', icon: '📞' },
     { id: 'scenarios' as Tab, name: 'What-If Scenarios', icon: '🔍' },
+    { id: 'modelcomp' as Tab, name: 'Model Comparison', icon: '⚖️' },
+    { id: 'capacity' as Tab, name: 'Capacity Planning', icon: '🎯' },
     { id: 'import' as Tab, name: 'Import Data', icon: '📥' },
     { id: 'export' as Tab, name: 'Export Results', icon: '📤' },
     { id: 'learn' as Tab, name: 'Learn', icon: '📚' }
@@ -66,7 +70,7 @@ function App() {
                   <span>100% Browser-Based</span>
                 </div>
                 <div className="h-4 w-px bg-gray-300"></div>
-                <div>Erlang C • A • Multi-Channel</div>
+                <div>Erlang C • A • X • Multi-Channel</div>
               </div>
             </div>
           </div>
@@ -111,9 +115,9 @@ function App() {
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2">Welcome to the Ultimate Contact Center Calculator!</h2>
                 <p className="text-sm opacity-95">
-                  Calculate staffing requirements using mathematically correct <strong>Erlang C</strong>,
-                  <strong> Erlang A</strong>, and <strong>multi-channel formulas</strong>.
-                  Import data via CSV, visualize with interactive charts, compare scenarios, and export detailed reports.
+                  Calculate staffing requirements using mathematically correct <strong>Erlang C, A, and X</strong> models
+                  with <strong>multi-channel support</strong> and <strong>capacity planning</strong>.
+                  Import data via CSV, compare models side-by-side, visualize with interactive charts, and export detailed reports.
                   Everything happens instantly in your browser - no data leaves your machine.
                 </p>
               </div>
@@ -139,6 +143,10 @@ function App() {
           {activeTab === 'multichannel' && <MultiChannelPanel />}
 
           {activeTab === 'scenarios' && <ScenarioComparison />}
+
+          {activeTab === 'modelcomp' && <ModelComparison />}
+
+          {activeTab === 'capacity' && <ReverseCalculator />}
 
           {activeTab === 'import' && (
             <div className="space-y-8">
@@ -207,8 +215,10 @@ function App() {
             <div>
               <h4 className="font-semibold text-gray-900 mb-3">Features</h4>
               <ul className="text-xs text-gray-600 space-y-1">
-                <li>✓ Erlang C & A formulas</li>
-                <li>✓ Multi-channel calculations</li>
+                <li>✓ Erlang C, A, and X formulas</li>
+                <li>✓ Model comparison (C vs A vs X)</li>
+                <li>✓ Multi-channel with concurrency</li>
+                <li>✓ Capacity planning (reverse calc)</li>
                 <li>✓ Interactive charts & analytics</li>
                 <li>✓ CSV import/export</li>
                 <li>✓ What-if scenario analysis</li>
