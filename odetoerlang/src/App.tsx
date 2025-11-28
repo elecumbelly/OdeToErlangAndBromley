@@ -12,11 +12,12 @@ import EducationalMode from './components/EducationalMode';
 import ScenarioComparison from './components/ScenarioComparison';
 import ModelComparison from './components/ModelComparison';
 import ReverseCalculator from './components/ReverseCalculator';
+import SimulationTab from './components/SimulationTab';
 import { useCalculatorStore } from './store/calculatorStore';
 import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
-type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'import' | 'export' | 'learn';
+type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'simulation' | 'import' | 'export' | 'learn';
 
 function App() {
   const calculate = useCalculatorStore((state) => state.calculate);
@@ -62,6 +63,7 @@ function App() {
     { id: 'scenarios' as Tab, name: 'What-If Scenarios', icon: '🔍' },
     { id: 'modelcomp' as Tab, name: 'Model Comparison', icon: '⚖️' },
     { id: 'capacity' as Tab, name: 'Capacity Planning', icon: '🎯' },
+    { id: 'simulation' as Tab, name: 'Queue Simulation', icon: '⚡' },
     { id: 'import' as Tab, name: 'Import Data', icon: '📥' },
     { id: 'export' as Tab, name: 'Export Results', icon: '📤' },
     { id: 'learn' as Tab, name: 'Learn', icon: '📚' }
@@ -214,6 +216,8 @@ function App() {
           {activeTab === 'modelcomp' && <ModelComparison />}
 
           {activeTab === 'capacity' && <ReverseCalculator />}
+
+          {activeTab === 'simulation' && <SimulationTab />}
 
           {activeTab === 'import' && (
             <div className="space-y-8">
