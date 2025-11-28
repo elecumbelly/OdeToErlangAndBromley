@@ -17,6 +17,7 @@ import {
   type Server,
   type SimulationStats,
   type Snapshot,
+  type ContactRecord,
 } from './types';
 
 export class SimulationEngine {
@@ -28,6 +29,7 @@ export class SimulationEngine {
   private customers: Map<number, Customer> = new Map();
   private nextCustomerId: number = 1;
   private stats: SimulationStats;
+  private contactRecords: ContactRecord[] = [];
 
   constructor(config: ScenarioConfig) {
     this.config = { ...config };
@@ -50,6 +52,7 @@ export class SimulationEngine {
     this.customers.clear();
     this.nextCustomerId = 1;
     this.stats = this.initStats();
+    this.contactRecords = [];
     this.initServers();
     this.scheduleFirstArrival();
   }
@@ -128,6 +131,80 @@ export class SimulationEngine {
    */
   getWaitingQueue(): Customer[] {
     return [...this.waitingQueue];
+  }
+
+  /**
+   * Get all contact records (completed customers)
+   */
+  getContactRecords(): ContactRecord[] {
+    return [...this.contactRecords];
+  }
+
+  /**
+   * Export contact records as CSV
+   */
+  exportContactRecordsAsCSV(): string {
+    if (this.contactRecords.length === 0) {
+      return '';
+    }
+
+    // CSV header
+    const headers = [
+      'Customer ID',
+      'Arrival Time',
+      'Queue Join Time',
+      'Queue Wait Time',
+      'Service Start Time',
+      'Service End Time',
+      'Total Time in System',
+      'Server ID',
+      'Was Queued',
+      'Service Time',
+      'Time to Answer (ASA)',
+    ];
+
+    // CSV rows
+    const rows = this.contactRecords.map(record => [
+      record.customerId,
+      record.arrivalTime.toFixed(4),
+      record.queueJoinTime.toFixed(4),
+      record.queueWaitTime.toFixed(4),
+      record.serviceStartTime.toFixed(4),
+      record.serviceEndTime.toFixed(4),
+      record.totalTimeInSystem.toFixed(4),
+      record.serverId,
+      record.wasQueued ? 'Yes' : 'No',
+      record.serviceTime.toFixed(4),
+      record.timeToAnswer.toFixed(4),
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\n');
+
+    return csvContent;
+  }
+
+  /**
+   * Download contact records as CSV file
+   */
+  downloadContactRecordsCSV(filename: string = 'contact-records.csv'): void {
+    const csv = this.exportContactRecordsAsCSV();
+    if (!csv) return;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   // ============================================================================
@@ -229,6 +306,29 @@ export class SimulationEngine {
     if (customer.serviceStartTime !== undefined) {
       const waitTime = customer.serviceStartTime - customer.arrivalTime;
       this.stats.totalWaitTime += waitTime;
+    }
+
+    // Create contact record for this completed customer
+    if (customer.serviceStartTime !== undefined && customer.serviceEndTime !== undefined) {
+      const queueWaitTime = customer.serviceStartTime - customer.arrivalTime;
+      const serviceTime = customer.serviceEndTime - customer.serviceStartTime;
+      const totalTimeInSystem = customer.serviceEndTime - customer.arrivalTime;
+
+      const contactRecord: ContactRecord = {
+        customerId: customer.id,
+        arrivalTime: customer.arrivalTime,
+        queueJoinTime: customer.arrivalTime,
+        queueWaitTime,
+        serviceStartTime: customer.serviceStartTime,
+        serviceEndTime: customer.serviceEndTime,
+        totalTimeInSystem,
+        serverId: server.id,
+        wasQueued: queueWaitTime > 0,
+        serviceTime,
+        timeToAnswer: queueWaitTime,
+      };
+
+      this.contactRecords.push(contactRecord);
     }
 
     // If there are customers waiting, start service for the next one

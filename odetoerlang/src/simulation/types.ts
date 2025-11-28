@@ -64,3 +64,22 @@ export interface PresetScenario {
   description: string;
   config: ScenarioConfig;
 }
+
+/**
+ * Contact Record - Complete journey of a customer through the system
+ */
+export interface ContactRecord {
+  customerId: number;
+  arrivalTime: number;
+  queueJoinTime: number;
+  queueWaitTime: number;
+  serviceStartTime: number;
+  serviceEndTime: number;
+  totalTimeInSystem: number;
+  serverId: number;
+  wasQueued: boolean;
+
+  // Calculated metrics
+  serviceTime: number;        // Service end - service start
+  timeToAnswer: number;       // Service start - arrival (ASA for this contact)
+}
