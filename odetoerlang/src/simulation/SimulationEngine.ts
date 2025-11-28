@@ -17,6 +17,7 @@ import {
   type Server,
   type SimulationStats,
   type Snapshot,
+  type ContactRecord,
 } from './types';
 
 export class SimulationEngine {
@@ -28,6 +29,7 @@ export class SimulationEngine {
   private customers: Map<number, Customer> = new Map();
   private nextCustomerId: number = 1;
   private stats: SimulationStats;
+  private contactRecords: ContactRecord[] = [];
 
   constructor(config: ScenarioConfig) {
     this.config = { ...config };
@@ -50,6 +52,7 @@ export class SimulationEngine {
     this.customers.clear();
     this.nextCustomerId = 1;
     this.stats = this.initStats();
+    this.contactRecords = [];
     this.initServers();
     this.scheduleFirstArrival();
   }
@@ -128,6 +131,160 @@ export class SimulationEngine {
    */
   getWaitingQueue(): Customer[] {
     return [...this.waitingQueue];
+  }
+
+  /**
+   * Get all contact records (completed customers)
+   */
+  getContactRecords(): ContactRecord[] {
+    return [...this.contactRecords];
+  }
+
+  /**
+   * Export contact records as CSV
+   */
+  exportContactRecordsAsCSV(): string {
+    if (this.contactRecords.length === 0) {
+      return '';
+    }
+
+    // CSV header
+    const headers = [
+      'Customer ID',
+      'Channel',
+      'Campaign ID',
+      'Skill ID',
+      'Arrival Time',
+      'Queue Join Time',
+      'Queue Wait Time',
+      'Service Start Time',
+      'Service End Time',
+      'Total Time in System',
+      'Server ID',
+      'Was Queued',
+      'Service Time',
+      'Time to Answer (ASA)',
+      'Abandoned',
+      'Concurrent Contacts',
+    ];
+
+    // CSV rows
+    const rows = this.contactRecords.map(record => [
+      record.customerId,
+      record.channel,
+      record.campaignId || '',
+      record.skillId || '',
+      record.arrivalTime.toFixed(4),
+      record.queueJoinTime.toFixed(4),
+      record.queueWaitTime.toFixed(4),
+      record.serviceStartTime.toFixed(4),
+      record.serviceEndTime.toFixed(4),
+      record.totalTimeInSystem.toFixed(4),
+      record.serverId,
+      record.wasQueued ? 'Yes' : 'No',
+      record.serviceTime.toFixed(4),
+      record.timeToAnswer.toFixed(4),
+      record.abandoned ? 'Yes' : 'No',
+      record.concurrentContacts || 1,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+    ].join('\n');
+
+    return csvContent;
+  }
+
+  /**
+   * Download contact records as CSV file
+   */
+  downloadContactRecordsCSV(filename: string = 'contact-records.csv'): void {
+    const csv = this.exportContactRecordsAsCSV();
+    if (!csv) return;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  /**
+   * Export contact records as SQL INSERT statements for HistoricalData table
+   * Compatible with the WFM database schema
+   */
+  exportAsHistoricalDataSQL(): string[] {
+    if (this.contactRecords.length === 0) {
+      return [];
+    }
+
+    return this.contactRecords.map(record => {
+      // Generate a timestamp for the contact (assuming simulation time is in minutes)
+      const contactDate = new Date();
+      contactDate.setMinutes(contactDate.getMinutes() + record.arrivalTime);
+      const hour = contactDate.getHours();
+
+      return `INSERT INTO HistoricalData (
+        date,
+        time_interval,
+        hour,
+        campaign_id,
+        skill_id,
+        channel,
+        contacts_offered,
+        contacts_handled,
+        contacts_abandoned,
+        total_talk_time,
+        total_hold_time,
+        total_acw_time,
+        total_handle_time,
+        service_level_target,
+        service_level_achieved,
+        avg_speed_answer,
+        max_wait_time,
+        occupancy
+      ) VALUES (
+        '${contactDate.toISOString().split('T')[0]}',
+        ${Math.floor(record.arrivalTime / 30) % 48},
+        ${hour},
+        ${record.campaignId || 'NULL'},
+        ${record.skillId || 'NULL'},
+        '${record.channel}',
+        1,
+        ${record.abandoned ? 0 : 1},
+        ${record.abandoned ? 1 : 0},
+        ${record.serviceTime.toFixed(2)},
+        0,
+        0,
+        ${record.serviceTime.toFixed(2)},
+        80,
+        ${record.queueWaitTime <= 20 ? 100 : 0},
+        ${record.timeToAnswer.toFixed(2)},
+        ${record.queueWaitTime.toFixed(2)},
+        85
+      );`;
+    });
+  }
+
+  /**
+   * Get simulation metadata
+   */
+  getSimulationMetadata() {
+    return {
+      config: this.config,
+      totalContacts: this.contactRecords.length,
+      channels: [...new Set(this.contactRecords.map(r => r.channel))],
+      campaigns: [...new Set(this.contactRecords.map(r => r.campaignId).filter(Boolean))],
+      skills: [...new Set(this.contactRecords.map(r => r.skillId).filter(Boolean))],
+    };
   }
 
   // ============================================================================
@@ -229,6 +386,34 @@ export class SimulationEngine {
     if (customer.serviceStartTime !== undefined) {
       const waitTime = customer.serviceStartTime - customer.arrivalTime;
       this.stats.totalWaitTime += waitTime;
+    }
+
+    // Create contact record for this completed customer
+    if (customer.serviceStartTime !== undefined && customer.serviceEndTime !== undefined) {
+      const queueWaitTime = customer.serviceStartTime - customer.arrivalTime;
+      const serviceTime = customer.serviceEndTime - customer.serviceStartTime;
+      const totalTimeInSystem = customer.serviceEndTime - customer.arrivalTime;
+
+      const contactRecord: ContactRecord = {
+        customerId: customer.id,
+        arrivalTime: customer.arrivalTime,
+        queueJoinTime: customer.arrivalTime,
+        queueWaitTime,
+        serviceStartTime: customer.serviceStartTime,
+        serviceEndTime: customer.serviceEndTime,
+        totalTimeInSystem,
+        serverId: server.id,
+        wasQueued: queueWaitTime > 0,
+        serviceTime,
+        timeToAnswer: queueWaitTime,
+        channel: this.config.channel || 'voice',
+        campaignId: this.config.campaignId,
+        skillId: this.config.skillId,
+        concurrentContacts: this.config.channel === 'chat' || this.config.channel === 'email' ? 1 : undefined,
+        abandoned: false,
+      };
+
+      this.contactRecords.push(contactRecord);
     }
 
     // If there are customers waiting, start service for the next one

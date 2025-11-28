@@ -63,6 +63,29 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
       serviceRate: 2,    // Average 30 seconds per call = 2 calls/min
       servers: 30,       // 30 agents → utilisation = 48/(30*2) = 0.80
       maxTime: 60,       // 1 hour simulation
+      channel: 'voice' as const,
+    },
+  },
+  {
+    name: 'Chat Queue',
+    description: 'Chat support (10 agents, concurrent chats)',
+    config: {
+      arrivalRate: 15,   // 15 chats per minute
+      serviceRate: 1.5,  // ~40 seconds per chat
+      servers: 10,       // 10 agents → utilisation = 15/(10*1.5) = 1.0
+      maxTime: 60,       // 1 hour simulation
+      channel: 'chat' as const,
+    },
+  },
+  {
+    name: 'Email Queue',
+    description: 'Email support (5 agents, async handling)',
+    config: {
+      arrivalRate: 5,    // 5 emails per minute
+      serviceRate: 0.5,  // 2 minutes per email
+      servers: 5,        // 5 agents → utilisation = 5/(5*0.5) = 2.0 (overloaded)
+      maxTime: 120,      // 2 hours simulation
+      channel: 'email' as const,
     },
   },
 ];
