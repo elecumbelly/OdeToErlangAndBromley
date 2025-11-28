@@ -13,17 +13,47 @@ import ScenarioComparison from './components/ScenarioComparison';
 import ModelComparison from './components/ModelComparison';
 import ReverseCalculator from './components/ReverseCalculator';
 import { useCalculatorStore } from './store/calculatorStore';
+import { initDatabase } from './lib/database/initDatabase';
+import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
 type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'import' | 'export' | 'learn';
 
 function App() {
   const calculate = useCalculatorStore((state) => state.calculate);
   const [activeTab, setActiveTab] = useState<Tab>('calculator');
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
-  // Calculate on initial load
+  // Initialize database on app mount
   useEffect(() => {
-    calculate();
-  }, [calculate]);
+    async function setupDatabase() {
+      try {
+        console.log('🔄 Initialising database...');
+        await initDatabase();
+
+        // Seed if empty
+        if (!isDatabaseSeeded()) {
+          console.log('📊 Seeding database with sample data...');
+          await seedDatabase();
+        }
+
+        setDbReady(true);
+        console.log('✅ Database ready');
+      } catch (error) {
+        console.error('❌ Database initialisation failed:', error);
+        setDbError(error instanceof Error ? error.message : 'Unknown error');
+      }
+    }
+
+    setupDatabase();
+  }, []);
+
+  // Calculate on initial load (after database is ready)
+  useEffect(() => {
+    if (dbReady) {
+      calculate();
+    }
+  }, [dbReady, calculate]);
 
   const tabs = [
     { id: 'calculator' as Tab, name: 'Calculator', icon: '🧮' },
@@ -41,6 +71,38 @@ function App() {
     console.log('Data imported:', data);
     // Here you could process the imported data and update the calculator store
   };
+
+  // Show loading screen while database initialises
+  if (!dbReady && !dbError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Initialising Database</h2>
+          <p className="text-gray-600">Loading sql.js and setting up your workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error screen if database initialisation failed
+  if (dbError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md border-4 border-red-500">
+          <div className="text-red-500 text-6xl mb-4">❌</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Database Error</h2>
+          <p className="text-gray-600 mb-4">{dbError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
@@ -105,11 +167,6 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ABSOLUTE TOP LEVEL TEST */}
-        <div className="mb-6 p-8 bg-red-500 text-white text-3xl font-bold border-8 border-black">
-          🚨 URGENT TEST: CAN YOU SEE THIS RED BOX? 🚨
-        </div>
-
         {/* Welcome Banner - Only show on calculator tab */}
         {activeTab === 'calculator' && (
           <div className="mb-8 p-6 bg-gradient-to-r from-primary-600 to-blue-600 text-white rounded-xl shadow-lg">
@@ -135,26 +192,17 @@ function App() {
         {/* Tab Content */}
         <div className="animate-in fade-in duration-300">
           {activeTab === 'calculator' && (
-            <>
-              {/* DEBUG TEST */}
-              <div className="mb-6 p-8 bg-red-500 text-white text-2xl font-bold border-4 border-black">
-                DEBUG: CAN YOU SEE THIS RED BOX?
-              </div>
-
-              {/* TEST: ActualStaffPanel standalone */}
-              <div className="mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div>
                 <ActualStaffPanel />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <InputPanel />
-                </div>
-                <div>
-                  <ResultsDisplay />
-                </div>
+              <div>
+                <InputPanel />
               </div>
-            </>
+              <div>
+                <ResultsDisplay />
+              </div>
+            </div>
           )}
 
           {activeTab === 'charts' && <ChartsPanel />}
