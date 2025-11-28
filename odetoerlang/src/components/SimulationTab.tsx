@@ -4,11 +4,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SimulationEngine } from '../simulation/SimulationEngine';
-import { type ScenarioConfig, type Snapshot } from '../simulation/types';
+import { type ScenarioConfig, type Snapshot, type ContactRecord } from '../simulation/types';
 import { PRESET_SCENARIOS } from '../simulation/presets';
 import ControlsPanel from './ControlsPanel';
 import QueueVisual from './QueueVisual';
 import StatsPanel from './StatsPanel';
+import ContactRecordsPanel from './ContactRecordsPanel';
 
 export default function SimulationTab() {
   // Configuration state
@@ -24,6 +25,8 @@ export default function SimulationTab() {
     maxQueueLength: 0,
     timeSeries: [],
   });
+
+  const [contactRecords, setContactRecords] = useState<ContactRecord[]>([]);
 
   // Playback state
   const [isRunning, setIsRunning] = useState(false);
@@ -45,6 +48,7 @@ export default function SimulationTab() {
       engineRef.current = new SimulationEngine(config);
     }
     setSnapshot(engineRef.current.getSnapshot());
+    setContactRecords([]);
     setIsFinished(false);
   }, [config]);
 
@@ -70,9 +74,10 @@ export default function SimulationTab() {
       // Process events until target time
       engineRef.current.processUntil(targetSimTime);
 
-      // Get updated snapshot
+      // Get updated snapshot and contact records
       const newSnapshot = engineRef.current.getSnapshot();
       setSnapshot(newSnapshot);
+      setContactRecords(engineRef.current.getContactRecords());
 
       // Check if finished
       if (engineRef.current.isFinished()) {
@@ -120,6 +125,16 @@ export default function SimulationTab() {
    */
   const handleConfigChange = useCallback((newConfig: ScenarioConfig) => {
     setConfig(newConfig);
+  }, []);
+
+  /**
+   * Export contact records as CSV
+   */
+  const handleExportCSV = useCallback(() => {
+    if (engineRef.current) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      engineRef.current.downloadContactRecordsCSV(`contact-records-${timestamp}.csv`);
+    }
   }, []);
 
   /**
@@ -205,6 +220,14 @@ export default function SimulationTab() {
         <div>
           <StatsPanel snapshot={snapshot} />
         </div>
+      </div>
+
+      {/* Contact Records Section */}
+      <div className="mt-8">
+        <ContactRecordsPanel
+          records={contactRecords}
+          onExportCSV={handleExportCSV}
+        />
       </div>
 
       {/* Help Section */}
