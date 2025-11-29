@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { calculateServiceLevel, calculateASA, calculateOccupancy, calculateTrafficIntensity } from '../lib/calculations/erlangC';
 import { calculateServiceLevelWithAbandonment, calculateASAWithAbandonment, calculateAbandonmentProbability } from '../lib/calculations/erlangA';
@@ -11,22 +11,8 @@ export default function ReverseCalculator() {
   const [availableAgents, setAvailableAgents] = useState(10);
   const [availableSeats, setAvailableSeats] = useState(12);
   const [model, setModel] = useState<ErlangModel>('erlangC');
-  const [results, setResults] = useState<{
-    serviceLevel: number;
-    asa: number;
-    occupancy: number;
-    utilization: number;
-    trafficIntensity: number;
-    surplusDeficit: number;
-    abandonmentRate?: number;
-    expectedAbandonments?: number;
-  } | null>(null);
 
-  useEffect(() => {
-    calculateReverse();
-  }, [availableAgents, availableSeats, model, inputs]);
-
-  const calculateReverse = () => {
+  const results = useMemo(() => {
     const intervalSeconds = inputs.intervalMinutes * 60;
     const trafficIntensity = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
 
@@ -91,7 +77,7 @@ export default function ReverseCalculator() {
     const targetAgents = Math.ceil(trafficIntensity / (inputs.maxOccupancy / 100));
     const surplusDeficit = availableAgents - targetAgents;
 
-    setResults({
+    return {
       serviceLevel: serviceLevel * 100,
       asa,
       occupancy: occupancy * 100,
@@ -100,8 +86,8 @@ export default function ReverseCalculator() {
       surplusDeficit,
       abandonmentRate,
       expectedAbandonments
-    });
-  };
+    };
+  }, [availableAgents, availableSeats, model, inputs]);
 
   const formatNumber = (num: number, decimals: number = 2): string => {
     if (num === Infinity) return '∞';

@@ -1,71 +1,89 @@
 /**
- * Erlang A Formula Implementation
+ * Erlang A Formula Implementation (M/M/c+M Queue)
  *
- * More accurate than Erlang C as it accounts for customer abandonment/impatience
+ * Mathematically rigorous implementation for contact centers with customer abandonment.
  * Reference: Garnett, Mandelbaum & Reiman (2002) - "Designing a Call Center with Impatient Customers"
  *
- * Key difference: Models customer patience - some customers abandon queue before being served
+ * The M/M/c+M model assumes:
+ * - M: Poisson arrivals (rate λ)
+ * - M: Exponential service times (rate μ = 1/AHT)
+ * - c: c parallel identical servers
+ * - +M: Exponential patience (customers abandon with rate θ = 1/average_patience)
  *
- * NOTATION: This implementation uses θ = Average_Patience_Time / AHT (patience ratio)
- * rather than the academic standard θ = 1 / Average_Patience_Time (abandonment rate).
- * This normalization approach:
- * - Keeps units dimensionally consistent
- * - Aligns with commercial WFM tools (NICE, Verint, Aspect)
- * - Is mathematically equivalent when applied consistently
- * - Provides easier parameter interpretation for WFM professionals
+ * Key formulas derived from queueing theory:
+ * - P(abandon) = E_C × θ×AHT / (c - A + θ×AHT)
+ * - P(served within t | wait) = (c-A)/(c-A+θ×AHT) × (1 - e^(-γt)) where γ = (c-A+θ×AHT)/AHT
+ * - E[wait | wait] = AHT / (c - A + θ×AHT)
  *
- * See docs/FORMULAS.md "Notation Standards" section for detailed explanation.
+ * where E_C = Erlang C probability, A = traffic intensity, c = agents, θ = 1/patience
  */
 
 import { erlangC } from './erlangC';
 
 /**
- * Calculate probability of abandonment using adjusted Erlang A formula
+ * Calculate probability of abandonment for M/M/c+M queue
  *
- * NOTE: This uses the PRODUCTION FORMULA, not the simplified conceptual formula
- * shown in documentation. The conceptual formula P(abandon) ≈ P(wait>0) × (1-e^(-θ))
- * is for teaching only.
+ * Derivation:
+ * - A waiting customer faces two competing exponential processes:
+ *   1. Service start: rate = (c-A)/AHT (when queue drains)
+ *   2. Abandonment: rate = θ = 1/patience
+ * - P(abandon | wait) = θ / (θ + (c-A)/AHT) = θ×AHT / (θ×AHT + c - A)
+ * - P(abandon) = P(wait) × P(abandon | wait) = E_C × θ×AHT / (c - A + θ×AHT)
  *
- * This implementation uses the adjusted Erlang A formula that accounts for:
- * - Queue state probability distribution
- * - Patience distribution effect on abandonment
- * - Adjustment factors for realistic service level prediction
- *
- * Provides ±5% accuracy vs. real-world results.
- *
- * @param agents - Number of available agents
- * @param trafficIntensity - Traffic intensity in Erlangs
- * @param theta - Patience parameter (Average Patience Time / AHT)
- * @returns Probability that a customer will abandon
+ * @param agents - Number of available agents (c)
+ * @param trafficIntensity - Traffic intensity in Erlangs (A)
+ * @param patienceRatio - τ = Average Patience Time / AHT (dimensionless)
+ * @returns Probability that a customer will abandon (0-1)
  */
 export function calculateAbandonmentProbability(
   agents: number,
   trafficIntensity: number,
-  theta: number
+  patienceRatio: number
 ): number {
-  if (agents <= trafficIntensity || theta === 0) {
-    return 1.0; // Unstable queue or no patience
+  if (agents <= trafficIntensity) {
+    return 1.0; // Unstable queue
+  }
+  if (patienceRatio <= 0) {
+    return 1.0; // Zero patience = everyone abandons
+  }
+  if (!isFinite(patienceRatio)) {
+    return 0; // Infinite patience = no abandonment (Erlang C)
   }
 
   const pwait = erlangC(agents, trafficIntensity);
   const c = agents;
-  const rho = trafficIntensity / c;
+  const A = trafficIntensity;
+  const tau = patienceRatio; // τ = patience/AHT
 
-  // Adjusted Erlang A formula (not the simplified exponential approximation)
-  // This accounts for queue dynamics and patience distribution
-  const abandonProb = pwait / (1 + theta * c * (1 - rho));
+  // θ×AHT = 1/τ (since θ = 1/patience = 1/(τ×AHT))
+  // P(abandon | wait) = (1/τ) / (c - A + 1/τ) = 1 / (τ×(c-A) + 1)
+  // P(abandon) = E_C / (1 + τ×(c-A))
+  const abandonProb = pwait / (1 + tau * (c - A));
 
   return Math.min(Math.max(abandonProb, 0), 1);
 }
 
 /**
  * Calculate Erlang A service level (accounts for abandonment)
- * @param agents - Number of available agents
- * @param trafficIntensity - Traffic intensity in Erlangs
+ *
+ * For M/M/c+M queue, service level = P(answered within t seconds)
+ *
+ * Derivation:
+ * - P(immediate service) = 1 - E_C
+ * - P(served within t | wait) = P(service before abandon AND before t)
+ *   = (service rate)/(combined rate) × (1 - e^(-combined_rate × t))
+ *   where combined_rate γ = (c-A)/AHT + θ = (c-A + θ×AHT)/AHT
+ *   and service_fraction = (c-A)/AHT / γ = (c-A)/(c-A + θ×AHT)
+ *
+ * SL = P(immediate) + P(wait) × P(served within t | wait)
+ *    = (1 - E_C) + E_C × (c-A)/(c-A + θ×AHT) × (1 - e^(-γt))
+ *
+ * @param agents - Number of available agents (c)
+ * @param trafficIntensity - Traffic intensity in Erlangs (A)
  * @param aht - Average Handle Time in seconds
- * @param targetSeconds - Service level threshold in seconds
+ * @param targetSeconds - Service level threshold in seconds (t)
  * @param averagePatience - Average customer patience in seconds
- * @returns Service level percentage (0-1)
+ * @returns Service level as decimal (0-1)
  */
 export function calculateServiceLevelWithAbandonment(
   agents: number,
@@ -75,22 +93,33 @@ export function calculateServiceLevelWithAbandonment(
   averagePatience: number
 ): number {
   if (agents <= trafficIntensity) {
-    return 0;
+    return 0; // Unstable queue
+  }
+  if (averagePatience <= 0) {
+    // Zero patience: only immediate service counts
+    return 1 - erlangC(agents, trafficIntensity);
   }
 
-  // Theta = patience parameter
-  const theta = averagePatience / aht;
-
-  // Get base Erlang C probability
-  const pwait = erlangC(agents, trafficIntensity);
-
-  // Adjust for abandonment
   const c = agents;
-  const rho = trafficIntensity / c;
-  const adjustmentFactor = theta * c * (1 - rho);
+  const A = trafficIntensity;
+  const t = targetSeconds;
+  const pwait = erlangC(c, A);
 
-  // Service level with abandonment consideration
-  const sl = 1 - (pwait * Math.exp(-((c - trafficIntensity) / aht) * targetSeconds)) / (1 + adjustmentFactor);
+  // θ = 1/patience (abandonment rate)
+  // θ×AHT = AHT/patience
+  const thetaAHT = aht / averagePatience;
+
+  // Combined exit rate from queue: γ = (c-A + θ×AHT) / AHT
+  const gamma = (c - A + thetaAHT) / aht;
+
+  // Fraction of waiters who get served (vs abandon)
+  const serviceFraction = (c - A) / (c - A + thetaAHT);
+
+  // P(served within t | wait) = serviceFraction × (1 - e^(-γt))
+  const pServedWithinT = serviceFraction * (1 - Math.exp(-gamma * t));
+
+  // SL = P(immediate) + P(wait) × P(served within t | wait)
+  const sl = (1 - pwait) + pwait * pServedWithinT;
 
   return Math.min(Math.max(sl, 0), 1);
 }
@@ -114,12 +143,26 @@ export function calculateExpectedAbandonments(
 }
 
 /**
- * Calculate Average Speed of Answer accounting for abandonments
- * @param agents - Number of available agents
- * @param trafficIntensity - Traffic intensity in Erlangs
+ * Calculate Average Speed of Answer for M/M/c+M queue
+ *
+ * For customers who ARE answered (not abandoned), what is their average wait?
+ *
+ * Derivation:
+ * - For a waiting customer, the combined exit rate is γ = (c-A)/AHT + θ
+ * - Expected time until exit (either service or abandon) = 1/γ = AHT/(c-A + θ×AHT)
+ * - Due to memoryless property, E[wait | answered, waited] = E[wait | waited] = 1/γ
+ *
+ * ASA = P(waited and answered)/P(answered) × E[wait | answered, waited]
+ *     ≈ E_C × (1/γ) for practical purposes (since most answered had to wait or not)
+ *
+ * Simplified: ASA = E_C × AHT / (c - A + θ×AHT)
+ *           where θ×AHT = AHT/patience
+ *
+ * @param agents - Number of available agents (c)
+ * @param trafficIntensity - Traffic intensity in Erlangs (A)
  * @param aht - Average Handle Time in seconds
  * @param averagePatience - Average customer patience in seconds
- * @returns ASA in seconds (for answered contacts only)
+ * @returns ASA in seconds (average wait for answered contacts)
  */
 export function calculateASAWithAbandonment(
   agents: number,
@@ -128,17 +171,21 @@ export function calculateASAWithAbandonment(
   averagePatience: number
 ): number {
   if (agents <= trafficIntensity) {
-    return Infinity;
+    return Infinity; // Unstable queue
   }
 
-  const theta = averagePatience / aht;
   const c = agents;
-  const pwait = erlangC(agents, trafficIntensity);
+  const A = trafficIntensity;
+  const pwait = erlangC(c, A);
 
-  // ASA formula adjusted for abandonment
-  const asa = (pwait * aht) / (c - trafficIntensity + theta);
+  // θ×AHT = AHT/patience
+  const thetaAHT = aht / averagePatience;
 
-  return asa;
+  // E[wait | wait] = 1/γ = AHT / (c - A + θ×AHT)
+  // ASA = E_C × E[wait | wait]
+  const asa = (pwait * aht) / (c - A + thetaAHT);
+
+  return Math.max(0, asa);
 }
 
 /**

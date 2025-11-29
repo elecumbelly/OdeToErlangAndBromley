@@ -24,7 +24,7 @@ const ScenarioManager: React.FC = () => {
 
   useEffect(() => {
     refreshScenarios();
-  }, []);
+  }, [refreshScenarios]);
 
   const handleCreate = () => {
     if (!newName.trim()) return;

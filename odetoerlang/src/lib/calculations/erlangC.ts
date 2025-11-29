@@ -35,11 +35,34 @@ export function calculateTrafficIntensity(
 }
 
 /**
- * Calculate Erlang C probability (probability of waiting)
- * Uses iterative method to avoid factorial overflow
+ * Calculate Erlang B (blocking probability) using the standard iterative method
+ * This is the universally accepted formula from telecommunications theory.
  *
- * @param agents - Number of agents
- * @param trafficIntensity - Traffic intensity in Erlangs
+ * @param agents - Number of agents (c)
+ * @param trafficIntensity - Traffic intensity in Erlangs (A)
+ * @returns Erlang B probability (blocking probability)
+ */
+export function erlangB(agents: number, trafficIntensity: number): number {
+  if (agents <= 0) return 1.0;
+  if (trafficIntensity <= 0) return 0;
+
+  let B = 1.0;
+  for (let k = 1; k <= agents; k++) {
+    B = (trafficIntensity * B) / (k + trafficIntensity * B);
+  }
+  return B;
+}
+
+/**
+ * Calculate Erlang C probability (probability of waiting)
+ * Uses the mathematically exact formula: E_C = E_B × c / (c - A + A × E_B)
+ *
+ * This is derived from the relationship between Erlang B and Erlang C:
+ * - Erlang B: probability of blocking in a loss system (no queue)
+ * - Erlang C: probability of waiting in a delay system (with queue)
+ *
+ * @param agents - Number of agents (c)
+ * @param trafficIntensity - Traffic intensity in Erlangs (A)
  * @returns Probability of waiting (0-1)
  */
 export function erlangC(agents: number, trafficIntensity: number): number {
@@ -48,25 +71,17 @@ export function erlangC(agents: number, trafficIntensity: number): number {
     return 0;
   }
 
-  // Unstable queue: agents < traffic intensity
+  // Unstable queue: agents <= traffic intensity
   if (agents <= trafficIntensity) {
     return 1.0;
   }
 
-  // Special case for single agent (M/M/1 queue)
-  // For c=1, the Erlang C formula simplifies to P(wait) = ρ = A/c = A
-  if (agents === 1) {
-    return trafficIntensity;
-  }
+  // Calculate using Erlang B relationship
+  // E_C = E_B × c / (c - A + A × E_B)
+  const B = erlangB(agents, trafficIntensity);
+  const C = (B * agents) / (agents - trafficIntensity + trafficIntensity * B);
 
-  // Calculate using iterative method to avoid factorial overflow
-  let inverseProbability = 1.0;
-  for (let k = 1; k < agents; k++) {
-    inverseProbability = 1 + (k / trafficIntensity) * inverseProbability;
-  }
-
-  const pwait = 1 / (1 + (1 - trafficIntensity / agents) * inverseProbability);
-  return Math.min(1.0, Math.max(0.0, pwait)); // Clamp to [0, 1]
+  return Math.min(1.0, Math.max(0.0, C)); // Clamp to [0, 1]
 }
 
 /**

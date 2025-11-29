@@ -12,7 +12,7 @@ interface ColumnMapping {
 
 interface PreviewData {
   headers: string[];
-  rows: any[][];
+  rows: (string | number | null | undefined)[][];
   rowCount: number;
 }
 
@@ -30,7 +30,7 @@ export default function SmartCSVImport() {
     { field: 'waitingTime', label: 'Waiting Time', required: false, mappedTo: null, description: 'Average queue wait time' },
     { field: 'threshold', label: 'SL Threshold', required: false, mappedTo: null, description: 'Service level threshold in seconds' }
   ]);
-  const [importedData, setImportedData] = useState<any[] | null>(null);
+  const [importedData, setImportedData] = useState<Record<string, number>[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +49,7 @@ export default function SmartCSVImport() {
         }
 
         const headers = results.data[0] as string[];
-        const rows = results.data.slice(1, 6) as any[][]; // First 5 rows for preview
+        const rows = results.data.slice(1, 6) as (string | number | null | undefined)[][]; // First 5 rows for preview
 
         setPreview({
           headers,
@@ -162,12 +162,12 @@ export default function SmartCSVImport() {
     Papa.parse(file, {
       complete: (results) => {
         const headers = results.data[0] as string[];
-        const dataRows = results.data.slice(1) as any[][];
+        const dataRows = results.data.slice(1) as (string | number | null | undefined)[][];
 
         const processedData = dataRows
           .filter(row => row.some(cell => cell && cell.toString().trim() !== ''))
           .map((row, index) => {
-            const rowData: any = { index: index + 1 };
+            const rowData: Record<string, number> = { index: index + 1 };
 
             mappings.forEach(mapping => {
               if (!mapping.mappedTo) return;
@@ -176,14 +176,16 @@ export default function SmartCSVImport() {
               if (columnIndex === -1) return;
 
               const value = row[columnIndex];
+              const valueStr = value != null ? String(value) : '';
+              const valueNum = typeof value === 'number' ? value : parseFloat(valueStr) || 0;
 
               // Parse based on field type
               if (mapping.field === 'aht' || mapping.field === 'asa' || mapping.field === 'waitingTime') {
-                rowData[mapping.field] = parseTimeToSeconds(value);
+                rowData[mapping.field] = parseTimeToSeconds(valueStr || valueNum);
               } else if (mapping.field === 'answerRate' || mapping.field === 'serviceLevel') {
-                rowData[mapping.field] = parsePercentage(value);
+                rowData[mapping.field] = parsePercentage(valueStr || valueNum);
               } else {
-                rowData[mapping.field] = typeof value === 'number' ? value : parseFloat(value) || 0;
+                rowData[mapping.field] = valueNum;
               }
             });
 
