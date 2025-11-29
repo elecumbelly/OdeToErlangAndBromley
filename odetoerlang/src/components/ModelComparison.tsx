@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { calculateStaffingMetrics, calculateTrafficIntensity, calculateFTE, calculateOccupancy } from '../lib/calculations/erlangC';
 import { calculateErlangAMetrics } from '../lib/calculations/erlangA';
 import { calculateErlangXMetrics } from '../lib/calculations/erlangX';
@@ -39,13 +39,7 @@ export default function ModelComparison() {
     averagePatience: 120
   });
 
-  const [results, setResults] = useState<ModelResults[]>([]);
-
-  useEffect(() => {
-    calculateComparison();
-  }, [inputs]);
-
-  const calculateComparison = () => {
+  const results = useMemo(() => {
     const intervalSeconds = inputs.intervalMinutes * 60;
     const comparisonResults: ModelResults[] = [];
 
@@ -129,8 +123,8 @@ export default function ModelComparison() {
       });
     }
 
-    setResults(comparisonResults);
-  };
+    return comparisonResults;
+  }, [inputs]);
 
   const handleInputChange = (key: keyof ComparisonInputs, value: number) => {
     setInputs(prev => ({ ...prev, [key]: value }));

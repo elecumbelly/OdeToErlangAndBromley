@@ -23,7 +23,7 @@ const CampaignSelector: React.FC = () => {
   useEffect(() => {
     refreshCampaigns();
     refreshClients();
-  }, []);
+  }, [refreshCampaigns, refreshClients]);
 
   const handleCreateClient = () => {
     if (!newClientName.trim()) return;

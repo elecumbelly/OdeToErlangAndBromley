@@ -27,11 +27,24 @@ interface ParsedInterval {
   answerSpecSeconds: number;
 }
 
+interface ImportSummary {
+  intervalCount: number;
+  totalIncoming: number;
+  totalAnswered: number;
+  totalAbandoned: number;
+  abandonRate: number;
+  avgAHT: number;
+  avgSL: number;
+  avgAnswerSpec: number;
+  avgVolume: number;
+  answerRate: number;
+}
+
 export default function ACDImport() {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<ParsedInterval[] | null>(null);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<ImportSummary | null>(null);
   const setInput = useCalculatorStore((state) => state.setInput);
 
   // Parse HH:MM:SS format to seconds

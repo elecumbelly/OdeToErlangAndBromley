@@ -100,27 +100,31 @@ function App() {
 
   const setInput = useCalculatorStore((state) => state.setInput);
 
-  const handleDataImported = (data: any) => {
+  const handleDataImported = (data: {
+    volumes?: Array<{ volume?: number }>;
+    aht?: Array<{ aht?: number; channel?: string }>;
+    shrinkage?: Array<{ percentage?: number }>;
+  }) => {
     console.log('Data imported:', data);
 
     // Process imported data and update the calculator store
     if (data.volumes && data.volumes.length > 0) {
       // Calculate average volume per interval
-      const totalVolume = data.volumes.reduce((sum: number, row: any) => sum + (row.volume || 0), 0);
+      const totalVolume = data.volumes.reduce((sum: number, row) => sum + (row.volume || 0), 0);
       const avgVolume = Math.round(totalVolume / data.volumes.length);
       setInput('volume', avgVolume > 0 ? avgVolume : 100);
     }
 
     if (data.aht && data.aht.length > 0) {
       // Find voice AHT or use first entry
-      const voiceAht = data.aht.find((row: any) => row.channel?.toLowerCase() === 'voice');
+      const voiceAht = data.aht.find((row) => row.channel?.toLowerCase() === 'voice');
       const ahtValue = voiceAht?.aht || data.aht[0]?.aht || 240;
       setInput('aht', Math.round(ahtValue));
     }
 
     if (data.shrinkage && data.shrinkage.length > 0) {
       // Sum all shrinkage categories
-      const totalShrinkage = data.shrinkage.reduce((sum: number, row: any) => sum + (row.percentage || 0), 0);
+      const totalShrinkage = data.shrinkage.reduce((sum: number, row) => sum + (row.percentage || 0), 0);
       setInput('shrinkagePercent', Math.min(totalShrinkage, 99));
     }
   };

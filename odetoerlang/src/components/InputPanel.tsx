@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
+import type { ErlangModel } from '../types';
 
 const InputPanel: React.FC = () => {
   const { inputs, setInput, reset } = useCalculatorStore();
@@ -99,7 +100,7 @@ const InputPanel: React.FC = () => {
           <select
             id="model"
             value={inputs.model}
-            onChange={(e) => setInput('model', e.target.value as any)}
+            onChange={(e) => setInput('model', e.target.value as ErlangModel)}
             className={inputClass}
           >
             <option value="erlangC">Erlang C (infinite patience)</option>
