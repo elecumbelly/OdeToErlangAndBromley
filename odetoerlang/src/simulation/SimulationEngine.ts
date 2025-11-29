@@ -447,7 +447,7 @@ export class SimulationEngine {
    */
   private scheduleEvent(event: Event): void {
     // Insert in sorted order (simple insertion sort for small queues)
-    let insertIndex = this.eventQueue.findIndex(e => e.time > event.time);
+    const insertIndex = this.eventQueue.findIndex(e => e.time > event.time);
     if (insertIndex === -1) {
       this.eventQueue.push(event);
     } else {

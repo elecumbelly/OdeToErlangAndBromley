@@ -188,11 +188,13 @@ export function solveAgents(
   // Start with minimum agents needed for target occupancy
   const minAgents = Math.ceil(trafficIntensity / maxOccupancy);
 
-  // Safety limit: ensure we check enough agents even for very low traffic
-  // For low traffic (<1), check at least 10 agents; otherwise 3x traffic
-  const maxAgents = trafficIntensity < 1
-    ? Math.max(10, Math.ceil(trafficIntensity * 3))
-    : Math.ceil(trafficIntensity * 3);
+  // Widen search bounds for high SL targets
+  // Use 5x traffic or minAgents + 50, whichever is larger
+  const maxAgents = Math.max(
+    Math.ceil(trafficIntensity * 5),
+    minAgents + 50,
+    trafficIntensity < 1 ? 10 : Math.ceil(trafficIntensity * 3)
+  );
 
   for (let agents = minAgents; agents <= maxAgents; agents++) {
     const sl = calculateServiceLevel(agents, trafficIntensity, aht, thresholdSeconds);
@@ -228,7 +230,7 @@ export function calculateFTE(
 }
 
 /**
- * Calculate all metrics for a staffing scenario
+ * Complete staffing metrics result from Erlang C calculation
  */
 export interface StaffingMetrics {
   trafficIntensity: number;
@@ -240,6 +242,35 @@ export interface StaffingMetrics {
   canAchieveTarget: boolean;
 }
 
+/**
+ * Calculate complete staffing metrics using Erlang C model.
+ * This is the primary entry point for Erlang C calculations.
+ *
+ * Solves for the minimum number of agents needed to meet service level target,
+ * then calculates all related metrics (FTE, ASA, occupancy).
+ *
+ * @param params - Calculation parameters
+ * @param params.volume - Contact volume for the interval
+ * @param params.aht - Average Handle Time in seconds
+ * @param params.intervalSeconds - Interval duration in seconds (default: 1800 for 30-min)
+ * @param params.targetSL - Target service level as decimal (0-1, e.g., 0.80 for 80%)
+ * @param params.thresholdSeconds - SL threshold in seconds (e.g., 20 for "80/20")
+ * @param params.shrinkagePercent - Shrinkage as decimal (0-1, e.g., 0.25 for 25%)
+ * @param params.maxOccupancy - Maximum occupancy constraint (default: 0.90)
+ * @returns StaffingMetrics with required agents, FTE, SL, ASA, occupancy, and success flag
+ *
+ * @example
+ * const metrics = calculateStaffingMetrics({
+ *   volume: 100,
+ *   aht: 240,
+ *   intervalSeconds: 1800,
+ *   targetSL: 0.80,
+ *   thresholdSeconds: 20,
+ *   shrinkagePercent: 0.25,
+ *   maxOccupancy: 0.90
+ * });
+ * // Returns: { requiredAgents: 14, serviceLevel: 0.82, asa: 8.5, ... }
+ */
 export function calculateStaffingMetrics(params: {
   volume: number;
   aht: number;

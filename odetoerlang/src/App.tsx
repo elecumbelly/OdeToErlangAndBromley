@@ -13,7 +13,11 @@ import ScenarioComparison from './components/ScenarioComparison';
 import ModelComparison from './components/ModelComparison';
 import ReverseCalculator from './components/ReverseCalculator';
 import SimulationTab from './components/SimulationTab';
+import CampaignSelector from './components/CampaignSelector';
+import ScenarioManager from './components/ScenarioManager';
+import { InitializationProgress, type InitStage } from './components/InitializationProgress';
 import { useCalculatorStore } from './store/calculatorStore';
+import { useDatabaseStore } from './store/databaseStore';
 import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
@@ -21,27 +25,51 @@ type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' 
 
 function App() {
   const calculate = useCalculatorStore((state) => state.calculate);
+  const refreshAll = useDatabaseStore((state) => state.refreshAll);
   const [activeTab, setActiveTab] = useState<Tab>('calculator');
-  const [dbReady, setDbReady] = useState(false);
+  const [initStage, setInitStage] = useState<InitStage>('idle');
+  const [initProgress, setInitProgress] = useState(0);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Initialize database on app mount
+  const dbReady = initStage === 'ready';
+
+  // Initialize database on app mount with progress tracking
   useEffect(() => {
     async function setupDatabase() {
       try {
-        console.log('🔄 Initialising database...');
-        await initDatabase();
+        // Stage 1: Loading WASM (0-33%)
+        setInitStage('loading-wasm');
+        setInitProgress(10);
+        console.log('🔄 Loading database engine...');
 
-        // Seed if empty
+        // initDatabase loads WASM and initializes
+        setInitProgress(20);
+        await initDatabase();
+        setInitProgress(50);
+
+        // Stage 2: Database initialized (33-66%)
+        setInitStage('loading-db');
+        setInitProgress(60);
+        console.log('📦 Database engine loaded');
+
+        // Stage 3: Seed if empty (66-100%)
         if (!isDatabaseSeeded()) {
+          setInitStage('seeding');
+          setInitProgress(75);
           console.log('📊 Seeding database with sample data...');
           await seedDatabase();
+          setInitProgress(95);
+        } else {
+          setInitProgress(95);
         }
 
-        setDbReady(true);
+        // Complete
+        setInitStage('ready');
+        setInitProgress(100);
         console.log('✅ Database ready');
       } catch (error) {
         console.error('❌ Database initialisation failed:', error);
+        setInitStage('error');
         setDbError(error instanceof Error ? error.message : 'Unknown error');
       }
     }
@@ -53,8 +81,9 @@ function App() {
   useEffect(() => {
     if (dbReady) {
       calculate();
+      refreshAll(); // Load campaigns, scenarios, clients from database
     }
-  }, [dbReady, calculate]);
+  }, [dbReady, calculate, refreshAll]);
 
   const tabs = [
     { id: 'calculator' as Tab, name: 'Calculator', icon: '🧮' },
@@ -69,40 +98,41 @@ function App() {
     { id: 'learn' as Tab, name: 'Learn', icon: '📚' }
   ];
 
+  const setInput = useCalculatorStore((state) => state.setInput);
+
   const handleDataImported = (data: any) => {
     console.log('Data imported:', data);
-    // Here you could process the imported data and update the calculator store
+
+    // Process imported data and update the calculator store
+    if (data.volumes && data.volumes.length > 0) {
+      // Calculate average volume per interval
+      const totalVolume = data.volumes.reduce((sum: number, row: any) => sum + (row.volume || 0), 0);
+      const avgVolume = Math.round(totalVolume / data.volumes.length);
+      setInput('volume', avgVolume > 0 ? avgVolume : 100);
+    }
+
+    if (data.aht && data.aht.length > 0) {
+      // Find voice AHT or use first entry
+      const voiceAht = data.aht.find((row: any) => row.channel?.toLowerCase() === 'voice');
+      const ahtValue = voiceAht?.aht || data.aht[0]?.aht || 240;
+      setInput('aht', Math.round(ahtValue));
+    }
+
+    if (data.shrinkage && data.shrinkage.length > 0) {
+      // Sum all shrinkage categories
+      const totalShrinkage = data.shrinkage.reduce((sum: number, row: any) => sum + (row.percentage || 0), 0);
+      setInput('shrinkagePercent', Math.min(totalShrinkage, 99));
+    }
   };
 
-  // Show loading screen while database initialises
-  if (!dbReady && !dbError) {
+  // Show progress screen while database initialises (or error screen)
+  if (initStage !== 'ready') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Initialising Database</h2>
-          <p className="text-gray-600">Loading sql.js and setting up your workspace...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error screen if database initialisation failed
-  if (dbError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md border-4 border-red-500">
-          <div className="text-red-500 text-6xl mb-4">❌</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Database Error</h2>
-          <p className="text-gray-600 mb-4">{dbError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
+      <InitializationProgress
+        stage={initStage}
+        progress={initProgress}
+        errorMessage={dbError || undefined}
+      />
     );
   }
 
@@ -194,15 +224,23 @@ function App() {
         {/* Tab Content */}
         <div className="animate-in fade-in duration-300">
           {activeTab === 'calculator' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <div>
-                <ActualStaffPanel />
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Left Sidebar - Data Management */}
+              <div className="lg:col-span-1 space-y-6">
+                <CampaignSelector />
+                <ScenarioManager />
               </div>
-              <div>
-                <InputPanel />
-              </div>
-              <div>
-                <ResultsDisplay />
+              {/* Main Calculator Area */}
+              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <ActualStaffPanel />
+                </div>
+                <div>
+                  <InputPanel />
+                </div>
+                <div>
+                  <ResultsDisplay />
+                </div>
               </div>
             </div>
           )}

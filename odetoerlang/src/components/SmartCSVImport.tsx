@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
+import { useCalculatorStore } from '../store/calculatorStore';
 
 interface ColumnMapping {
   field: string;
@@ -16,6 +17,7 @@ interface PreviewData {
 }
 
 export default function SmartCSVImport() {
+  const setInput = useCalculatorStore((state) => state.setInput);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [mappings, setMappings] = useState<ColumnMapping[]>([
     { field: 'volume', label: 'Call Volume', required: true, mappedTo: null, description: 'Total incoming calls/contacts' },
@@ -211,11 +213,15 @@ export default function SmartCSVImport() {
     // Calculate aggregates
     const totalVolume = importedData.reduce((sum, row) => sum + (row.volume || 0), 0);
     const totalAnswered = importedData.reduce((sum, row) => sum + (row.answered || 0), 0);
-    const totalAbandoned = importedData.reduce((sum, row) => sum + (row.abandoned || 0), 0);
 
-    // Weighted average AHT
-    const totalTalkTime = importedData.reduce((sum, row) => sum + ((row.aht || 0) * (row.answered || 0)), 0);
-    const avgAHT = totalAnswered > 0 ? Math.round(totalTalkTime / totalAnswered) : 0;
+    // Weighted average AHT (by answered contacts)
+    const totalTalkTime = importedData.reduce((sum, row) => sum + ((row.aht || 0) * (row.answered || row.volume || 0)), 0);
+    const avgAHT = totalAnswered > 0
+      ? Math.round(totalTalkTime / totalAnswered)
+      : Math.round(totalTalkTime / totalVolume) || 240;
+
+    // Average per interval (for typical 30-min interval calculation)
+    const avgVolumePerInterval = Math.round(totalVolume / importedData.length);
 
     // Average service level
     const avgSL = importedData.reduce((sum, row) => sum + (row.serviceLevel || 0), 0) / importedData.length;
@@ -223,13 +229,23 @@ export default function SmartCSVImport() {
     console.log('Imported Data Summary:', {
       intervals: importedData.length,
       totalVolume,
+      avgVolumePerInterval,
       totalAnswered,
-      totalAbandoned,
       avgAHT,
       avgSL: avgSL.toFixed(2) + '%'
     });
 
-    alert(`Data imported successfully!\n\n${importedData.length} intervals\nAvg AHT: ${avgAHT}s\nAvg SL: ${avgSL.toFixed(1)}%\n\nReady to use in calculations.`);
+    // Actually update the calculator store with imported values
+    setInput('volume', avgVolumePerInterval > 0 ? avgVolumePerInterval : totalVolume);
+    setInput('aht', avgAHT > 0 ? avgAHT : 240);
+
+    // If service level threshold was imported, use it
+    const avgThreshold = importedData.reduce((sum, row) => sum + (row.threshold || 0), 0) / importedData.length;
+    if (avgThreshold > 0) {
+      setInput('thresholdSeconds', Math.round(avgThreshold));
+    }
+
+    alert(`Data applied to calculator!\n\nVolume: ${avgVolumePerInterval > 0 ? avgVolumePerInterval : totalVolume} contacts\nAHT: ${avgAHT}s\n\nSwitch to Calculator tab to see results.`);
   };
 
   return (

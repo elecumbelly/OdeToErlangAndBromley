@@ -1,73 +1,78 @@
-# React + TypeScript + Vite
+# OdeToErlang
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive contact center capacity planning calculator built with React, TypeScript, and Tailwind CSS.
 
-Currently, two official plugins are available:
+Named in tribute to **A.K. Erlang** and the mathematical foundations of queuing theory that power modern workforce management.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Erlang C, A, and X Models** - Mathematically correct implementations validated against published tables
+- **Multi-Channel Support** - Voice, chat, email, video with concurrency handling
+- **Real-Time Calculations** - Instant results as parameters change
+- **What-If Scenarios** - Save and compare different staffing scenarios
+- **Model Comparison** - Side-by-side comparison of Erlang C vs A vs X
+- **Queue Simulation** - Discrete-event simulation for validation
+- **CSV Import/Export** - Load historical data, export results
+- **Educational Mode** - Step-by-step formula breakdowns
+- **100% Browser-Based** - No backend, no data leaves your machine
+- **IndexedDB Storage** - Persistent database with no 5MB limit
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quick Start
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open http://localhost:5173
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
+npm run preview
 ```
+
+## Test
+
+```bash
+npm test              # Watch mode
+npm run test:run      # Single run
+npm run test:coverage # With coverage
+```
+
+92 tests covering all Erlang formula implementations.
+
+## Tech Stack
+
+- **React 19** + TypeScript
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Zustand** - State management
+- **Recharts** - Visualization
+- **sql.js** - SQLite in browser (WASM)
+- **idb** - IndexedDB wrapper
+- **Vitest** - Testing
+
+## Project Structure
+
+```
+src/
+├── components/       # UI components
+├── lib/
+│   ├── calculations/ # Erlang C, A, X implementations
+│   ├── database/     # SQLite + IndexedDB storage
+│   └── validation/   # Input validation
+├── store/            # Zustand stores
+└── types/            # TypeScript types
+```
+
+## Documentation
+
+- [FORMULAS.md](../docs/FORMULAS.md) - Mathematical reference
+- [CSV-FORMATS.md](../docs/CSV-FORMATS.md) - Import file formats
+- [DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md) - 21-table schema
+
+## License
+
+MIT - Copyright 2025 SteS

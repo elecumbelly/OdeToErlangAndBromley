@@ -1,26 +1,36 @@
 import initSqlJs, { type Database } from 'sql.js';
+// Import SQL schema as raw string (Vite feature)
+import schemaSql from './schema.sql?raw';
+import {
+  saveDatabaseBinary,
+  loadDatabaseBinary,
+  deleteDatabaseBinary,
+  migrateFromLocalStorage,
+} from './storage';
 
 let db: Database | null = null;
 
 /**
  * Initialize the SQLite database in browser using sql.js
- * Data persists in localStorage
+ * Data persists in IndexedDB (migrated from localStorage for larger storage)
  */
 export async function initDatabase(): Promise<Database> {
   if (db) return db;
 
-  // Load sql.js WASM
+  // Load sql.js WASM from local bundle (enables offline support)
   const SQL = await initSqlJs({
-    locateFile: (file) => `https://sql.js.org/dist/${file}`,
+    locateFile: () => '/sql-wasm.wasm',
   });
 
-  // Try to load existing database from localStorage
-  const savedDb = localStorage.getItem('odetoerlang_db');
-  if (savedDb) {
+  // One-time migration from localStorage to IndexedDB
+  await migrateFromLocalStorage();
+
+  // Try to load existing database from IndexedDB
+  const savedDbBinary = await loadDatabaseBinary();
+  if (savedDbBinary) {
     try {
-      const buffer = Uint8Array.from(atob(savedDb), (c) => c.charCodeAt(0));
-      db = new SQL.Database(buffer);
-      console.log('✅ Database loaded from localStorage');
+      db = new SQL.Database(savedDbBinary);
+      console.log('✅ Database loaded from IndexedDB');
       return db;
     } catch (error) {
       console.warn('⚠️ Failed to load saved database, creating new one:', error);
@@ -32,10 +42,10 @@ export async function initDatabase(): Promise<Database> {
   console.log('🆕 Creating new database');
 
   // Load and execute schema
-  await createTables();
+  createTables();
 
-  // Save to localStorage
-  saveDatabase();
+  // Save to IndexedDB
+  await saveDatabase();
 
   return db;
 }
@@ -43,30 +53,25 @@ export async function initDatabase(): Promise<Database> {
 /**
  * Execute all CREATE TABLE statements
  */
-async function createTables() {
+function createTables() {
   if (!db) throw new Error('Database not initialized');
 
-  // Fetch schema.sql
-  const response = await fetch('/src/lib/database/schema.sql');
-  const schemaSql = await response.text();
-
-  // Execute all statements
+  // Execute schema (imported as raw string via Vite)
   db.exec(schemaSql);
 
   console.log('✅ All 21 tables created');
 }
 
 /**
- * Save database to localStorage (called after every write)
+ * Save database to IndexedDB (called after every write)
  */
-export function saveDatabase() {
+export async function saveDatabase(): Promise<void> {
   if (!db) return;
 
   try {
     const data = db.export();
-    const buffer = Buffer.from(data);
-    localStorage.setItem('odetoerlang_db', buffer.toString('base64'));
-    console.log('💾 Database saved to localStorage');
+    await saveDatabaseBinary(data);
+    console.log('💾 Database saved to IndexedDB');
   } catch (error) {
     console.error('❌ Failed to save database:', error);
   }
@@ -84,7 +89,7 @@ export function getDatabase(): Database {
  * Clear all data and reset database
  */
 export async function resetDatabase() {
-  localStorage.removeItem('odetoerlang_db');
+  await deleteDatabaseBinary();
   db = null;
   await initDatabase();
   console.log('🔄 Database reset');
@@ -108,11 +113,11 @@ export async function importDatabase(file: File) {
   const uint8Array = new Uint8Array(arrayBuffer);
 
   const SQL = await initSqlJs({
-    locateFile: (file) => `https://sql.js.org/dist/${file}`,
+    locateFile: () => '/sql-wasm.wasm',
   });
 
   db = new SQL.Database(uint8Array);
-  saveDatabase();
+  await saveDatabase();
 
   console.log('📥 Database imported from file');
 }

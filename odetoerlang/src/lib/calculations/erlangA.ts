@@ -159,8 +159,17 @@ export function solveAgentsErlangA(
   maxOccupancy: number,
   averagePatience: number
 ): number | null {
-  const minAgents = Math.ceil(trafficIntensity);
-  const maxAgents = Math.ceil(trafficIntensity * 3);
+  // Zero traffic = no agents needed
+  if (trafficIntensity <= 0 || aht <= 0) {
+    return 0;
+  }
+
+  const minAgents = Math.ceil(trafficIntensity / maxOccupancy);
+  // Widen search bounds for high SL targets
+  const maxAgents = Math.max(
+    Math.ceil(trafficIntensity * 5),
+    minAgents + 50
+  );
 
   for (let agents = minAgents; agents <= maxAgents; agents++) {
     const occupancy = trafficIntensity / agents;
@@ -185,9 +194,10 @@ export function solveAgentsErlangA(
 }
 
 /**
- * Calculate comprehensive Erlang A metrics
+ * Complete staffing metrics result from Erlang A calculation (with abandonment)
  */
 export interface ErlangAMetrics {
+  trafficIntensity: number;
   serviceLevel: number;
   asa: number;
   abandonmentProbability: number;
@@ -197,6 +207,37 @@ export interface ErlangAMetrics {
   theta: number;
 }
 
+/**
+ * Calculate complete staffing metrics using Erlang A model (with abandonment).
+ * This is the primary entry point for Erlang A calculations.
+ *
+ * Erlang A extends Erlang C by modeling customer patience/abandonment.
+ * More accurate than Erlang C for centers with significant abandonment.
+ *
+ * @param params - Calculation parameters
+ * @param params.volume - Contact volume for the interval
+ * @param params.aht - Average Handle Time in seconds
+ * @param params.intervalMinutes - Interval duration in minutes (e.g., 30)
+ * @param params.targetSLPercent - Target service level as percentage (0-100, e.g., 80)
+ * @param params.thresholdSeconds - SL threshold in seconds (e.g., 20)
+ * @param params.shrinkagePercent - Shrinkage as percentage (0-100, e.g., 25)
+ * @param params.maxOccupancy - Maximum occupancy as percentage (0-100, e.g., 90)
+ * @param params.averagePatience - Average customer patience in seconds before abandoning
+ * @returns ErlangAMetrics with agents, abandonment rate, and theta parameter, or null if target unachievable
+ *
+ * @example
+ * const metrics = calculateErlangAMetrics({
+ *   volume: 100,
+ *   aht: 240,
+ *   intervalMinutes: 30,
+ *   targetSLPercent: 80,
+ *   thresholdSeconds: 20,
+ *   shrinkagePercent: 25,
+ *   maxOccupancy: 90,
+ *   averagePatience: 120  // 2 minutes patience
+ * });
+ * // Returns: { requiredAgents: 13, abandonmentProbability: 0.05, theta: 0.5, ... }
+ */
 export function calculateErlangAMetrics(params: {
   volume: number;
   aht: number;
@@ -209,7 +250,21 @@ export function calculateErlangAMetrics(params: {
 }): ErlangAMetrics | null {
   const intervalSeconds = params.intervalMinutes * 60;
   const trafficIntensity = (params.volume * params.aht) / intervalSeconds;
-  const theta = params.averagePatience / params.aht;
+  const theta = params.aht > 0 ? params.averagePatience / params.aht : 0;
+
+  // Handle zero traffic case - return valid metrics with 0 agents
+  if (trafficIntensity <= 0 || params.volume <= 0) {
+    return {
+      trafficIntensity,
+      serviceLevel: 1.0,
+      asa: 0,
+      abandonmentProbability: 0,
+      expectedAbandonments: 0,
+      answeredContacts: params.volume,
+      requiredAgents: 0,
+      theta
+    };
+  }
 
   const requiredAgents = solveAgentsErlangA(
     trafficIntensity,
@@ -220,8 +275,22 @@ export function calculateErlangAMetrics(params: {
     params.averagePatience
   );
 
-  if (!requiredAgents) {
+  if (requiredAgents === null) {
     return null;
+  }
+
+  // Handle case where solver returns 0 (zero traffic)
+  if (requiredAgents === 0) {
+    return {
+      trafficIntensity,
+      serviceLevel: 1.0,
+      asa: 0,
+      abandonmentProbability: 0,
+      expectedAbandonments: 0,
+      answeredContacts: params.volume,
+      requiredAgents: 0,
+      theta
+    };
   }
 
   const serviceLevel = calculateServiceLevelWithAbandonment(
@@ -255,6 +324,7 @@ export function calculateErlangAMetrics(params: {
   const answeredContacts = params.volume - expectedAbandonments;
 
   return {
+    trafficIntensity,
     serviceLevel,
     asa,
     abandonmentProbability,

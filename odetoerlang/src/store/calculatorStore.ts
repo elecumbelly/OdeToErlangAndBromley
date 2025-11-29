@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import type { CalculationInputs, CalculationResults } from '../types';
-import { calculateStaffingMetrics, calculateTrafficIntensity, calculateFTE, calculateOccupancy } from '../lib/calculations/erlangC';
-import { calculateErlangAMetrics } from '../lib/calculations/erlangA';
-import { calculateErlangXMetrics } from '../lib/calculations/erlangX';
+import {
+  calculateStaffingMetrics,
+  calculateTrafficIntensity,
+  calculateFTE,
+  calculateOccupancy,
+  calculateServiceLevel,
+  calculateASA
+} from '../lib/calculations/erlangC';
+import { calculateErlangAMetrics, calculateServiceLevelWithAbandonment, calculateASAWithAbandonment, calculateAbandonmentProbability, calculateExpectedAbandonments } from '../lib/calculations/erlangA';
+import { calculateErlangXMetrics, calculateServiceLevelX, calculateRetrialProbability, calculateVirtualTraffic, solveEquilibriumAbandonment } from '../lib/calculations/erlangX';
+import { validateCalculationInputs, type ValidationResult } from '../lib/validation/inputValidation';
 
 interface ActualStaff {
   totalFTE: number;
@@ -14,6 +22,7 @@ interface CalculatorState {
   inputs: CalculationInputs;
   results: CalculationResults | null;
   actualStaff: ActualStaff;
+  validation: ValidationResult;
   abandonmentMetrics?: {
     abandonmentRate: number;
     expectedAbandonments: number;
@@ -47,6 +56,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     productiveAgents: 0,
     useAsConstraint: false
   },
+  validation: { valid: true, errors: [] },
   abandonmentMetrics: null,
 
   setInput: (key, value) => {
@@ -61,12 +71,108 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     set((state) => ({
       actualStaff: { ...state.actualStaff, [key]: value }
     }));
+    // Auto-calculate when staff constraint changes
+    setTimeout(() => get().calculate(), 0);
   },
 
   calculate: () => {
-    const { inputs } = get();
-    const intervalSeconds = inputs.intervalMinutes * 60;
+    const { inputs, actualStaff } = get();
 
+    // Validate inputs before calculating
+    const validationResult = validateCalculationInputs(inputs);
+    set({ validation: validationResult });
+
+    // If invalid, clear results and stop
+    if (!validationResult.valid) {
+      set({ results: null, abandonmentMetrics: null });
+      return;
+    }
+
+    const intervalSeconds = inputs.intervalMinutes * 60;
+    const trafficIntensity = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
+
+    // If using actual staff as constraint, calculate achievable metrics
+    if (actualStaff.useAsConstraint && actualStaff.productiveAgents > 0) {
+      const agents = actualStaff.productiveAgents;
+
+      if (inputs.model === 'erlangC') {
+        const sl = calculateServiceLevel(agents, trafficIntensity, inputs.aht, inputs.thresholdSeconds);
+        const asa = calculateASA(agents, trafficIntensity, inputs.aht);
+        const occupancy = calculateOccupancy(trafficIntensity, agents);
+        const totalFTE = calculateFTE(agents, inputs.shrinkagePercent / 100);
+
+        set({
+          results: {
+            trafficIntensity,
+            requiredAgents: agents,
+            totalFTE,
+            serviceLevel: sl * 100,
+            asa,
+            occupancy: occupancy * 100,
+            canAchieveTarget: sl >= inputs.targetSLPercent / 100
+          },
+          abandonmentMetrics: null
+        });
+        return;
+      } else if (inputs.model === 'erlangA') {
+        const theta = inputs.averagePatience / inputs.aht;
+        const sl = calculateServiceLevelWithAbandonment(agents, trafficIntensity, inputs.aht, inputs.thresholdSeconds, inputs.averagePatience);
+        const asa = calculateASAWithAbandonment(agents, trafficIntensity, inputs.aht, inputs.averagePatience);
+        const abandonProb = calculateAbandonmentProbability(agents, trafficIntensity, theta);
+        const expectedAbandons = calculateExpectedAbandonments(inputs.volume, agents, trafficIntensity, theta);
+        const occupancy = calculateOccupancy(trafficIntensity, agents);
+        const totalFTE = calculateFTE(agents, inputs.shrinkagePercent / 100);
+
+        set({
+          results: {
+            trafficIntensity,
+            requiredAgents: agents,
+            totalFTE,
+            serviceLevel: sl * 100,
+            asa,
+            occupancy: occupancy * 100,
+            canAchieveTarget: sl >= inputs.targetSLPercent / 100
+          },
+          abandonmentMetrics: {
+            abandonmentRate: abandonProb,
+            expectedAbandonments: expectedAbandons,
+            answeredContacts: inputs.volume - expectedAbandons
+          }
+        });
+        return;
+      } else if (inputs.model === 'erlangX') {
+        const abandonRate = solveEquilibriumAbandonment(trafficIntensity, agents, inputs.aht, inputs.averagePatience);
+        const sl = calculateServiceLevelX(agents, trafficIntensity, inputs.aht, inputs.thresholdSeconds, inputs.averagePatience);
+        const avgWait = agents > trafficIntensity ? (inputs.aht / (agents - trafficIntensity)) : Infinity;
+        const retrialProb = calculateRetrialProbability(avgWait, inputs.averagePatience);
+        const virtualTraffic = calculateVirtualTraffic(trafficIntensity, abandonRate, retrialProb);
+        const expectedAbandons = inputs.volume * abandonRate;
+        const occupancy = calculateOccupancy(trafficIntensity, agents);
+        const totalFTE = calculateFTE(agents, inputs.shrinkagePercent / 100);
+
+        set({
+          results: {
+            trafficIntensity,
+            requiredAgents: agents,
+            totalFTE,
+            serviceLevel: sl * 100,
+            asa: avgWait,
+            occupancy: occupancy * 100,
+            canAchieveTarget: sl >= inputs.targetSLPercent / 100
+          },
+          abandonmentMetrics: {
+            abandonmentRate: abandonRate,
+            expectedAbandonments: expectedAbandons,
+            answeredContacts: inputs.volume - expectedAbandons,
+            retrialProbability: retrialProb,
+            virtualTraffic
+          }
+        });
+        return;
+      }
+    }
+
+    // Normal mode: solve for optimal staffing
     // Dispatch to appropriate model
     if (inputs.model === 'erlangC') {
       // Erlang C (infinite patience)
@@ -190,7 +296,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
   },
 
   reset: () => {
-    set({ inputs: DEFAULT_INPUTS, results: null, abandonmentMetrics: null });
+    set({ inputs: DEFAULT_INPUTS, results: null, abandonmentMetrics: null, validation: { valid: true, errors: [] } });
     setTimeout(() => get().calculate(), 0);
   }
 }));

@@ -396,7 +396,7 @@ where:
 P(abandon) = ∫[0 to ∞] P(wait = t) × (1 - e^(-t/patience)) dt
 ```
 
-**Implementation:** OdeToErlang uses the **adjusted Erlang A formula with numerical methods** for accuracy (see `erlangA.ts` lines 19-36). The production implementation accounts for:
+**Implementation:** OdeToErlang uses the **adjusted Erlang A formula with numerical methods** for accuracy (see `erlangA.ts` `calculateAbandonmentProbability` function). The production implementation accounts for:
 - Queue state probability distribution
 - Patience distribution over waiting time
 - Adjustment factors for service level calculation
@@ -479,11 +479,11 @@ Developed by **Janssen, Koole, and Pot** (2011+) as the most accurate queuing mo
 
 #### Virtual Traffic Intensity
 
-**Definition:** Actual traffic load including retrials.
+**Definition:** Actual traffic load including retrials, accounting for the feedback loop.
 
 **Formula:**
 ```
-A_virtual = A_offered × (1 + r × P(abandon))
+A_virtual = A_offered / (1 - P(abandon) × r)
 
 where:
   A_offered = Original traffic intensity
@@ -491,18 +491,28 @@ where:
   P(abandon) = Abandonment rate
 ```
 
+**Derivation:** This accounts for the geometric series of retrials:
+- First round: A_offered contacts
+- Retrying abandoned: A_offered × P(abandon) × r
+- Those who abandon and retry again: A_offered × (P(abandon) × r)²
+- And so on...
+- Sum: A_offered × (1 + f + f² + ...) = A_offered / (1 - f) where f = P(abandon) × r
+
 **Example:**
 ```
 Offered Traffic: 10 Erlangs
 P(abandon): 0.15 (15%)
 Retrial Probability: 0.40 (40% of abandoners retry)
 
-A_virtual = 10 × (1 + 0.40 × 0.15)
-          = 10 × 1.06
-          = 10.6 Erlangs
+A_virtual = 10 / (1 - 0.15 × 0.40)
+          = 10 / (1 - 0.06)
+          = 10 / 0.94
+          = 10.64 Erlangs
 ```
 
-**Interpretation:** Virtual traffic accounts for the extra load from customers calling back after abandoning.
+**Interpretation:** Virtual traffic accounts for the extra load from customers calling back after abandoning, including the compounding effect of repeated retrials.
+
+**Stability Condition:** If P(abandon) × r >= 1, the system is unstable (infinite retrials).
 
 #### Equilibrium Abandonment Rate
 
@@ -853,8 +863,8 @@ All formula implementations must:
 
 ---
 
-**Last Updated:** 2025-01-23
-**Version:** 0.1.0
+**Last Updated:** 2025-11-29
+**Version:** 0.2.0
 **Maintained by:** OdeToErlang Project
 
 For questions or corrections, please open an issue on GitHub.
