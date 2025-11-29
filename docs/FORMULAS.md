@@ -864,7 +864,7 @@ All formula implementations must:
 ---
 
 **Last Updated:** 2025-11-29
-**Version:** 0.2.0
+**Version:** 0.1.0
 **Maintained by:** OdeToErlang Project
 
 For questions or corrections, please open an issue on GitHub.
