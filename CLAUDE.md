@@ -3,26 +3,30 @@
 Contact center capacity planning calculator (React/TypeScript/Vite).
 Implements Erlang B, C, A, X queuing formulas for staffing calculations.
 
-## Testing Status (CRITICAL - 38% Coverage)
+**Version:** 0.2.0 | **UI:** Dark theme (Scientific/Vivid on Black)
 
-| File | Lines | Tests | Priority |
-|------|-------|-------|----------|
-| modelRunner.ts | 137 | NONE | P0 |
-| inputValidation.ts | 115 | NONE | P0 |
-| SimulationEngine.ts | 486 | NONE | P1 |
-| Database layer | ~300 | NONE | P1 |
-| erlangX.ts | 402 | 11 | P2 |
+## Testing Status
+
+| File | Tests | Status |
+|------|-------|--------|
+| modelRunner.ts | 56 | Done |
+| inputValidation.ts | 64 | Done |
+| SimulationEngine.ts | 15+ | Done |
+| Database layer | 59 | Done |
+| erlangC.ts | 35+ | Done |
+| erlangA.ts | 25+ | Done |
+| erlangX.ts | 30+ | Done |
 
 **Rule**: Any work on untested files MUST include tests.
 
 ## Formula Status
 
-| Formula | Status | Tests | File |
-|---------|--------|-------|------|
-| Erlang B | Helper | 0 | erlangC.ts (internal) |
-| Erlang C | Complete | 35+ | erlangC.ts |
-| Erlang A | Complete | 25+ | erlangA.ts |
-| Erlang X | Complete | 11 | erlangX.ts |
+| Formula | Status | File |
+|---------|--------|------|
+| Erlang B | Helper | erlangC.ts (internal) |
+| Erlang C | Complete | erlangC.ts |
+| Erlang A | Complete | erlangA.ts |
+| Erlang X | Complete | erlangX.ts |
 
 ## Auto-Agent Spawning Rules
 
