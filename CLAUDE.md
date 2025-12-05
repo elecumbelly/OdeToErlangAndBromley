@@ -1,99 +1,51 @@
 # CLAUDE.md - OdeToErlang
 
-Contact center capacity planning calculator (React/TypeScript/Vite).
-Implements Erlang B, C, A, X queuing formulas for staffing calculations.
+Contact center calculator (React/TS/Vite). Erlang B/C/A/X formulas.
 
-**Version:** 0.2.0 | **UI:** Dark theme (Scientific/Vivid on Black)
+**v0.2.0** | Dark theme | Tests: 280+
 
-## Testing Status
+## Parallelization Rules
 
-| File | Tests | Status |
-|------|-------|--------|
-| modelRunner.ts | 56 | Done |
-| inputValidation.ts | 64 | Done |
-| SimulationEngine.ts | 15+ | Done |
-| Database layer | 59 | Done |
-| erlangC.ts | 35+ | Done |
-| erlangA.ts | 25+ | Done |
-| erlangX.ts | 30+ | Done |
+**ALWAYS parallel when possible:**
+- Multiple file reads → parallel Task agents
+- Independent searches → parallel Grep/Glob
+- Multi-component changes → parallel agents per component
+- Research + implementation → Explore agent first, then implement
 
-**Rule**: Any work on untested files MUST include tests.
+**Use Task agents for:**
+- Any search needing 2+ attempts
+- Context-heavy work (inject command file content)
+- Multi-file changes (1 agent per logical unit)
 
-## Formula Status
+## Agent Dispatch
 
-| Formula | Status | File |
-|---------|--------|------|
-| Erlang B | Helper | erlangC.ts (internal) |
-| Erlang C | Complete | erlangC.ts |
-| Erlang A | Complete | erlangA.ts |
-| Erlang X | Complete | erlangX.ts |
+| Keywords | Command File | Agent |
+|----------|--------------|-------|
+| erlang, formula, calculation, B/C/A/X | erlang-formulas.md | general-purpose |
+| CSV, import, export | csv-formats.md | general-purpose |
+| test, vitest, coverage | js-conventions.md | general-purpose |
+| component, React, implement | js-conventions.md | general-purpose |
+| architecture, structure | architecture.md | Explore |
+| roadmap, planning | roadmap.md | Plan |
 
-## Auto-Agent Spawning Rules
-
-When you detect work in these areas, automatically spawn a Task agent with the relevant command file content injected into the prompt. Do NOT ask the user to invoke commands manually.
-
-| Detect Keywords | Command File | Agent Type |
-|-----------------|--------------|------------|
-| erlang, formula, calculation, probability, staffing, B/C/A/X | erlang-formulas.md | general-purpose |
-| service level, AHT, shrinkage, FTE, abandonment, occupancy | domain-knowledge.md | Explore |
-| CSV, import, export, parse, file format | csv-formats.md | general-purpose |
-| test, coverage, vitest, unit test | js-conventions.md | general-purpose |
-| component, TypeScript, React, implement | js-conventions.md | general-purpose |
-| tooltip, help, tutorial, glossary | help-system.md | general-purpose |
-| structure, architecture, module, organization | architecture.md | Explore |
-| commit, branch, PR, push | git-workflow.md | general-purpose |
-| roadmap, priority, planning, phase | roadmap.md | Plan |
-
-### Multi-Context Tasks
-
-| Task Type | Inject Both |
-|-----------|-------------|
-| New Erlang formula | erlang-formulas.md + js-conventions.md |
-| Erlang formula tests | erlang-formulas.md + js-conventions.md |
-| CSV validation | csv-formats.md + js-conventions.md |
-| Feature planning | roadmap.md + architecture.md |
-
-### Agent Spawning Pattern
-
-```
-1. Read .claude/commands/<relevant-file>.md
-2. Spawn Task agent:
-   - subagent_type: <from table above>
-   - prompt: [Injected command content] + [Specific task]
-   - Include: Working directory is odetoerlang/
-```
-
-## Agent Types
-
-| Type | Use For |
-|------|---------|
-| Explore | Understanding codebase, finding patterns, "where is X" |
-| Plan | Architectural decisions, multi-step feature design |
-| general-purpose | Implementation, bug fixes, tests, code changes |
+**Pattern:** Read `.claude/commands/<file>.md` → inject into agent prompt
 
 ## Core Rules
 
-- Read files before proposing changes
-- Simplicity over abstraction (YAGNI)
-- Validate only at system boundaries
-- Use TodoWrite for 3+ step tasks
-- Concise output, no emojis
+- Read before edit
+- YAGNI - no over-engineering
+- Tests required for new code
+- TodoWrite for 3+ steps
+- No emojis
 
-## Command Files (.claude/commands/)
-
-| File | Contains |
-|------|----------|
-| erlang-formulas.md | B, C, A, X math, validation, edge cases |
-| domain-knowledge.md | Contact center terms, benchmarks |
-| csv-formats.md | Import/export specs, column mappings |
-| architecture.md | Directory structure, modules |
-| js-conventions.md | TypeScript patterns, testing |
-| help-system.md | Tooltip, tutorial, glossary specs |
-| git-workflow.md | Branch naming, commit format |
-| roadmap.md | Phase 1-4 deliverables |
-
-## Branch Convention
+## Files
 
 ```
-claude/<feature>-<session-id>
+.claude/commands/
+├── erlang-formulas.md   # Math, edge cases
+├── csv-formats.md       # Import/export specs
+├── js-conventions.md    # TS patterns, testing
+├── architecture.md      # Directory structure
+├── domain-knowledge.md  # CC terms, benchmarks
+└── roadmap.md          # Phase deliverables
 ```
