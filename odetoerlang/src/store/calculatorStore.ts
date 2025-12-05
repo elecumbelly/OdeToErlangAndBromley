@@ -12,6 +12,31 @@ import { calculateErlangAMetrics, calculateServiceLevelWithAbandonment, calculat
 import { calculateErlangXMetrics, calculateServiceLevelX, calculateRetrialProbability, calculateVirtualTraffic, solveEquilibriumAbandonment } from '../lib/calculations/erlangX';
 import { validateCalculationInputs, type ValidationResult } from '../lib/validation/inputValidation';
 
+// Simple debounce utility - avoids lodash dependency
+function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  }) as T;
+}
+
+// Debounce delay in ms - prevents excessive recalculation on rapid input
+const DEBOUNCE_DELAY = 300;
+
+// Module-level debounced calculate trigger
+// This is created once and shared across all store operations
+let debouncedCalculateTrigger: (() => void) | null = null;
+
+function triggerDebouncedCalculate(calculate: () => void) {
+  if (!debouncedCalculateTrigger) {
+    debouncedCalculateTrigger = debounce(() => {
+      calculate();
+    }, DEBOUNCE_DELAY);
+  }
+  debouncedCalculateTrigger();
+}
+
 interface ActualStaff {
   totalFTE: number;
   productiveAgents: number;
@@ -63,16 +88,16 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     set((state) => ({
       inputs: { ...state.inputs, [key]: value }
     }));
-    // Auto-calculate on input change
-    setTimeout(() => get().calculate(), 0);
+    // Auto-calculate on input change with debouncing to prevent excessive recalculation
+    triggerDebouncedCalculate(() => get().calculate());
   },
 
   setActualStaff: (key, value) => {
     set((state) => ({
       actualStaff: { ...state.actualStaff, [key]: value }
     }));
-    // Auto-calculate when staff constraint changes
-    setTimeout(() => get().calculate(), 0);
+    // Auto-calculate when staff constraint changes with debouncing
+    triggerDebouncedCalculate(() => get().calculate());
   },
 
   calculate: () => {

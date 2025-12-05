@@ -342,16 +342,18 @@ export function upsertAssumption(
 ): number {
   const db = getDatabase();
 
-  // Check if exists
-  const existing = db.exec(
+  // Check if exists - using parameterized query to prevent SQL injection
+  const stmt = db.prepare(
     `SELECT id FROM Assumptions
-     WHERE assumption_type = '${type}'
-       AND (campaign_id = ${campaignId ?? 'NULL'} OR (campaign_id IS NULL AND ${campaignId === null}))
-       AND valid_from = '${validFrom}'`
+     WHERE assumption_type = ?
+       AND (campaign_id = ? OR (campaign_id IS NULL AND ?))
+       AND valid_from = ?`
   );
+  stmt.bind([type, campaignId, campaignId === null ? 1 : 0, validFrom]);
+  const existingRow = stmtToObject<{ id: number }>(stmt);
 
-  if (existing.length && existing[0].values.length) {
-    const id = existing[0].values[0][0] as number;
+  if (existingRow) {
+    const id = existingRow.id;
     db.run(
       `UPDATE Assumptions SET value = ?, unit = ?, valid_to = ? WHERE id = ?`,
       [value, unit, validTo, id]

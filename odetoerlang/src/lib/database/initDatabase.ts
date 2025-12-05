@@ -18,8 +18,9 @@ export async function initDatabase(): Promise<Database> {
   if (db) return db;
 
   // Load sql.js WASM from local bundle (enables offline support)
+  // Uses import.meta.url for dynamic path resolution - supports subdirectory deployments
   const SQL = await initSqlJs({
-    locateFile: () => '/sql-wasm.wasm',
+    locateFile: (file) => new URL(`/${file}`, import.meta.url).href,
   });
 
   // One-time migration from localStorage to IndexedDB
@@ -31,6 +32,10 @@ export async function initDatabase(): Promise<Database> {
     try {
       db = new SQL.Database(savedDbBinary);
       console.log('✅ Database loaded from IndexedDB');
+
+      // Check schema version and run migrations if needed
+      await runMigrations();
+
       return db;
     } catch (error) {
       console.warn('⚠️ Failed to load saved database, creating new one:', error);
@@ -50,6 +55,61 @@ export async function initDatabase(): Promise<Database> {
   return db;
 }
 
+// Current schema version - increment when adding migrations
+const CURRENT_SCHEMA_VERSION = 1;
+
+/**
+ * Get the current schema version from the database
+ * Returns 0 if schema_version table doesn't exist (legacy database)
+ */
+function getSchemaVersion(): number {
+  if (!db) return 0;
+
+  try {
+    const result = db.exec('SELECT MAX(version) as version FROM schema_version');
+    if (result.length > 0 && result[0].values.length > 0) {
+      return (result[0].values[0][0] as number) || 0;
+    }
+  } catch {
+    // Table doesn't exist - legacy database
+    return 0;
+  }
+  return 0;
+}
+
+/**
+ * Run database migrations if schema is out of date
+ */
+async function runMigrations(): Promise<void> {
+  if (!db) return;
+
+  const currentVersion = getSchemaVersion();
+
+  if (currentVersion < CURRENT_SCHEMA_VERSION) {
+    console.log(`🔄 Running migrations from v${currentVersion} to v${CURRENT_SCHEMA_VERSION}`);
+
+    // Migration 0 → 1: Add schema_version table to legacy databases
+    if (currentVersion < 1) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS schema_version (
+          version INTEGER PRIMARY KEY,
+          applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          description TEXT
+        );
+        INSERT OR IGNORE INTO schema_version (version, description)
+        VALUES (1, 'Initial schema - WFM Ready Reckoner');
+      `);
+      console.log('✅ Migration 1 applied: schema_version table created');
+    }
+
+    // Future migrations would be added here:
+    // if (currentVersion < 2) { ... }
+
+    await saveDatabase();
+    console.log(`✅ Migrations complete. Schema now at v${CURRENT_SCHEMA_VERSION}`);
+  }
+}
+
 /**
  * Execute all CREATE TABLE statements
  */
@@ -59,7 +119,7 @@ function createTables() {
   // Execute schema (imported as raw string via Vite)
   db.exec(schemaSql);
 
-  console.log('✅ All 21 tables created');
+  console.log('✅ All 22 tables created (including schema_version)');
 }
 
 /**
@@ -113,10 +173,13 @@ export async function importDatabase(file: File) {
   const uint8Array = new Uint8Array(arrayBuffer);
 
   const SQL = await initSqlJs({
-    locateFile: () => '/sql-wasm.wasm',
+    locateFile: (f) => new URL(`/${f}`, import.meta.url).href,
   });
 
   db = new SQL.Database(uint8Array);
+
+  // Run migrations on imported database
+  await runMigrations();
   await saveDatabase();
 
   console.log('📥 Database imported from file');

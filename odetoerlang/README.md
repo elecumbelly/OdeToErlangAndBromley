@@ -41,7 +41,12 @@ npm run test:run      # Single run
 npm run test:coverage # With coverage
 ```
 
-92 tests covering all Erlang formula implementations.
+443 tests covering:
+- Erlang C, A, X formula calculations
+- Simulation engine with seeded RNG for reproducibility
+- Database operations (storage, schema migrations)
+- Calculator store state management
+- Input validation and edge cases
 
 ## Tech Stack
 
@@ -71,7 +76,21 @@ src/
 
 - [FORMULAS.md](../docs/FORMULAS.md) - Mathematical reference
 - [CSV-FORMATS.md](../docs/CSV-FORMATS.md) - Import file formats
-- [DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md) - 21-table schema
+- [DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md) - 22-table schema (including schema_version)
+
+## Performance Optimizations
+
+- **Binary search** for agent solving - O(log n) vs O(n) linear search
+- **Input debouncing** (300ms) - Prevents excessive recalculation during typing
+- **Code splitting** - Lazy-loaded tabs reduce initial bundle size
+- **Non-blocking DB init** - UI renders immediately while database loads
+
+## Recent Changes (v0.1.0)
+
+- Fixed SQL injection vulnerability in `upsertAssumption`
+- Added schema versioning and migration support
+- Implemented simulation seeding for reproducible runs
+- Added 351 new tests (443 total, up from 92)
 
 ## License
 

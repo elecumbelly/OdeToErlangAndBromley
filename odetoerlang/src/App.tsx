@@ -1,22 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
 import ActualStaffPanel from './components/ActualStaffPanel';
-import ChartsPanel from './components/ChartsPanel';
-import CSVImport from './components/CSVImport';
-import ACDImport from './components/ACDImport';
-import SmartCSVImport from './components/SmartCSVImport';
-import ExportPanel from './components/ExportPanel';
-import MultiChannelPanel from './components/MultiChannelPanel';
-import EducationalMode from './components/EducationalMode';
-import ScenarioComparison from './components/ScenarioComparison';
-import ModelComparison from './components/ModelComparison';
-import ReverseCalculator from './components/ReverseCalculator';
-import SimulationTab from './components/SimulationTab';
 import CampaignSelector from './components/CampaignSelector';
 import ScenarioManager from './components/ScenarioManager';
-import { InitializationProgress, type InitStage } from './components/InitializationProgress';
+import type { InitStage } from './components/InitializationProgress';
+
+// Lazy-loaded components for code splitting - reduces initial bundle size
+// These components are heavy and only loaded when their tabs are accessed
+const ChartsPanel = lazy(() => import('./components/ChartsPanel'));
+const CSVImport = lazy(() => import('./components/CSVImport'));
+const ACDImport = lazy(() => import('./components/ACDImport'));
+const SmartCSVImport = lazy(() => import('./components/SmartCSVImport'));
+const ExportPanel = lazy(() => import('./components/ExportPanel'));
+const MultiChannelPanel = lazy(() => import('./components/MultiChannelPanel'));
+const EducationalMode = lazy(() => import('./components/EducationalMode'));
+const ScenarioComparison = lazy(() => import('./components/ScenarioComparison'));
+const ModelComparison = lazy(() => import('./components/ModelComparison'));
+const ReverseCalculator = lazy(() => import('./components/ReverseCalculator'));
+const SimulationTab = lazy(() => import('./components/SimulationTab'));
+
 import { useCalculatorStore } from './store/calculatorStore';
+
+// Loading fallback for lazy-loaded components
+function TabLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center p-8 bg-white rounded-lg shadow-sm">
+      <div className="flex items-center space-x-3 text-gray-600">
+        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Loading component...</span>
+      </div>
+    </div>
+  );
+}
 import { useDatabaseStore } from './store/databaseStore';
 import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
@@ -28,7 +47,6 @@ function App() {
   const refreshAll = useDatabaseStore((state) => state.refreshAll);
   const [activeTab, setActiveTab] = useState<Tab>('calculator');
   const [initStage, setInitStage] = useState<InitStage>('idle');
-  const [initProgress, setInitProgress] = useState(0);
   const [dbError, setDbError] = useState<string | null>(null);
 
   const dbReady = initStage === 'ready';
@@ -37,35 +55,25 @@ function App() {
   useEffect(() => {
     async function setupDatabase() {
       try {
-        // Stage 1: Loading WASM (0-33%)
+        // Stage 1: Loading WASM
         setInitStage('loading-wasm');
-        setInitProgress(10);
         console.log('🔄 Loading database engine...');
 
-        // initDatabase loads WASM and initializes
-        setInitProgress(20);
         await initDatabase();
-        setInitProgress(50);
 
-        // Stage 2: Database initialized (33-66%)
+        // Stage 2: Database initialized
         setInitStage('loading-db');
-        setInitProgress(60);
         console.log('📦 Database engine loaded');
 
-        // Stage 3: Seed if empty (66-100%)
+        // Stage 3: Seed if empty
         if (!isDatabaseSeeded()) {
           setInitStage('seeding');
-          setInitProgress(75);
           console.log('📊 Seeding database with sample data...');
           await seedDatabase();
-          setInitProgress(95);
-        } else {
-          setInitProgress(95);
         }
 
         // Complete
         setInitStage('ready');
-        setInitProgress(100);
         console.log('✅ Database ready');
       } catch (error) {
         console.error('❌ Database initialisation failed:', error);
@@ -129,19 +137,33 @@ function App() {
     }
   };
 
-  // Show progress screen while database initialises (or error screen)
-  if (initStage !== 'ready') {
-    return (
-      <InitializationProgress
-        stage={initStage}
-        progress={initProgress}
-        errorMessage={dbError || undefined}
-      />
-    );
-  }
+  // Show initialization error as a banner instead of blocking the whole UI
+  // This allows users to use basic calculator features while DB is loading
+  const showDbLoadingBanner = initStage !== 'ready' && initStage !== 'error';
+  const showDbErrorBanner = initStage === 'error';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      {/* Database Loading/Error Banner - Non-blocking UI */}
+      {showDbLoadingBanner && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-center space-x-2 text-sm text-blue-700">
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading database... Calculator is ready to use!</span>
+          </div>
+        </div>
+      )}
+      {showDbErrorBanner && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-center space-x-2 text-sm text-red-700">
+            <span>Database error: {dbError}. Calculator features still work, but scenarios/campaigns unavailable.</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white shadow-lg border-b-4 border-primary-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -229,10 +251,24 @@ function App() {
         <div className="animate-in fade-in duration-300">
           {activeTab === 'calculator' && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Left Sidebar - Data Management */}
+              {/* Left Sidebar - Data Management (requires database) */}
               <div className="lg:col-span-1 space-y-6">
-                <CampaignSelector />
-                <ScenarioManager />
+                {dbReady ? (
+                  <>
+                    <CampaignSelector />
+                    <ScenarioManager />
+                  </>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                      <div className="h-8 bg-gray-100 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                      <div className="h-8 bg-gray-100 rounded"></div>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">Loading campaigns...</p>
+                  </div>
+                )}
               </div>
               {/* Main Calculator Area */}
               <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -249,34 +285,37 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'charts' && <ChartsPanel />}
+          {/* Lazy-loaded tabs wrapped in Suspense for code splitting */}
+          <Suspense fallback={<TabLoadingFallback />}>
+            {activeTab === 'charts' && <ChartsPanel />}
 
-          {activeTab === 'multichannel' && <MultiChannelPanel />}
+            {activeTab === 'multichannel' && <MultiChannelPanel />}
 
-          {activeTab === 'scenarios' && <ScenarioComparison />}
+            {activeTab === 'scenarios' && <ScenarioComparison />}
 
-          {activeTab === 'modelcomp' && <ModelComparison />}
+            {activeTab === 'modelcomp' && <ModelComparison />}
 
-          {activeTab === 'capacity' && <ReverseCalculator />}
+            {activeTab === 'capacity' && <ReverseCalculator />}
 
-          {activeTab === 'simulation' && <SimulationTab />}
+            {activeTab === 'simulation' && <SimulationTab />}
 
-          {activeTab === 'import' && (
-            <div className="space-y-8">
-              <SmartCSVImport />
-              <div className="border-t pt-8">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Legacy Importers</h3>
-                <div className="space-y-8 opacity-75">
-                  <ACDImport />
-                  <CSVImport onDataImported={handleDataImported} />
+            {activeTab === 'import' && (
+              <div className="space-y-8">
+                <SmartCSVImport />
+                <div className="border-t pt-8">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Legacy Importers</h3>
+                  <div className="space-y-8 opacity-75">
+                    <ACDImport />
+                    <CSVImport onDataImported={handleDataImported} />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'export' && <ExportPanel />}
+            {activeTab === 'export' && <ExportPanel />}
 
-          {activeTab === 'learn' && <EducationalMode />}
+            {activeTab === 'learn' && <EducationalMode />}
+          </Suspense>
         </div>
 
         {/* Feature Highlights - Show on calculator tab */}

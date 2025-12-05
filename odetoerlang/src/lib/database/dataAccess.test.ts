@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 
 /**
  * dataAccess.ts Test Suite
@@ -35,7 +35,6 @@ import {
   getScenarios,
   getBaselineScenario,
   createScenario,
-  updateScenario,
   deleteScenario,
   setBaselineScenario,
   getAssumptions,
@@ -46,9 +45,6 @@ import {
   getForecasts,
   saveForecast,
   getTableCounts,
-  type Campaign,
-  type Scenario,
-  type Client,
 } from './dataAccess';
 
 beforeEach(() => {
@@ -336,28 +332,53 @@ describe('dataAccess - Assumptions', () => {
       free: mockFree,
     });
 
-    const assumptions = getCurrentAssumptions(null, '2024-06-15');
+    getCurrentAssumptions(null, '2024-06-15');
 
     expect(mockBind).toHaveBeenCalledWith([null, '2024-06-15', '2024-06-15']);
   });
 
   test('upsertAssumption inserts new assumption', () => {
-    // First check returns empty (no existing)
-    mockExec.mockReturnValueOnce([]).mockReturnValueOnce([{ values: [[10]] }]);
+    // Mock prepare for the existence check - no existing row found
+    const mockStep = vi.fn().mockReturnValue(false);
+    const mockFree = vi.fn();
+    const mockBind = vi.fn();
+
+    mockPrepare.mockReturnValueOnce({
+      bind: mockBind,
+      step: mockStep,
+      getAsObject: vi.fn(),
+      free: mockFree,
+    });
+
+    // Mock exec for last_insert_rowid
+    mockExec.mockReturnValueOnce([{ values: [[10]] }]);
 
     const id = upsertAssumption('shrinkage', 25, 'percent', '2024-01-01', null, null);
 
+    expect(mockPrepare).toHaveBeenCalled();
+    expect(mockBind).toHaveBeenCalledWith(['shrinkage', null, 1, '2024-01-01']);
     expect(mockRun).toHaveBeenCalled();
     expect(mockRun.mock.calls[0][0]).toContain('INSERT INTO Assumptions');
     expect(id).toBe(10);
   });
 
   test('upsertAssumption updates existing assumption', () => {
-    // First check returns existing
-    mockExec.mockReturnValueOnce([{ values: [[5]] }]);
+    // Mock prepare for the existence check - existing row found
+    const mockStep = vi.fn().mockReturnValue(true);
+    const mockGetAsObject = vi.fn().mockReturnValue({ id: 5 });
+    const mockFree = vi.fn();
+    const mockBind = vi.fn();
+
+    mockPrepare.mockReturnValueOnce({
+      bind: mockBind,
+      step: mockStep,
+      getAsObject: mockGetAsObject,
+      free: mockFree,
+    });
 
     const id = upsertAssumption('shrinkage', 30, 'percent', '2024-01-01', null, null);
 
+    expect(mockPrepare).toHaveBeenCalled();
     expect(mockRun).toHaveBeenCalled();
     expect(mockRun.mock.calls[0][0]).toContain('UPDATE Assumptions');
     expect(id).toBe(5);
@@ -373,7 +394,7 @@ describe('dataAccess - Clients', () => {
       },
     ]);
 
-    const clients = getClients();
+    getClients();
 
     expect(mockExec).toHaveBeenCalledWith(
       'SELECT * FROM Clients WHERE active = 1 ORDER BY client_name'
@@ -435,7 +456,7 @@ describe('dataAccess - Forecasts', () => {
       free: mockFree,
     });
 
-    const forecasts = getForecasts(1);
+    getForecasts(1);
 
     expect(mockBind).toHaveBeenCalledWith([1]);
   });
