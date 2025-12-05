@@ -34,6 +34,9 @@ function createSeededRng(seed: number): () => number {
   };
 }
 
+// Default maximum records to prevent memory exhaustion
+const DEFAULT_MAX_RECORDS = 10000;
+
 export class SimulationEngine {
   private config: ScenarioConfig;
   private now: number = 0;
@@ -45,9 +48,12 @@ export class SimulationEngine {
   private stats: SimulationStats;
   private contactRecords: ContactRecord[] = [];
   private random: () => number; // Seeded or unseeded RNG
+  private maxRecords: number;
+  private recordsDropped: number = 0;
 
   constructor(config: ScenarioConfig) {
     this.config = { ...config };
+    this.maxRecords = config.maxRecords ?? DEFAULT_MAX_RECORDS;
     this.random = config.seed !== undefined ? createSeededRng(config.seed) : Math.random;
     this.stats = this.initStats();
     this.initServers();
@@ -60,6 +66,7 @@ export class SimulationEngine {
   reset(config?: ScenarioConfig): void {
     if (config) {
       this.config = { ...config };
+      this.maxRecords = config.maxRecords ?? DEFAULT_MAX_RECORDS;
       // Reset RNG if new config has a seed
       this.random = config.seed !== undefined ? createSeededRng(config.seed) : Math.random;
     }
@@ -71,6 +78,7 @@ export class SimulationEngine {
     this.nextCustomerId = 1;
     this.stats = this.initStats();
     this.contactRecords = [];
+    this.recordsDropped = 0;
     this.initServers();
     this.scheduleFirstArrival();
   }
@@ -305,6 +313,18 @@ export class SimulationEngine {
     };
   }
 
+  /**
+   * Get record statistics including dropped count
+   */
+  getRecordStats() {
+    return {
+      currentRecords: this.contactRecords.length,
+      maxRecords: this.maxRecords,
+      recordsDropped: this.recordsDropped,
+      isAtLimit: this.contactRecords.length >= this.maxRecords,
+    };
+  }
+
   // ============================================================================
   // Private methods
   // ============================================================================
@@ -431,6 +451,11 @@ export class SimulationEngine {
         abandoned: false,
       };
 
+      // Enforce record cap - drop oldest records if at limit
+      if (this.contactRecords.length >= this.maxRecords) {
+        this.contactRecords.shift(); // Remove oldest record
+        this.recordsDropped++;
+      }
       this.contactRecords.push(contactRecord);
     }
 

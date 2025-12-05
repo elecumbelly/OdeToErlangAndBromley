@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '../../utils/cn';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,20 +12,42 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 focus-visible:ring-primary-500',
-  secondary:
-    'bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 active:bg-neutral-100 focus-visible:ring-neutral-500',
-  ghost:
-    'bg-transparent text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 focus-visible:ring-neutral-500',
-  danger:
-    'bg-error-600 text-white hover:bg-error-700 active:bg-error-800 focus-visible:ring-error-500',
+  primary: [
+    'bg-cyan/10 text-cyan border border-cyan/30',
+    'hover:bg-cyan/20 hover:border-cyan/50 hover:shadow-glow-cyan',
+    'active:bg-cyan/30',
+    'focus-visible:ring-cyan/50',
+  ].join(' '),
+  secondary: [
+    'bg-bg-elevated text-text-primary border border-border-subtle',
+    'hover:bg-bg-hover hover:border-border-active',
+    'active:bg-bg-surface',
+    'focus-visible:ring-border-active',
+  ].join(' '),
+  ghost: [
+    'bg-transparent text-text-secondary border border-transparent',
+    'hover:bg-bg-hover hover:text-text-primary',
+    'active:bg-bg-elevated',
+    'focus-visible:ring-border-subtle',
+  ].join(' '),
+  danger: [
+    'bg-red/10 text-red border border-red/30',
+    'hover:bg-red/20 hover:border-red/50 hover:shadow-glow-red',
+    'active:bg-red/30',
+    'focus-visible:ring-red/50',
+  ].join(' '),
+  success: [
+    'bg-green/10 text-green border border-green/30',
+    'hover:bg-green/20 hover:border-green/50 hover:shadow-glow-green',
+    'active:bg-green/30',
+    'focus-visible:ring-green/50',
+  ].join(' '),
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm gap-1.5',
-  md: 'px-4 py-2 text-sm gap-2',
-  lg: 'px-6 py-3 text-base gap-2',
+  sm: 'px-3 py-1.5 text-xs gap-1.5',
+  md: 'px-4 py-2 text-xs gap-2',
+  lg: 'px-5 py-2.5 text-sm gap-2',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -34,11 +56,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center font-medium rounded-apple',
-          'transition-all duration-fast ease-apple',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+          'inline-flex items-center justify-center font-medium rounded-md',
+          'transition-all duration-fast',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base',
           'active:scale-[0.98]',
-          'disabled:opacity-50 disabled:pointer-events-none',
+          'disabled:opacity-40 disabled:pointer-events-none disabled:shadow-none',
+          'uppercase tracking-wide',
           variantStyles[variant],
           sizeStyles[size],
           className

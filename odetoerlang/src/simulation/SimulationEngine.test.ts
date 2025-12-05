@@ -900,6 +900,98 @@ describe('SimulationEngine - Statistical Properties', () => {
   });
 });
 
+describe('SimulationEngine - Record Caps', () => {
+  test('applies default maxRecords of 10000', () => {
+    const config = createConfig();
+    const engine = new SimulationEngine(config);
+
+    const stats = engine.getRecordStats();
+    expect(stats.maxRecords).toBe(10000);
+  });
+
+  test('respects custom maxRecords config', () => {
+    const config = createConfig({ maxRecords: 500 });
+    const engine = new SimulationEngine(config);
+
+    const stats = engine.getRecordStats();
+    expect(stats.maxRecords).toBe(500);
+  });
+
+  test('enforces record cap by dropping oldest records', () => {
+    // Configure a small cap with high traffic to ensure we hit the limit
+    const config = createConfig({
+      arrivalRate: 100,
+      serviceRate: 100,
+      servers: 50,
+      maxTime: 100,
+      maxRecords: 50, // Very small cap
+    });
+    const engine = new SimulationEngine(config);
+
+    engine.processUntil(100);
+
+    const stats = engine.getRecordStats();
+    // Should not exceed cap
+    expect(stats.currentRecords).toBeLessThanOrEqual(50);
+    // Should have dropped records
+    expect(stats.recordsDropped).toBeGreaterThan(0);
+  });
+
+  test('getRecordStats returns correct structure', () => {
+    const config = createConfig({ maxRecords: 1000 });
+    const engine = new SimulationEngine(config);
+
+    engine.processUntil(50);
+
+    const stats = engine.getRecordStats();
+    expect(stats).toHaveProperty('currentRecords');
+    expect(stats).toHaveProperty('maxRecords');
+    expect(stats).toHaveProperty('recordsDropped');
+    expect(stats).toHaveProperty('isAtLimit');
+    expect(typeof stats.currentRecords).toBe('number');
+    expect(typeof stats.recordsDropped).toBe('number');
+    expect(typeof stats.isAtLimit).toBe('boolean');
+  });
+
+  test('reset clears recordsDropped counter', () => {
+    const config = createConfig({
+      arrivalRate: 100,
+      serviceRate: 100,
+      servers: 50,
+      maxTime: 50,
+      maxRecords: 10,
+    });
+    const engine = new SimulationEngine(config);
+
+    engine.processUntil(50);
+    const beforeReset = engine.getRecordStats();
+    expect(beforeReset.recordsDropped).toBeGreaterThan(0);
+
+    engine.reset();
+    const afterReset = engine.getRecordStats();
+    expect(afterReset.recordsDropped).toBe(0);
+    expect(afterReset.currentRecords).toBe(0);
+  });
+
+  test('isAtLimit is true when at capacity', () => {
+    const config = createConfig({
+      arrivalRate: 50,
+      serviceRate: 50,
+      servers: 25,
+      maxTime: 50,
+      maxRecords: 20,
+    });
+    const engine = new SimulationEngine(config);
+
+    engine.processUntil(50);
+
+    const stats = engine.getRecordStats();
+    if (stats.currentRecords >= 20) {
+      expect(stats.isAtLimit).toBe(true);
+    }
+  });
+});
+
 describe('SimulationEngine - Channel Types', () => {
   test('voice channel uses correct defaults', () => {
     const config = createConfig({ channel: 'voice' });

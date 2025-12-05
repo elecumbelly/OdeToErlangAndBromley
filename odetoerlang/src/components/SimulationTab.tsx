@@ -27,6 +27,7 @@ export default function SimulationTab() {
   });
 
   const [contactRecords, setContactRecords] = useState<ContactRecord[]>([]);
+  const [recordStats, setRecordStats] = useState({ currentRecords: 0, maxRecords: 10000, recordsDropped: 0, isAtLimit: false });
 
   // Playback state
   const [isRunning, setIsRunning] = useState(false);
@@ -74,10 +75,11 @@ export default function SimulationTab() {
       // Process events until target time
       engineRef.current.processUntil(targetSimTime);
 
-      // Get updated snapshot and contact records
+      // Get updated snapshot, contact records, and record stats
       const newSnapshot = engineRef.current.getSnapshot();
       setSnapshot(newSnapshot);
       setContactRecords(engineRef.current.getContactRecords());
+      setRecordStats(engineRef.current.getRecordStats());
 
       // Check if finished
       if (engineRef.current.isFinished()) {
@@ -224,6 +226,14 @@ export default function SimulationTab() {
 
       {/* Contact Records Section */}
       <div className="mt-8">
+        {recordStats.recordsDropped > 0 && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              <strong>Record Cap Active:</strong> Showing most recent {recordStats.currentRecords.toLocaleString()} of {(recordStats.currentRecords + recordStats.recordsDropped).toLocaleString()} total contacts.
+              ({recordStats.recordsDropped.toLocaleString()} older records dropped to conserve memory)
+            </p>
+          </div>
+        )}
         <ContactRecordsPanel
           records={contactRecords}
           onExportCSV={handleExportCSV}

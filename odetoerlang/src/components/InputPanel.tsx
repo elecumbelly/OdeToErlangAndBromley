@@ -12,27 +12,28 @@ const InputPanel: React.FC = () => {
     setInput(key, value);
   };
 
-  const inputClass = "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border";
-  const labelClass = "block text-sm font-medium text-gray-700";
+  const inputClass = "mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20 transition-all duration-fast";
+  const labelClass = "block text-2xs font-semibold text-text-secondary uppercase tracking-widest";
+  const hintClass = "mt-1 text-2xs text-text-muted";
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Input Parameters</h2>
+    <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4 pb-3 border-b border-border-muted">
+        <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wide">Input Parameters</h2>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm font-medium transition-colors"
+          className="px-3 py-1 bg-bg-hover hover:bg-bg-elevated text-text-secondary hover:text-text-primary border border-border-subtle rounded-md text-2xs font-medium transition-all uppercase tracking-wide"
         >
           Reset
         </button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Volume */}
         <div>
           <label htmlFor="volume" className={labelClass}>
             Call Volume
-            <span className="text-gray-500 text-xs ml-2">(contacts per interval)</span>
+            <span className="text-text-muted ml-1 lowercase font-normal">/interval</span>
           </label>
           <input
             id="volume"
@@ -42,18 +43,15 @@ const InputPanel: React.FC = () => {
             value={inputs.volume}
             onChange={handleChange('volume')}
             className={inputClass}
-            placeholder="e.g., 100"
+            placeholder="100"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Number of incoming contacts in the interval
-          </p>
         </div>
 
         {/* AHT */}
         <div>
           <label htmlFor="aht" className={labelClass}>
-            Average Handle Time (AHT)
-            <span className="text-gray-500 text-xs ml-2">(seconds)</span>
+            AHT
+            <span className="text-text-muted ml-1 lowercase font-normal">seconds</span>
           </label>
           <input
             id="aht"
@@ -63,18 +61,15 @@ const InputPanel: React.FC = () => {
             value={inputs.aht}
             onChange={handleChange('aht')}
             className={inputClass}
-            placeholder="e.g., 240 (4 minutes)"
+            placeholder="240"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Average time to handle a contact (talk time + after-call work). Typical voice: 180-360 seconds
-          </p>
+          <p className={hintClass}>Talk + ACW. Voice: 180-360s</p>
         </div>
 
         {/* Interval */}
         <div>
           <label htmlFor="intervalMinutes" className={labelClass}>
-            Interval Length
-            <span className="text-gray-500 text-xs ml-2">(minutes)</span>
+            Interval
           </label>
           <select
             id="intervalMinutes"
@@ -82,20 +77,16 @@ const InputPanel: React.FC = () => {
             onChange={(e) => setInput('intervalMinutes', parseFloat(e.target.value))}
             className={inputClass}
           >
-            <option value={15}>15 minutes</option>
-            <option value={30}>30 minutes (standard)</option>
-            <option value={60}>60 minutes</option>
+            <option value={15}>15 min</option>
+            <option value={30}>30 min</option>
+            <option value={60}>60 min</option>
           </select>
-          <p className="mt-1 text-xs text-gray-500">
-            Time period for volume measurement. Standard is 30 minutes.
-          </p>
         </div>
 
         {/* Model Selection */}
-        <div className="border-t pt-6 mt-6">
+        <div className="pt-3 border-t border-border-muted">
           <label htmlFor="model" className={labelClass}>
-            Mathematical Model
-            <span className="text-gray-500 text-xs ml-2">(calculation method)</span>
+            Model
           </label>
           <select
             id="model"
@@ -103,28 +94,25 @@ const InputPanel: React.FC = () => {
             onChange={(e) => setInput('model', e.target.value as ErlangModel)}
             className={inputClass}
           >
-            <option value="erlangC">Erlang C (infinite patience)</option>
-            <option value="erlangA">Erlang A (with abandonment)</option>
-            <option value="erlangX">Erlang X (most accurate)</option>
+            <option value="erlangC">Erlang C</option>
+            <option value="erlangA">Erlang A</option>
+            <option value="erlangX">Erlang X</option>
           </select>
-          <div className="mt-2 p-3 bg-gray-50 rounded-md">
-            <p className="text-xs text-gray-700">
+          <div className="mt-2 p-2 bg-bg-elevated border border-border-muted rounded-md">
+            <p className="text-2xs text-text-secondary">
               {inputs.model === 'erlangC' && (
                 <>
-                  <strong>Erlang C:</strong> Classic formula. Assumes customers never hang up.
-                  Simple and widely understood, but overestimates service level by 5-15%.
+                  <span className="text-cyan font-medium">C:</span> Classic. Infinite patience. Overestimates SL 5-15%.
                 </>
               )}
               {inputs.model === 'erlangA' && (
                 <>
-                  <strong>Erlang A:</strong> Accounts for customer abandonment.
-                  More accurate than Erlang C (~5% error). Requires patience parameter.
+                  <span className="text-green font-medium">A:</span> With abandonment. ~5% error. Needs patience.
                 </>
               )}
               {inputs.model === 'erlangX' && (
                 <>
-                  <strong>Erlang X:</strong> Most accurate model (±2% error).
-                  Includes abandonment, retrials, and virtual waiting time. Industry best practice.
+                  <span className="text-magenta font-medium">X:</span> Most accurate. Abandonment + retrials. Industry standard.
                 </>
               )}
             </p>
@@ -133,10 +121,10 @@ const InputPanel: React.FC = () => {
 
         {/* Average Patience - Only show for Erlang A/X */}
         {(inputs.model === 'erlangA' || inputs.model === 'erlangX') && (
-          <div>
+          <div className="animate-fade-in">
             <label htmlFor="averagePatience" className={labelClass}>
-              Average Customer Patience
-              <span className="text-gray-500 text-xs ml-2">(seconds)</span>
+              Patience
+              <span className="text-text-muted ml-1 lowercase font-normal">seconds</span>
             </label>
             <input
               id="averagePatience"
@@ -146,19 +134,17 @@ const InputPanel: React.FC = () => {
               value={inputs.averagePatience}
               onChange={handleChange('averagePatience')}
               className={inputClass}
-              placeholder="e.g., 120 (2 minutes)"
+              placeholder="120"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              How long customers wait before hanging up. Typical range: 60-180 seconds (1-3 minutes)
-            </p>
+            <p className={hintClass}>Time before abandon. 60-180s typical</p>
           </div>
         )}
 
         {/* Service Level Target */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border-muted">
           <div>
             <label htmlFor="targetSLPercent" className={labelClass}>
-              Service Level %
+              SL Target %
             </label>
             <input
               id="targetSLPercent"
@@ -169,16 +155,13 @@ const InputPanel: React.FC = () => {
               value={inputs.targetSLPercent}
               onChange={handleChange('targetSLPercent')}
               className={inputClass}
-              placeholder="e.g., 80"
+              placeholder="80"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Target % (e.g., 80 for 80/20)
-            </p>
           </div>
 
           <div>
             <label htmlFor="thresholdSeconds" className={labelClass}>
-              Threshold (sec)
+              Threshold
             </label>
             <input
               id="thresholdSeconds"
@@ -188,26 +171,24 @@ const InputPanel: React.FC = () => {
               value={inputs.thresholdSeconds}
               onChange={handleChange('thresholdSeconds')}
               className={inputClass}
-              placeholder="e.g., 20"
+              placeholder="20"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Time limit (e.g., 20 for 80/20)
-            </p>
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-          <p className="text-xs text-blue-800">
-            <strong>Service Level:</strong> {inputs.targetSLPercent}/{inputs.thresholdSeconds} means{' '}
-            {inputs.targetSLPercent}% of contacts answered within {inputs.thresholdSeconds} seconds
+        <div className="bg-cyan/5 border border-cyan/20 rounded-md p-2">
+          <p className="text-2xs text-cyan">
+            <span className="font-semibold">{inputs.targetSLPercent}/{inputs.thresholdSeconds}</span>
+            <span className="text-text-secondary ml-1">
+              = {inputs.targetSLPercent}% answered in {inputs.thresholdSeconds}s
+            </span>
           </p>
         </div>
 
         {/* Shrinkage */}
-        <div>
+        <div className="pt-3 border-t border-border-muted">
           <label htmlFor="shrinkagePercent" className={labelClass}>
             Shrinkage %
-            <span className="text-gray-500 text-xs ml-2">(breaks, training, etc.)</span>
           </label>
           <input
             id="shrinkagePercent"
@@ -218,18 +199,15 @@ const InputPanel: React.FC = () => {
             value={inputs.shrinkagePercent}
             onChange={handleChange('shrinkagePercent')}
             className={inputClass}
-            placeholder="e.g., 25"
+            placeholder="25"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            % of paid time not available for handling contacts. Typical range: 20-35%
-          </p>
+          <p className={hintClass}>Breaks, training, meetings. 20-35% typical</p>
         </div>
 
         {/* Max Occupancy */}
         <div>
           <label htmlFor="maxOccupancy" className={labelClass}>
-            Maximum Occupancy %
-            <span className="text-gray-500 text-xs ml-2">(agent utilization cap)</span>
+            Max Occupancy %
           </label>
           <input
             id="maxOccupancy"
@@ -240,11 +218,9 @@ const InputPanel: React.FC = () => {
             value={inputs.maxOccupancy}
             onChange={handleChange('maxOccupancy')}
             className={inputClass}
-            placeholder="e.g., 90"
+            placeholder="90"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Maximum % of time agents should be busy. Typical voice: 85-90%
-          </p>
+          <p className={hintClass}>Agent utilization cap. Voice: 85-90%</p>
         </div>
       </div>
     </div>

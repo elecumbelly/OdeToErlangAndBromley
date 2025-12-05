@@ -60,53 +60,50 @@ const CampaignSelector: React.FC = () => {
 
   const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
 
-  const inputClass = "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border";
-  const labelClass = "block text-sm font-medium text-gray-700";
-  const buttonClass = "px-3 py-1.5 text-sm font-medium rounded-md transition-colors";
+  const inputClass = "mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20 transition-all duration-fast";
+  const labelClass = "block text-2xs font-semibold text-text-secondary uppercase tracking-widest";
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Campaign</h3>
+    <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4 pb-3 border-b border-border-muted">
+        <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wide">Campaign</h3>
         <button
           onClick={() => setIsCreating(!isCreating)}
-          className={`${buttonClass} bg-primary-500 hover:bg-primary-600 text-white`}
+          className="px-3 py-1 text-2xs font-medium rounded-md transition-all uppercase tracking-wide bg-cyan/10 text-cyan border border-cyan/30 hover:bg-cyan/20 hover:border-cyan/50"
         >
           {isCreating ? 'Cancel' : '+ New'}
         </button>
       </div>
 
       {error && (
-        <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <div className="mb-3 p-2 bg-red/10 border border-red/30 rounded text-red text-xs">
           {error}
         </div>
       )}
 
       {isCreating && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-md space-y-3">
+        <div className="mb-4 p-3 bg-bg-elevated border border-border-muted rounded-lg space-y-3">
           {/* Client Selection */}
           <div>
             <label className={labelClass}>Client</label>
-            <div className="flex gap-2 mt-1">
-              <select
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value ? parseInt(e.target.value) : '')}
-                className={`${inputClass} flex-1`}
-              >
-                <option value="">Select client...</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.client_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value ? parseInt(e.target.value) : '')}
+              className={inputClass}
+            >
+              <option value="">Select client...</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.client_name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Quick Client Create */}
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="text-xs text-gray-500">Or create new client:</label>
+              <label className="text-2xs text-text-muted">Or create new:</label>
               <input
                 type="text"
                 value={newClientName}
@@ -118,7 +115,7 @@ const CampaignSelector: React.FC = () => {
             <button
               onClick={handleCreateClient}
               disabled={!newClientName.trim()}
-              className={`${buttonClass} bg-gray-200 hover:bg-gray-300 text-gray-700 disabled:opacity-50`}
+              className="px-3 py-2 text-2xs bg-bg-hover hover:bg-bg-surface text-text-secondary hover:text-text-primary border border-border-subtle rounded-md transition-all disabled:opacity-40 uppercase"
             >
               Add
             </button>
@@ -157,7 +154,7 @@ const CampaignSelector: React.FC = () => {
           <button
             onClick={handleCreateCampaign}
             disabled={!newCampaignName.trim() || !selectedClientId}
-            className={`${buttonClass} bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+            className="w-full px-3 py-2 text-2xs font-medium rounded-md transition-all uppercase tracking-wide bg-green/10 text-green border border-green/30 hover:bg-green/20 hover:border-green/50 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Create Campaign
           </button>
@@ -170,9 +167,9 @@ const CampaignSelector: React.FC = () => {
         <select
           value={selectedCampaignId ?? ''}
           onChange={(e) => selectCampaign(e.target.value ? parseInt(e.target.value) : null)}
-          className={`${inputClass} mt-1`}
+          className={inputClass}
         >
-          <option value="">None (Quick Calculation)</option>
+          <option value="">None (Quick Calc)</option>
           {campaigns.map((campaign) => (
             <option key={campaign.id} value={campaign.id}>
               {campaign.campaign_name} ({campaign.channel_type})
@@ -183,25 +180,25 @@ const CampaignSelector: React.FC = () => {
 
       {/* Selected Campaign Info */}
       {selectedCampaign && (
-        <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="mt-3 p-2 bg-bg-elevated border border-border-muted rounded-lg">
+          <div className="grid grid-cols-2 gap-2 text-2xs">
             <div>
-              <span className="text-gray-500">Channel:</span>{' '}
-              <span className="font-medium">{selectedCampaign.channel_type}</span>
+              <span className="text-text-muted">Channel:</span>{' '}
+              <span className="text-text-primary font-medium">{selectedCampaign.channel_type}</span>
             </div>
             <div>
-              <span className="text-gray-500">SLA:</span>{' '}
-              <span className="font-medium">
+              <span className="text-text-muted">SLA:</span>{' '}
+              <span className="text-cyan font-medium">
                 {selectedCampaign.sla_target_percent}/{selectedCampaign.sla_threshold_seconds}
               </span>
             </div>
             <div>
-              <span className="text-gray-500">Concurrency:</span>{' '}
-              <span className="font-medium">{selectedCampaign.concurrency_allowed}</span>
+              <span className="text-text-muted">Concurrency:</span>{' '}
+              <span className="text-text-primary font-medium">{selectedCampaign.concurrency_allowed}</span>
             </div>
             <div>
-              <span className="text-gray-500">Status:</span>{' '}
-              <span className={`font-medium ${selectedCampaign.active ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="text-text-muted">Status:</span>{' '}
+              <span className={selectedCampaign.active ? 'text-green font-medium' : 'text-text-muted'}>
                 {selectedCampaign.active ? 'Active' : 'Inactive'}
               </span>
             </div>

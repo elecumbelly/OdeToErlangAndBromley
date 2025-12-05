@@ -465,19 +465,22 @@ export function saveForecast(forecast: Omit<Forecast, 'id' | 'created_at'>): num
 /**
  * Get table row counts for diagnostics
  */
+// Allowlist of valid table names - prevents SQL injection if this function is ever refactored
+const ALLOWED_TABLES = [
+  'Staff', 'Roles', 'Skills', 'StaffSkills', 'StaffSecondaryRoles', 'Sites',
+  'Clients', 'Campaigns', 'Contracts', 'BillingRules',
+  'Assumptions', 'CalendarEvents', 'ProductivityCurves', 'EventAssignments',
+  'Scenarios', 'Forecasts', 'HistoricalData',
+  'SupportingResources', 'AttritionCurves', 'RecruitmentPipeline', 'RecruitmentRequests'
+] as const;
+
 export function getTableCounts(): Record<string, number> {
   const db = getDatabase();
-  const tables = [
-    'Staff', 'Roles', 'Skills', 'StaffSkills', 'StaffSecondaryRoles', 'Sites',
-    'Clients', 'Campaigns', 'Contracts', 'BillingRules',
-    'Assumptions', 'CalendarEvents', 'ProductivityCurves', 'EventAssignments',
-    'Scenarios', 'Forecasts', 'HistoricalData',
-    'SupportingResources', 'AttritionCurves', 'RecruitmentPipeline', 'RecruitmentRequests'
-  ];
 
   const counts: Record<string, number> = {};
-  tables.forEach((table) => {
+  ALLOWED_TABLES.forEach((table) => {
     try {
+      // Table name is from allowlist, safe to interpolate
       const result = db.exec(`SELECT COUNT(*) FROM ${table}`);
       counts[table] = result[0]?.values[0]?.[0] as number ?? 0;
     } catch {

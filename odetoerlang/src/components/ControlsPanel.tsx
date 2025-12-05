@@ -153,6 +153,22 @@ export default function ControlsPanel({
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Max Contact Records
+            <span className="text-xs text-gray-500 ml-2">prevents memory exhaustion</span>
+          </label>
+          <input
+            type="number"
+            step="1000"
+            min="100"
+            max="100000"
+            value={localConfig.maxRecords ?? 10000}
+            onChange={(e) => handleFieldChange('maxRecords', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+        </div>
+
         {/* Utilisation Display */}
         <div className={`p-3 rounded-md ${isUnstable ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
           <div className="text-sm font-medium mb-1">

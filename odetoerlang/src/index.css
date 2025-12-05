@@ -2,10 +2,363 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Google Fonts - JetBrains Mono */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ============================================================================
+   BASE STYLES - Scientific / Vivid on Black
+   ============================================================================ */
+
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Core colors */
+  --color-bg-base: #000000;
+  --color-bg-surface: #0a0a0a;
+  --color-bg-elevated: #111111;
+  --color-bg-hover: #1a1a1a;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #888888;
+  --color-text-muted: #555555;
+
+  --color-border-subtle: #333333;
+  --color-border-muted: #222222;
+  --color-border-active: #00fff7;
+
+  /* Vivid accents */
+  --color-cyan: #00fff7;
+  --color-magenta: #ff00ff;
+  --color-green: #00ff00;
+  --color-amber: #ffaa00;
+  --color-red: #ff3333;
+  --color-blue: #0088ff;
+
+  /* Font */
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+
+  /* Rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+}
+
+/* Dark mode by default */
+html {
+  color-scheme: dark;
 }
 
 body {
-  @apply m-0 min-h-screen bg-gray-50;
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+}
+
+/* ============================================================================
+   SELECTION
+   ============================================================================ */
+
+::selection {
+  background-color: rgba(0, 255, 247, 0.3);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: rgba(0, 255, 247, 0.3);
+  color: #ffffff;
+}
+
+/* ============================================================================
+   SCROLLBAR - Thin, dark
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-subtle) var(--color-bg-base);
+}
+
+/* ============================================================================
+   FOCUS STYLES - Cyan glow
+   ============================================================================ */
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 255, 247, 0.2);
+}
+
+/* ============================================================================
+   LINKS
+   ============================================================================ */
+
+a {
+  color: var(--color-cyan);
+  text-decoration: none;
+  transition: color 100ms ease-out;
+}
+
+a:hover {
+  color: #00cccc;
+  text-decoration: underline;
+}
+
+/* ============================================================================
+   FORM ELEMENTS
+   ============================================================================ */
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  padding: 8px 12px;
+  transition: border-color 100ms ease-out, box-shadow 100ms ease-out;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 255, 247, 0.15);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ============================================================================
+   BUTTONS - Base reset
+   ============================================================================ */
+
+button {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ============================================================================
+   TABLES
+   ============================================================================ */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+th {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+/* Grid background overlay */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(51, 51, 51, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(51, 51, 51, 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.bg-grid-dense {
+  background-image:
+    linear-gradient(rgba(51, 51, 51, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(51, 51, 51, 0.4) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+/* Tabular numbers for metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Glow text effect */
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 255, 247, 0.5);
+}
+
+.text-glow-green {
+  text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.text-glow-amber {
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+}
+
+/* Skeleton loading shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-surface) 25%,
+    var(--color-bg-elevated) 50%,
+    var(--color-bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Skip to content (accessibility) */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: var(--color-cyan);
+  color: var(--color-bg-base);
+  font-weight: 600;
+  z-index: 9999;
+  transition: top 100ms ease-out;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ============================================================================
+   COMPONENT UTILITIES
+   ============================================================================ */
+
+/* Card component base */
+.card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+}
+
+.card-elevated {
+  background-color: var(--color-bg-elevated);
+}
+
+/* Status indicator dots */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot-success {
+  background-color: var(--color-green);
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+.status-dot-warning {
+  background-color: var(--color-amber);
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.5);
+}
+
+.status-dot-error {
+  background-color: var(--color-red);
+  box-shadow: 0 0 8px rgba(255, 51, 51, 0.5);
+}
+
+/* Label styling (uppercase, small) */
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+/* Large metric display */
+.metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-left: 4px;
 }

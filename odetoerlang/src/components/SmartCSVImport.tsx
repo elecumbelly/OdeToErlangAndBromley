@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import Papa from 'papaparse';
+import { useState, useRef } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
+import { useCSVWorker } from '../hooks/useCSVWorker';
+import { useToast } from './ui/Toast';
 
 interface ColumnMapping {
   field: string;
@@ -18,6 +19,11 @@ interface PreviewData {
 
 export default function SmartCSVImport() {
   const setInput = useCalculatorStore((state) => state.setInput);
+  const { parseCSV, isLoading: isWorkerLoading, error: workerError } = useCSVWorker();
+  const { addToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
+
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [mappings, setMappings] = useState<ColumnMapping[]>([
     { field: 'volume', label: 'Call Volume', required: true, mappedTo: null, description: 'Total incoming calls/contacts' },
@@ -33,37 +39,40 @@ export default function SmartCSVImport() {
   const [importedData, setImportedData] = useState<Record<string, number>[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setError(null);
     setPreview(null);
     setImportedData(null);
+    setCurrentFile(file);
 
-    Papa.parse(file, {
-      complete: (results) => {
-        if (results.data.length < 2) {
-          setError('File must have at least a header row and one data row');
-          return;
-        }
+    try {
+      const results = await parseCSV(file);
 
-        const headers = results.data[0] as string[];
-        const rows = results.data.slice(1, 6) as (string | number | null | undefined)[][]; // First 5 rows for preview
-
-        setPreview({
-          headers,
-          rows,
-          rowCount: results.data.length - 1
-        });
-
-        // Auto-detect mappings
-        autoDetectMappings(headers);
-      },
-      error: (error) => {
-        setError(`Error parsing CSV: ${error.message}`);
+      if (results.data.length < 2) {
+        setError('File must have at least a header row and one data row');
+        return;
       }
-    });
+
+      const headers = results.data[0] as string[];
+      const rows = results.data.slice(1, 6) as (string | number | null | undefined)[][]; // First 5 rows for preview
+
+      setPreview({
+        headers,
+        rows,
+        rowCount: results.data.length - 1
+      });
+
+      // Auto-detect mappings
+      autoDetectMappings(headers);
+      addToast(`Loaded ${results.data.length - 1} rows from ${file.name}`, 'info');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error parsing CSV';
+      setError(message);
+      addToast(message, 'error');
+    }
   };
 
   const autoDetectMappings = (headers: string[]) => {
@@ -141,8 +150,8 @@ export default function SmartCSVImport() {
     return isNaN(num) ? 0 : num;
   };
 
-  const validateAndImport = () => {
-    if (!preview) {
+  const validateAndImport = async () => {
+    if (!preview || !currentFile) {
       setError('No file loaded');
       return;
     }
@@ -150,63 +159,63 @@ export default function SmartCSVImport() {
     // Check required fields are mapped
     const unmappedRequired = mappings.filter(m => m.required && !m.mappedTo);
     if (unmappedRequired.length > 0) {
-      setError(`Required fields not mapped: ${unmappedRequired.map(m => m.label).join(', ')}`);
+      const message = `Required fields not mapped: ${unmappedRequired.map(m => m.label).join(', ')}`;
+      setError(message);
+      addToast(message, 'warning');
       return;
     }
 
-    // Re-parse full file with mappings
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-    if (!file) return;
+    try {
+      // Re-parse full file with worker
+      const results = await parseCSV(currentFile);
 
-    Papa.parse(file, {
-      complete: (results) => {
-        const headers = results.data[0] as string[];
-        const dataRows = results.data.slice(1) as (string | number | null | undefined)[][];
+      const headers = results.data[0] as string[];
+      const dataRows = results.data.slice(1) as (string | number | null | undefined)[][];
 
-        const processedData = dataRows
-          .filter(row => row.some(cell => cell && cell.toString().trim() !== ''))
-          .map((row, index) => {
-            const rowData: Record<string, number> = { index: index + 1 };
+      const processedData = dataRows
+        .filter(row => row.some(cell => cell && cell.toString().trim() !== ''))
+        .map((row, index) => {
+          const rowData: Record<string, number> = { index: index + 1 };
 
-            mappings.forEach(mapping => {
-              if (!mapping.mappedTo) return;
+          mappings.forEach(mapping => {
+            if (!mapping.mappedTo) return;
 
-              const columnIndex = headers.indexOf(mapping.mappedTo);
-              if (columnIndex === -1) return;
+            const columnIndex = headers.indexOf(mapping.mappedTo);
+            if (columnIndex === -1) return;
 
-              const value = row[columnIndex];
-              const valueStr = value != null ? String(value) : '';
-              const valueNum = typeof value === 'number' ? value : parseFloat(valueStr) || 0;
+            const value = row[columnIndex];
+            const valueStr = value != null ? String(value) : '';
+            const valueNum = typeof value === 'number' ? value : parseFloat(valueStr) || 0;
 
-              // Parse based on field type
-              if (mapping.field === 'aht' || mapping.field === 'asa' || mapping.field === 'waitingTime') {
-                rowData[mapping.field] = parseTimeToSeconds(valueStr || valueNum);
-              } else if (mapping.field === 'answerRate' || mapping.field === 'serviceLevel') {
-                rowData[mapping.field] = parsePercentage(valueStr || valueNum);
-              } else {
-                rowData[mapping.field] = valueNum;
-              }
-            });
-
-            // Calculate derived fields
-            if (rowData.volume && rowData.answerRate && !rowData.answered) {
-              rowData.answered = Math.round(rowData.volume * (rowData.answerRate / 100));
+            // Parse based on field type
+            if (mapping.field === 'aht' || mapping.field === 'asa' || mapping.field === 'waitingTime') {
+              rowData[mapping.field] = parseTimeToSeconds(valueStr || valueNum);
+            } else if (mapping.field === 'answerRate' || mapping.field === 'serviceLevel') {
+              rowData[mapping.field] = parsePercentage(valueStr || valueNum);
+            } else {
+              rowData[mapping.field] = valueNum;
             }
-            if (rowData.volume && rowData.answered && !rowData.abandoned) {
-              rowData.abandoned = rowData.volume - rowData.answered;
-            }
-
-            return rowData;
           });
 
-        setImportedData(processedData);
-        setError(null);
-      },
-      error: (error) => {
-        setError(`Import error: ${error.message}`);
-      }
-    });
+          // Calculate derived fields
+          if (rowData.volume && rowData.answerRate && !rowData.answered) {
+            rowData.answered = Math.round(rowData.volume * (rowData.answerRate / 100));
+          }
+          if (rowData.volume && rowData.answered && !rowData.abandoned) {
+            rowData.abandoned = rowData.volume - rowData.answered;
+          }
+
+          return rowData;
+        });
+
+      setImportedData(processedData);
+      setError(null);
+      addToast(`Successfully imported ${processedData.length} intervals`, 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Import error';
+      setError(message);
+      addToast(message, 'error');
+    }
   };
 
   const applyToCalculator = () => {
@@ -247,8 +256,16 @@ export default function SmartCSVImport() {
       setInput('thresholdSeconds', Math.round(avgThreshold));
     }
 
-    alert(`Data applied to calculator!\n\nVolume: ${avgVolumePerInterval > 0 ? avgVolumePerInterval : totalVolume} contacts\nAHT: ${avgAHT}s\n\nSwitch to Calculator tab to see results.`);
+    const volume = avgVolumePerInterval > 0 ? avgVolumePerInterval : totalVolume;
+    addToast(
+      `Applied: ${volume} contacts, ${avgAHT}s AHT. Switch to Calculator tab to see results.`,
+      'success',
+      5000
+    );
   };
+
+  // Show worker error if present
+  const displayError = error || workerError;
 
   return (
     <div className="space-y-6">
@@ -265,28 +282,40 @@ export default function SmartCSVImport() {
 
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors">
           <input
+            ref={fileInputRef}
             type="file"
             accept=".csv"
             onChange={handleFileUpload}
             className="hidden"
             id="smart-csv-upload"
+            disabled={isWorkerLoading}
           />
-          <label htmlFor="smart-csv-upload" className="cursor-pointer">
+          <label htmlFor="smart-csv-upload" className={`cursor-pointer ${isWorkerLoading ? 'opacity-50' : ''}`}>
             <div className="flex flex-col items-center">
-              <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
+              {isWorkerLoading ? (
+                <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-3" />
+              ) : (
+                <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              )}
               <p className="text-sm text-gray-600 mb-1">
-                <span className="text-primary-600 font-semibold">Click to upload</span> or drag and drop
+                {isWorkerLoading ? (
+                  <span className="text-primary-600 font-semibold">Processing...</span>
+                ) : (
+                  <>
+                    <span className="text-primary-600 font-semibold">Click to upload</span> or drag and drop
+                  </>
+                )}
               </p>
-              <p className="text-xs text-gray-500">Any CSV file with call center data</p>
+              <p className="text-xs text-gray-500">Any CSV file with call center data (max 50MB)</p>
             </div>
           </label>
         </div>
 
-        {error && (
+        {displayError && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-800">⚠️ {error}</p>
+            <p className="text-sm text-red-800">{displayError}</p>
           </div>
         )}
       </div>
@@ -337,9 +366,10 @@ export default function SmartCSVImport() {
           <div className="mt-6 flex gap-3">
             <button
               onClick={validateAndImport}
-              className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              disabled={isWorkerLoading}
+              className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Import Data
+              {isWorkerLoading ? 'Processing...' : 'Import Data'}
             </button>
             {importedData && (
               <button
@@ -390,7 +420,7 @@ export default function SmartCSVImport() {
       {importedData && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6">
           <h3 className="text-lg font-bold text-green-900 mb-3">
-            ✓ Data Imported Successfully!
+            Data Imported Successfully!
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
@@ -422,7 +452,7 @@ export default function SmartCSVImport() {
             onClick={applyToCalculator}
             className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
           >
-            📊 Apply This Data to Calculator
+            Apply This Data to Calculator
           </button>
         </div>
       )}

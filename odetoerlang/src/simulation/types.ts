@@ -16,6 +16,7 @@ export interface ScenarioConfig {
   campaignId?: number;   // Optional campaign ID for database integration
   skillId?: number;      // Optional skill ID for database integration
   seed?: number;        // Random seed for reproducible simulations (optional)
+  maxRecords?: number;  // Maximum contact records to retain (default: 10000)
 }
 
 export interface Customer {

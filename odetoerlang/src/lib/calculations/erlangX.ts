@@ -1,13 +1,22 @@
 /**
- * Erlang X Formula Implementation
+ * Erlang X Formula Implementation (Heuristic Model)
  *
- * Most accurate model for modern contact centers. Accounts for:
- * - Customer abandonment with realistic patience distributions
- * - Retrial behavior (customers who hang up calling back)
- * - Virtual waiting time (accounts for offered load including retrials)
- * - Time-dependent arrival patterns
+ * IMPORTANT: This is a heuristic approximation, NOT a closed-form queueing solution.
+ * It extends Erlang C/A with empirical retrial modeling. Results are indicative,
+ * not mathematically exact. Use for directional planning, not SLA guarantees.
  *
- * References:
+ * The model layers these approximations:
+ * 1. Erlang C base for P(wait) calculation
+ * 2. Erlang A-style abandonment adjustment
+ * 3. Empirical retrial inflation (40-70% retry rate based on frustration)
+ * 4. Iterative equilibrium solving for feedback loops
+ *
+ * Limitations:
+ * - Retrial rates are empirical estimates, not measured from your data
+ * - Assumes retrials arrive in same interval (ignores delay distribution)
+ * - No validation against real-world retrial-heavy datasets
+ *
+ * References (for underlying concepts, not this exact implementation):
  * - Janssen, Koole & Pot (2011) - "Erlang Loss Models with Delayed Feedback"
  * - Koole & Mandelbaum (2002) - "Queueing Models of Call Centers"
  */

@@ -64,36 +64,35 @@ const ScenarioManager: React.FC = () => {
 
   const selectedScenario = scenarios.find((s) => s.id === selectedScenarioId);
 
-  const inputClass = "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border";
-  const labelClass = "block text-sm font-medium text-gray-700";
-  const buttonClass = "px-3 py-1.5 text-sm font-medium rounded-md transition-colors";
+  const inputClass = "mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20 transition-all duration-fast";
+  const labelClass = "block text-2xs font-semibold text-text-secondary uppercase tracking-widest";
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Scenarios</h3>
+    <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4 pb-3 border-b border-border-muted">
+        <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wide">Scenarios</h3>
         <button
           onClick={() => setIsCreating(!isCreating)}
-          className={`${buttonClass} bg-primary-500 hover:bg-primary-600 text-white`}
+          className="px-3 py-1 text-2xs font-medium rounded-md transition-all uppercase tracking-wide bg-cyan/10 text-cyan border border-cyan/30 hover:bg-cyan/20 hover:border-cyan/50"
         >
           {isCreating ? 'Cancel' : '+ New'}
         </button>
       </div>
 
       {error && (
-        <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <div className="mb-3 p-2 bg-red/10 border border-red/30 rounded text-red text-xs">
           {error}
         </div>
       )}
 
       {saveMessage && (
-        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
+        <div className="mb-3 p-2 bg-green/10 border border-green/30 rounded text-green text-xs">
           {saveMessage}
         </div>
       )}
 
       {isCreating && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-md space-y-3">
+        <div className="mb-4 p-3 bg-bg-elevated border border-border-muted rounded-lg space-y-3">
           <div>
             <label htmlFor="scenarioName" className={labelClass}>Name</label>
             <input
@@ -119,7 +118,7 @@ const ScenarioManager: React.FC = () => {
           <button
             onClick={handleCreate}
             disabled={!newName.trim()}
-            className={`${buttonClass} bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+            className="w-full px-3 py-2 text-2xs font-medium rounded-md transition-all uppercase tracking-wide bg-green/10 text-green border border-green/30 hover:bg-green/20 hover:border-green/50 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Create Scenario
           </button>
@@ -129,39 +128,39 @@ const ScenarioManager: React.FC = () => {
       {/* Scenario List */}
       <div className="space-y-2 max-h-48 overflow-y-auto">
         {scenarios.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">No scenarios yet. Create one to save calculations.</p>
+          <p className="text-xs text-text-muted italic">No scenarios yet. Create one to save calculations.</p>
         ) : (
           scenarios.map((scenario) => (
             <div
               key={scenario.id}
-              className={`p-2 rounded-md border cursor-pointer transition-colors ${
+              className={`p-2 rounded-md border cursor-pointer transition-all ${
                 selectedScenarioId === scenario.id
-                  ? 'border-primary-500 bg-primary-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  ? 'border-cyan/50 bg-cyan/5'
+                  : 'border-border-muted hover:border-border-subtle hover:bg-bg-hover'
               }`}
               onClick={() => selectScenario(scenario.id)}
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="font-medium text-sm">{scenario.scenario_name}</span>
+                  <span className="font-medium text-xs text-text-primary">{scenario.scenario_name}</span>
                   {scenario.is_baseline && (
-                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                    <span className="ml-2 text-2xs bg-blue/10 text-blue border border-blue/30 px-1.5 py-0.5 rounded">
                       Baseline
                     </span>
                   )}
                   {scenario.description && (
-                    <p className="text-xs text-gray-500 mt-0.5">{scenario.description}</p>
+                    <p className="text-2xs text-text-muted mt-0.5">{scenario.description}</p>
                   )}
                 </div>
                 {selectedScenarioId === scenario.id && (
-                  <div className="flex gap-1">
+                  <div className="flex gap-2">
                     {!scenario.is_baseline && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           makeBaseline(scenario.id);
                         }}
-                        className="text-xs text-blue-600 hover:text-blue-800"
+                        className="text-2xs text-blue hover:text-cyan transition-colors"
                         title="Set as baseline"
                       >
                         Set Baseline
@@ -174,7 +173,7 @@ const ScenarioManager: React.FC = () => {
                           removeScenario(scenario.id);
                         }
                       }}
-                      className="text-xs text-red-600 hover:text-red-800"
+                      className="text-2xs text-red hover:text-red/80 transition-colors"
                       title="Delete scenario"
                     >
                       Delete
@@ -189,15 +188,15 @@ const ScenarioManager: React.FC = () => {
 
       {/* Save Current Calculation */}
       {selectedScenarioId && results && (
-        <div className="mt-4 pt-3 border-t border-gray-200">
+        <div className="mt-4 pt-3 border-t border-border-muted">
           <button
             onClick={handleSaveCalculation}
-            className={`w-full ${buttonClass} bg-green-500 hover:bg-green-600 text-white`}
+            className="w-full px-3 py-2 text-2xs font-medium rounded-md transition-all uppercase tracking-wide bg-green/10 text-green border border-green/30 hover:bg-green/20 hover:border-green/50 hover:shadow-glow-green"
           >
-            Save Current Calculation to "{selectedScenario?.scenario_name}"
+            Save to "{selectedScenario?.scenario_name}"
           </button>
-          <p className="text-xs text-gray-500 mt-1 text-center">
-            Saves: {inputs.volume} vol, {results.requiredAgents} agents, {results.serviceLevel.toFixed(1)}% SL
+          <p className="text-2xs text-text-muted mt-1 text-center">
+            {inputs.volume} vol, {results.requiredAgents} agents, {results.serviceLevel.toFixed(1)}% SL
           </p>
         </div>
       )}

@@ -15,27 +15,26 @@ const ActualStaffPanel: React.FC = () => {
     setActualStaff('useAsConstraint', e.target.checked);
   };
 
-  const inputClass = "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm px-3 py-2 border";
-  const labelClass = "block text-sm font-medium text-gray-700";
+  const inputClass = "mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:border-cyan focus:ring-2 focus:ring-cyan/20 transition-all duration-fast";
+  const labelClass = "block text-2xs font-semibold text-text-secondary uppercase tracking-widest";
+  const hintClass = "mt-1 text-2xs text-text-muted";
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md border-2 border-green-200">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-          <span className="text-green-600 mr-2">👥</span>
+    <div className="bg-bg-surface border border-green/20 rounded-lg p-4">
+      <div className="mb-4 pb-3 border-b border-border-muted">
+        <h2 className="text-sm font-semibold text-text-primary uppercase tracking-wide">
           Actual Staff
         </h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Your current staffing levels on the books
+        <p className="text-2xs text-text-muted mt-1">
+          Current staffing on books
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Total FTE */}
         <div>
           <label htmlFor="actualFTE" className={labelClass}>
-            Total FTE on Books
-            <span className="text-gray-500 text-xs ml-2">(full-time equivalents)</span>
+            Total FTE
           </label>
           <input
             id="actualFTE"
@@ -45,18 +44,15 @@ const ActualStaffPanel: React.FC = () => {
             value={actualStaff.totalFTE}
             onChange={handleChange('totalFTE')}
             className={inputClass}
-            placeholder="e.g., 150.0"
+            placeholder="150.0"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Total full-time equivalents including shrinkage
-          </p>
+          <p className={hintClass}>Including shrinkage</p>
         </div>
 
         {/* Productive Agents */}
         <div>
           <label htmlFor="actualAgents" className={labelClass}>
-            Productive Agents Available
-            <span className="text-gray-500 text-xs ml-2">(agents on phones)</span>
+            Productive Agents
           </label>
           <input
             id="actualAgents"
@@ -66,42 +62,39 @@ const ActualStaffPanel: React.FC = () => {
             value={actualStaff.productiveAgents}
             onChange={handleChange('productiveAgents')}
             className={inputClass}
-            placeholder="e.g., 120"
+            placeholder="120"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Agents actually available to handle contacts (after shrinkage)
-          </p>
+          <p className={hintClass}>Available for contacts</p>
         </div>
 
         {/* Shrinkage % (informational) */}
         {actualStaff.totalFTE > 0 && actualStaff.productiveAgents > 0 && (
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-medium text-blue-900 mb-1">Calculated Shrinkage</p>
-            <p className="text-2xl font-bold text-blue-600">
+          <div className="p-3 bg-blue/5 border border-blue/20 rounded-lg">
+            <p className="text-2xs text-text-muted uppercase tracking-widest">Calc Shrinkage</p>
+            <p className="text-xl font-bold text-blue tabular-nums">
               {((1 - actualStaff.productiveAgents / actualStaff.totalFTE) * 100).toFixed(1)}%
             </p>
-            <p className="text-xs text-blue-600 mt-1">
-              Based on {actualStaff.totalFTE} FTE and {actualStaff.productiveAgents} productive agents
+            <p className="text-2xs text-text-muted mt-1">
+              {actualStaff.totalFTE} FTE / {actualStaff.productiveAgents} agents
             </p>
           </div>
         )}
 
         {/* Use as Constraint */}
-        <div className="border-t pt-6 mt-6">
-          <label className="flex items-start space-x-3 cursor-pointer">
+        <div className="pt-3 border-t border-border-muted">
+          <label className="flex items-start space-x-3 cursor-pointer group">
             <input
               type="checkbox"
               checked={actualStaff.useAsConstraint}
               onChange={handleCheckboxChange}
-              className="mt-0.5 h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="mt-0.5 h-4 w-4 bg-bg-surface border-border-subtle rounded text-cyan focus:ring-cyan/30 focus:ring-2"
             />
             <div className="flex-1">
-              <span className="text-sm font-medium text-gray-900">
-                Use as staffing constraint
+              <span className="text-xs font-medium text-text-primary group-hover:text-cyan transition-colors">
+                Use as constraint
               </span>
-              <p className="text-xs text-gray-500 mt-1">
-                When enabled, calculations will consider your actual staffing levels
-                and show what service level you can achieve with current staff
+              <p className="text-2xs text-text-muted mt-0.5">
+                Calculate SL with current staff
               </p>
             </div>
           </label>
@@ -109,38 +102,36 @@ const ActualStaffPanel: React.FC = () => {
 
         {/* Status indicator */}
         {actualStaff.totalFTE > 0 && (
-          <div className={`p-3 rounded-md ${actualStaff.useAsConstraint ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
-            <p className="text-xs font-medium">
-              {actualStaff.useAsConstraint ? (
-                <>
-                  <span className="text-green-600">✓ Constraint Active:</span>
-                  <span className="text-gray-700"> Calculations will use your actual staff of {actualStaff.productiveAgents} agents</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-gray-600">○ Informational Only:</span>
-                  <span className="text-gray-600"> Calculations will determine optimal staffing independently</span>
-                </>
-              )}
-            </p>
+          <div className={`p-2 rounded-md text-2xs ${
+            actualStaff.useAsConstraint
+              ? 'bg-green/5 border border-green/20'
+              : 'bg-bg-elevated border border-border-muted'
+          }`}>
+            {actualStaff.useAsConstraint ? (
+              <p>
+                <span className="text-green font-medium">ACTIVE:</span>
+                <span className="text-text-secondary ml-1">Using {actualStaff.productiveAgents} agents</span>
+              </p>
+            ) : (
+              <p className="text-text-muted">
+                INFO ONLY: Optimal staffing calculated independently
+              </p>
+            )}
           </div>
         )}
 
         {/* Quick Actions */}
-        <div className="border-t pt-4">
-          <p className="text-xs font-medium text-gray-700 mb-2">Quick Actions</p>
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                setActualStaff('totalFTE', 0);
-                setActualStaff('productiveAgents', 0);
-                setActualStaff('useAsConstraint', false);
-              }}
-              className="w-full px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
-            >
-              Clear All
-            </button>
-          </div>
+        <div className="pt-3 border-t border-border-muted">
+          <button
+            onClick={() => {
+              setActualStaff('totalFTE', 0);
+              setActualStaff('productiveAgents', 0);
+              setActualStaff('useAsConstraint', false);
+            }}
+            className="w-full px-3 py-2 text-2xs bg-bg-hover hover:bg-bg-elevated text-text-secondary hover:text-text-primary border border-border-subtle rounded-md transition-all uppercase tracking-wide"
+          >
+            Clear All
+          </button>
         </div>
       </div>
     </div>

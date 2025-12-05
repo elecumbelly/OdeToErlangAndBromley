@@ -1,8 +1,15 @@
 /**
- * Erlang A Formula Implementation (M/M/c+M Queue)
+ * Erlang A Formula Implementation (M/M/c+M Queue Approximation)
  *
- * Mathematically rigorous implementation for contact centers with customer abandonment.
+ * Industry-standard approximation for contact centers with customer abandonment.
  * Reference: Garnett, Mandelbaum & Reiman (2002) - "Designing a Call Center with Impatient Customers"
+ *
+ * IMPORTANT: This is the Palm/Erlang A heavy-traffic approximation, NOT the exact M/M/c+M
+ * steady-state solution. The approximation is accurate (±5%) for typical call center parameters
+ * (many agents, moderate patience) but may diverge for:
+ * - Very small agent pools (c < 10)
+ * - Extreme patience values (very short or very long)
+ * - Near-unstable queues (utilization > 95%)
  *
  * The M/M/c+M model assumes:
  * - M: Poisson arrivals (rate λ)
@@ -10,10 +17,10 @@
  * - c: c parallel identical servers
  * - +M: Exponential patience (customers abandon with rate θ = 1/average_patience)
  *
- * Key formulas derived from queueing theory:
- * - P(abandon) = E_C × θ×AHT / (c - A + θ×AHT)
- * - P(served within t | wait) = (c-A)/(c-A+θ×AHT) × (1 - e^(-γt)) where γ = (c-A+θ×AHT)/AHT
- * - E[wait | wait] = AHT / (c - A + θ×AHT)
+ * Key approximation formulas:
+ * - P(abandon) ≈ E_C / (1 + τ×(c-A)) where τ = patience/AHT
+ * - P(served within t | wait) ≈ (c-A)/(c-A+θ×AHT) × (1 - e^(-γt))
+ * - E[wait | wait] ≈ AHT / (c - A + θ×AHT)
  *
  * where E_C = Erlang C probability, A = traffic intensity, c = agents, θ = 1/patience
  */

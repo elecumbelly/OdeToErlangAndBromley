@@ -1,79 +1,70 @@
 /**
  * Design System Tokens
  *
- * Single source of truth for all design decisions.
- * Apple-inspired, minimal, functional.
+ * Scientific / Vivid on Black aesthetic.
+ * Bloomberg terminal meets synthesizer interface.
+ * Pure black canvas with electric accent colors.
  */
 
 export const colors = {
-  // Primary - Blue (trust, reliability)
-  primary: {
-    50: '#eff6ff',
-    100: '#dbeafe',
-    200: '#bfdbfe',
-    300: '#93c5fd',
-    400: '#60a5fa',
-    500: '#3b82f6',
-    600: '#2563eb',
-    700: '#1d4ed8',
-    800: '#1e40af',
-    900: '#1e3a8a',
+  // Background layers - pure black to near-black
+  bg: {
+    base: '#000000',      // True black canvas
+    surface: '#0a0a0a',   // Card backgrounds
+    elevated: '#111111',  // Elevated elements
+    hover: '#1a1a1a',     // Hover states
   },
 
-  // Success - Green (positive outcomes)
-  success: {
-    50: '#f0fdf4',
-    100: '#dcfce7',
-    200: '#bbf7d0',
-    300: '#86efac',
-    400: '#4ade80',
-    500: '#22c55e',
-    600: '#16a34a',
-    700: '#15803d',
-    800: '#166534',
-    900: '#14532d',
+  // Text hierarchy
+  text: {
+    primary: '#ffffff',   // Main text
+    secondary: '#888888', // Secondary info
+    muted: '#555555',     // Disabled, hints
+    inverse: '#000000',   // On bright backgrounds
   },
 
-  // Warning - Amber (attention needed)
-  warning: {
-    50: '#fffbeb',
-    100: '#fef3c7',
-    200: '#fde68a',
-    300: '#fcd34d',
-    400: '#fbbf24',
-    500: '#f59e0b',
-    600: '#d97706',
-    700: '#b45309',
-    800: '#92400e',
-    900: '#78350f',
+  // Border colors
+  border: {
+    subtle: '#333333',    // Default borders
+    muted: '#222222',     // Very subtle
+    active: '#00fff7',    // Active/focus states (cyan)
   },
 
-  // Error - Red (problems, failures)
-  error: {
-    50: '#fef2f2',
-    100: '#fee2e2',
-    200: '#fecaca',
-    300: '#fca5a5',
-    400: '#f87171',
-    500: '#ef4444',
-    600: '#dc2626',
-    700: '#b91c1c',
-    800: '#991b1b',
-    900: '#7f1d1d',
+  // VIVID Accent Colors
+  cyan: {
+    DEFAULT: '#00fff7',   // Primary actions, focus, links
+    dim: '#00cccc',       // Hover state
+    glow: 'rgba(0, 255, 247, 0.3)', // Glow effect
   },
 
-  // Neutral - Gray (text, borders, backgrounds)
-  neutral: {
-    50: '#fafafa',
-    100: '#f4f4f5',
-    200: '#e4e4e7',
-    300: '#d4d4d8',
-    400: '#a1a1aa',
-    500: '#71717a',
-    600: '#52525b',
-    700: '#3f3f46',
-    800: '#27272a',
-    900: '#18181b',
+  magenta: {
+    DEFAULT: '#ff00ff',   // Highlights, secondary actions
+    dim: '#cc00cc',       // Hover state
+    glow: 'rgba(255, 0, 255, 0.3)',
+  },
+
+  green: {
+    DEFAULT: '#00ff00',   // Success, positive metrics
+    dim: '#00cc00',
+    glow: 'rgba(0, 255, 0, 0.3)',
+  },
+
+  amber: {
+    DEFAULT: '#ffaa00',   // Warning, caution
+    dim: '#cc8800',
+    glow: 'rgba(255, 170, 0, 0.3)',
+  },
+
+  red: {
+    DEFAULT: '#ff3333',   // Error, critical
+    dim: '#cc2929',
+    glow: 'rgba(255, 51, 51, 0.3)',
+  },
+
+  blue: {
+    DEFAULT: '#0088ff',   // Info, secondary
+    dim: '#006acc',
+    glow: 'rgba(0, 136, 255, 0.3)',
   },
 } as const;
 
@@ -81,7 +72,9 @@ export const spacing = {
   0: '0px',
   0.5: '2px',
   1: '4px',
+  1.5: '6px',
   2: '8px',
+  2.5: '10px',
   3: '12px',
   4: '16px',
   5: '20px',
@@ -90,46 +83,55 @@ export const spacing = {
   10: '40px',
   12: '48px',
   16: '64px',
+  20: '80px',
 } as const;
 
 export const radii = {
   none: '0px',
-  sm: '6px',
-  md: '12px',
-  lg: '16px',
-  xl: '24px',
+  sm: '4px',
+  md: '6px',
+  lg: '8px',
+  xl: '12px',
   full: '9999px',
 } as const;
 
 export const shadows = {
   none: 'none',
-  sm: '0 1px 2px rgba(0, 0, 0, 0.04)',
-  md: '0 4px 12px rgba(0, 0, 0, 0.08)',
-  lg: '0 8px 24px rgba(0, 0, 0, 0.12)',
-  xl: '0 16px 48px rgba(0, 0, 0, 0.16)',
+  sm: '0 1px 2px rgba(0, 0, 0, 0.5)',
+  md: '0 4px 12px rgba(0, 0, 0, 0.6)',
+  lg: '0 8px 24px rgba(0, 0, 0, 0.7)',
+  // Glow shadows for accent colors
+  'glow-cyan': '0 0 20px rgba(0, 255, 247, 0.4)',
+  'glow-magenta': '0 0 20px rgba(255, 0, 255, 0.4)',
+  'glow-green': '0 0 20px rgba(0, 255, 0, 0.4)',
+  'glow-amber': '0 0 20px rgba(255, 170, 0, 0.4)',
+  'glow-red': '0 0 20px rgba(255, 51, 51, 0.4)',
 } as const;
 
 export const transitions = {
-  fast: '150ms cubic-bezier(0.4, 0, 0.2, 1)',
-  normal: '250ms cubic-bezier(0.4, 0, 0.2, 1)',
-  slow: '400ms cubic-bezier(0.4, 0, 0.2, 1)',
+  fast: '100ms ease-out',
+  normal: '200ms ease-out',
+  slow: '300ms ease-out',
   spring: '400ms cubic-bezier(0.34, 1.56, 0.64, 1)',
 } as const;
 
 export const typography = {
   fontFamily: {
-    sans: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-    mono: '"SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace',
+    mono: '"JetBrains Mono", "IBM Plex Mono", "Fira Code", "SF Mono", Consolas, monospace',
+    // Everything is mono in this design system
+    sans: '"JetBrains Mono", "IBM Plex Mono", "Fira Code", monospace',
   },
   fontSize: {
-    xs: ['12px', { lineHeight: '16px' }],
-    sm: ['14px', { lineHeight: '20px' }],
-    base: ['16px', { lineHeight: '24px' }],
-    lg: ['18px', { lineHeight: '28px' }],
-    xl: ['20px', { lineHeight: '28px' }],
-    '2xl': ['24px', { lineHeight: '32px' }],
-    '3xl': ['30px', { lineHeight: '36px' }],
-    '4xl': ['36px', { lineHeight: '40px' }],
+    '2xs': ['10px', { lineHeight: '14px', letterSpacing: '0.05em' }],
+    xs: ['11px', { lineHeight: '16px', letterSpacing: '0.04em' }],
+    sm: ['12px', { lineHeight: '18px', letterSpacing: '0.02em' }],
+    base: ['13px', { lineHeight: '20px', letterSpacing: '0.01em' }],
+    lg: ['14px', { lineHeight: '22px' }],
+    xl: ['16px', { lineHeight: '24px' }],
+    '2xl': ['20px', { lineHeight: '28px' }],
+    '3xl': ['24px', { lineHeight: '32px' }],
+    '4xl': ['32px', { lineHeight: '40px' }],
+    '5xl': ['48px', { lineHeight: '56px' }],
   },
   fontWeight: {
     normal: '400',
@@ -141,7 +143,7 @@ export const typography = {
 
 // Animation timing functions
 export const easing = {
-  smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  smooth: 'ease-out',
   spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
   bounce: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
 } as const;
@@ -149,31 +151,36 @@ export const easing = {
 // Semantic color mappings for status indicators
 export type StatusType = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
-export const statusColors: Record<StatusType, { bg: string; text: string; border: string }> = {
+export const statusColors: Record<StatusType, { bg: string; text: string; border: string; glow: string }> = {
   success: {
-    bg: colors.success[50],
-    text: colors.success[700],
-    border: colors.success[200],
+    bg: 'rgba(0, 255, 0, 0.1)',
+    text: colors.green.DEFAULT,
+    border: colors.green.dim,
+    glow: colors.green.glow,
   },
   warning: {
-    bg: colors.warning[50],
-    text: colors.warning[700],
-    border: colors.warning[200],
+    bg: 'rgba(255, 170, 0, 0.1)',
+    text: colors.amber.DEFAULT,
+    border: colors.amber.dim,
+    glow: colors.amber.glow,
   },
   error: {
-    bg: colors.error[50],
-    text: colors.error[700],
-    border: colors.error[200],
+    bg: 'rgba(255, 51, 51, 0.1)',
+    text: colors.red.DEFAULT,
+    border: colors.red.dim,
+    glow: colors.red.glow,
   },
   info: {
-    bg: colors.primary[50],
-    text: colors.primary[700],
-    border: colors.primary[200],
+    bg: 'rgba(0, 136, 255, 0.1)',
+    text: colors.blue.DEFAULT,
+    border: colors.blue.dim,
+    glow: colors.blue.glow,
   },
   neutral: {
-    bg: colors.neutral[50],
-    text: colors.neutral[700],
-    border: colors.neutral[200],
+    bg: 'rgba(255, 255, 255, 0.05)',
+    text: colors.text.secondary,
+    border: colors.border.subtle,
+    glow: 'transparent',
   },
 };
 

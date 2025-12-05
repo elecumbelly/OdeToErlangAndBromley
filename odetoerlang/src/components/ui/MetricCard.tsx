@@ -2,7 +2,7 @@ import { useAnimatedValue } from '../../hooks/useAnimatedValue';
 import { cn } from '../../utils/cn';
 
 export type MetricTrend = 'up' | 'down' | 'neutral';
-export type MetricStatus = 'success' | 'warning' | 'error' | 'neutral';
+export type MetricStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info';
 
 interface MetricCardProps {
   label: string;
@@ -14,13 +14,31 @@ interface MetricCardProps {
   description?: string;
   className?: string;
   animate?: boolean;
+  glow?: boolean;
 }
 
 const statusStyles: Record<MetricStatus, string> = {
-  success: 'text-success-600',
-  warning: 'text-warning-600',
-  error: 'text-error-600',
-  neutral: 'text-neutral-900',
+  success: 'text-green',
+  warning: 'text-amber',
+  error: 'text-red',
+  neutral: 'text-text-primary',
+  info: 'text-cyan',
+};
+
+const statusBorderStyles: Record<MetricStatus, string> = {
+  success: 'border-green/20 hover:border-green/40',
+  warning: 'border-amber/20 hover:border-amber/40',
+  error: 'border-red/20 hover:border-red/40',
+  neutral: 'border-border-subtle hover:border-border-active',
+  info: 'border-cyan/20 hover:border-cyan/40',
+};
+
+const glowStyles: Record<MetricStatus, string> = {
+  success: 'hover:shadow-glow-green',
+  warning: 'hover:shadow-glow-amber',
+  error: 'hover:shadow-glow-red',
+  neutral: '',
+  info: 'hover:shadow-glow-cyan',
 };
 
 const trendIcons: Record<MetricTrend, string> = {
@@ -30,9 +48,9 @@ const trendIcons: Record<MetricTrend, string> = {
 };
 
 const trendStyles: Record<MetricTrend, string> = {
-  up: 'text-success-500',
-  down: 'text-error-500',
-  neutral: 'text-neutral-400',
+  up: 'text-green',
+  down: 'text-red',
+  neutral: 'text-text-muted',
 };
 
 export function MetricCard({
@@ -45,6 +63,7 @@ export function MetricCard({
   description,
   className,
   animate = true,
+  glow = false,
 }: MetricCardProps) {
   const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
   const displayValue = useAnimatedValue(numericValue, animate ? 400 : 0);
@@ -60,12 +79,16 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'rounded-apple bg-white p-4 shadow-apple transition-all duration-normal hover:-translate-y-0.5 hover:shadow-apple-lg',
+        'rounded-lg bg-bg-surface border p-4 transition-all duration-fast',
+        statusBorderStyles[status],
+        glow && glowStyles[status],
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <span className="text-sm font-medium text-neutral-500">{label}</span>
+        <span className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">
+          {label}
+        </span>
         {trend && (
           <span className={cn('text-sm font-medium', trendStyles[trend])}>
             {trendIcons[trend]}
@@ -74,13 +97,15 @@ export function MetricCard({
       </div>
 
       <div className="mt-2 flex items-baseline gap-1">
-        <span className={cn('text-2xl font-semibold tabular-nums', statusStyles[status])}>
+        <span className={cn('text-2xl font-bold tabular-nums', statusStyles[status])}>
           {formattedValue}
         </span>
-        {unit && <span className="text-sm text-neutral-400">{unit}</span>}
+        {unit && <span className="text-xs text-text-muted">{unit}</span>}
       </div>
 
-      {description && <p className="mt-2 text-xs text-neutral-500">{description}</p>}
+      {description && (
+        <p className="mt-2 text-2xs text-text-muted">{description}</p>
+      )}
     </div>
   );
 }
