@@ -15,6 +15,7 @@ export interface ScenarioConfig {
   channel?: ChannelType; // Channel type (defaults to 'voice')
   campaignId?: number;   // Optional campaign ID for database integration
   skillId?: number;      // Optional skill ID for database integration
+  seed?: number;        // Random seed for reproducible simulations (optional)
 }
 
 export interface Customer {

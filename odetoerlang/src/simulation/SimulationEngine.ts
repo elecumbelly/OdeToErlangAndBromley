@@ -20,6 +20,20 @@ import {
   type ContactRecord,
 } from './types';
 
+/**
+ * Simple seeded pseudo-random number generator (Mulberry32)
+ * Provides deterministic random values when a seed is specified.
+ * Returns a function that generates values in [0, 1)
+ */
+function createSeededRng(seed: number): () => number {
+  return function() {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export class SimulationEngine {
   private config: ScenarioConfig;
   private now: number = 0;
@@ -30,9 +44,11 @@ export class SimulationEngine {
   private nextCustomerId: number = 1;
   private stats: SimulationStats;
   private contactRecords: ContactRecord[] = [];
+  private random: () => number; // Seeded or unseeded RNG
 
   constructor(config: ScenarioConfig) {
     this.config = { ...config };
+    this.random = config.seed !== undefined ? createSeededRng(config.seed) : Math.random;
     this.stats = this.initStats();
     this.initServers();
     this.scheduleFirstArrival();
@@ -44,6 +60,8 @@ export class SimulationEngine {
   reset(config?: ScenarioConfig): void {
     if (config) {
       this.config = { ...config };
+      // Reset RNG if new config has a seed
+      this.random = config.seed !== undefined ? createSeededRng(config.seed) : Math.random;
     }
 
     this.now = 0;
@@ -476,11 +494,12 @@ export class SimulationEngine {
 
   /**
    * Generate exponentially distributed random variable
+   * Uses seeded RNG if a seed was provided in config (for reproducibility)
    * @param rate - rate parameter (lambda or mu)
    * @returns random value with exponential distribution
    */
   private exponential(rate: number): number {
     // Exponential distribution: -ln(U) / rate where U ~ Uniform(0,1)
-    return -Math.log(Math.random()) / rate;
+    return -Math.log(this.random()) / rate;
   }
 }

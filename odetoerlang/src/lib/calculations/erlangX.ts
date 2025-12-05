@@ -238,9 +238,16 @@ export function solveAgentsErlangX(
     baseTraffic < 1 ? 10 : Math.ceil(baseTraffic * 3)
   );
 
-  for (let agents = minAgents; agents <= maxAgents; agents++) {
+  // Binary search: service level is monotonically increasing with agents
+  // O(log n) instead of O(n) - critical for high traffic volumes
+  let left = minAgents;
+  let right = maxAgents;
+  let result: number | null = null;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
     const sl = calculateServiceLevelX(
-      agents,
+      mid,
       baseTraffic,
       aht,
       thresholdSeconds,
@@ -248,11 +255,14 @@ export function solveAgentsErlangX(
     );
 
     if (sl >= targetSL) {
-      return agents;
+      result = mid; // Found a valid solution, but try to find smaller
+      right = mid - 1;
+    } else {
+      left = mid + 1;
     }
   }
 
-  return null; // Cannot achieve target
+  return result;
 }
 
 /**

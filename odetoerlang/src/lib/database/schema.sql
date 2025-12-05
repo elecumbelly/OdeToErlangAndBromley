@@ -1,6 +1,21 @@
 -- OdeToErlang Database Schema
--- 21 Tables for WFM Ready Reckoner
+-- 22 Tables for WFM Ready Reckoner (21 + schema_version)
 -- All values customisable, time-bound where appropriate
+
+-- ============================================================================
+-- SCHEMA VERSIONING
+-- ============================================================================
+
+-- Schema version tracking for database migrations
+-- Version 1: Initial schema (v0.1.0)
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER PRIMARY KEY,
+  applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  description TEXT
+);
+
+-- Insert version 1 if not exists
+INSERT OR IGNORE INTO schema_version (version, description) VALUES (1, 'Initial schema - WFM Ready Reckoner');
 
 -- ============================================================================
 -- STAFF & ORGANISATION (6 tables)

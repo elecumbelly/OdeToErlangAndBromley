@@ -218,14 +218,24 @@ export function solveAgentsErlangA(
     minAgents + 50
   );
 
-  for (let agents = minAgents; agents <= maxAgents; agents++) {
-    const occupancy = trafficIntensity / agents;
+  // Binary search: service level is monotonically increasing with agents
+  // O(log n) instead of O(n) - critical for high traffic volumes
+  let left = minAgents;
+  let right = maxAgents;
+  let result: number | null = null;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const occupancy = trafficIntensity / mid;
+
+    // Skip agents that exceed max occupancy
     if (occupancy > maxOccupancy) {
+      left = mid + 1;
       continue;
     }
 
     const sl = calculateServiceLevelWithAbandonment(
-      agents,
+      mid,
       trafficIntensity,
       aht,
       thresholdSeconds,
@@ -233,11 +243,14 @@ export function solveAgentsErlangA(
     );
 
     if (sl >= targetSL) {
-      return agents;
+      result = mid; // Found a valid solution, but try to find smaller
+      right = mid - 1;
+    } else {
+      left = mid + 1;
     }
   }
 
-  return null;
+  return result;
 }
 
 /**

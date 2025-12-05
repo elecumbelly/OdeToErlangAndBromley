@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { SimulationEngine } from './SimulationEngine';
-import type { ScenarioConfig, ContactRecord, Snapshot } from './types';
+import type { ScenarioConfig } from './types';
 
 /**
  * SimulationEngine Test Suite
