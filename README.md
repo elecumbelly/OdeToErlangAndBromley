@@ -1,8 +1,8 @@
-# 📊 OdeToErlang
+# 📊 OdeToErlangAndBromleyAndBromley
 
 > **The Ultimate Contact Center Capacity Planning Calculator**
 
-A comprehensive, browser-based workforce management tool for calculating staffing requirements in modern contact centers. Named in tribute to **A.K. Erlang** and the mathematical foundations of queuing theory.
+A comprehensive, browser-based workforce management tool for calculating staffing requirements in modern contact centers. Named in tribute to **A.K. Erlang** and the mathematical foundations of queuing theory, and **Bromley** - a wonderful place where great ideas happen.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -11,11 +11,11 @@ A comprehensive, browser-based workforce management tool for calculating staffin
 
 ---
 
-## ✨ Why OdeToErlang?
+## ✨ Why OdeToErlangAndBromley?
 
 **Problem:** Contact center managers struggle with complex staffing calculations across multiple channels, skills, and models. Most tools are expensive, inflexible, or require sending sensitive data to third-party servers.
 
-**Solution:** OdeToErlang is a 100% browser-based, mathematically correct capacity planning calculator that:
+**Solution:** OdeToErlangAndBromley is a 100% browser-based, mathematically correct capacity planning calculator that:
 - ✅ Works entirely in your browser (no data leaves your machine)
 - ✅ Supports Erlang C, A, and X models (from basic to most accurate)
 - ✅ Handles multi-channel environments (voice, chat, email, video, custom)
@@ -81,8 +81,8 @@ A comprehensive, browser-based workforce management tool for calculating staffin
 
 ```bash
 # Clone the repository
-git clone https://github.com/elecumbelly/OdeToErlang.git
-cd OdeToErlang/odetoerlang
+git clone https://github.com/elecumbelly/OdeToErlangAndBromley.git
+cd OdeToErlangAndBromley/odetoerlang
 
 # Install dependencies
 npm install
@@ -280,7 +280,7 @@ Typical: 20-35%
 ## 📁 Project Structure
 
 ```
-OdeToErlang/
+OdeToErlangAndBromley/
 ├── odetoerlang/               # Main application directory
 │   ├── public/                # Static assets
 │   ├── src/
@@ -395,7 +395,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 - Queuing theory researchers
 
 ### Built With
-- ❤️ and ☕ by the OdeToErlang team
+- ❤️ and ☕ by the OdeToErlangAndBromley team
 - Powered by modern web technologies
 - Validated against industry-standard tools
 
@@ -403,8 +403,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## 📞 Support & Contact
 
-- **Issues:** [GitHub Issues](https://github.com/elecumbelly/OdeToErlang/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/elecumbelly/OdeToErlang/discussions)
+- **Issues:** [GitHub Issues](https://github.com/elecumbelly/OdeToErlangAndBromley/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/elecumbelly/OdeToErlangAndBromley/discussions)
 - **Email:** [Contact via GitHub profile](https://github.com/elecumbelly)
 
 ---
@@ -433,7 +433,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## ⭐ Star History
 
-If you find OdeToErlang useful, please consider giving it a star on GitHub!
+If you find OdeToErlangAndBromley useful, please consider giving it a star on GitHub!
 
 ---
 

@@ -1,4 +1,4 @@
-# CLAUDE.md - OdeToErlang
+# CLAUDE.md - OdeToErlangAndBromley
 
 Contact center calculator (React/TS/Vite). Erlang B/C/A/X formulas.
 
