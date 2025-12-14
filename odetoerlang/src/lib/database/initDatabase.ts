@@ -18,9 +18,9 @@ export async function initDatabase(): Promise<Database> {
   if (db) return db;
 
   // Load sql.js WASM from local bundle (enables offline support)
-  // WASM file is in /public folder, served at root
+  // WASM file is in /public folder, served at base URL
   const SQL = await initSqlJs({
-    locateFile: (file) => `/${file}`,
+    locateFile: (file) => `${import.meta.env.BASE_URL}${file}`,
   });
 
   // One-time migration from localStorage to IndexedDB
@@ -179,7 +179,7 @@ export async function importDatabase(file: File) {
   const uint8Array = new Uint8Array(arrayBuffer);
 
   const SQL = await initSqlJs({
-    locateFile: (f) => new URL(`/${f}`, import.meta.url).href,
+    locateFile: (f) => `${import.meta.env.BASE_URL}${f}`,
   });
 
   db = new SQL.Database(uint8Array);
