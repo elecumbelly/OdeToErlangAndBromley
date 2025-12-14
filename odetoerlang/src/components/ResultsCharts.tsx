@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { calculateServiceLevel, calculateOccupancy } from '../lib/calculations/erlangC';
 import { calculateServiceLevelWithAbandonment } from '../lib/calculations/erlangA';
-import { calculateServiceLevelX } from '../lib/calculations/erlangX';
 
 const ResultsCharts: React.FC = () => {
   const { inputs, results } = useCalculatorStore();
@@ -17,16 +16,8 @@ const ResultsCharts: React.FC = () => {
       const v = Math.max(1, Math.round(baseVol * (1 + s)));
       const traffic = (v * inputs.aht) / (inputs.intervalMinutes * 60);
       let sl = 0;
-      if (inputs.model === 'erlangA') {
+      if (inputs.model === 'A') {
         sl = calculateServiceLevelWithAbandonment(
-          results.requiredAgents,
-          traffic,
-          inputs.aht,
-          inputs.thresholdSeconds,
-          inputs.averagePatience
-        ) * 100;
-      } else if (inputs.model === 'erlangX') {
-        sl = calculateServiceLevelX(
           results.requiredAgents,
           traffic,
           inputs.aht,

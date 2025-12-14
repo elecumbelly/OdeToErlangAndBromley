@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { calculateServiceLevel, calculateOccupancy, calculateASA } from '../lib/calculations/erlangC';
@@ -26,7 +26,7 @@ interface IntervalDataPoint {
   trafficIntensity: number;
 }
 
-export default function ChartsPanel() {
+export default memo(function ChartsPanel() {
   const { inputs } = useCalculatorStore();
 
   // Generate service level curve data (varying agent count)
@@ -267,4 +267,4 @@ export default function ChartsPanel() {
       </div>
     </div>
   );
-}
+});

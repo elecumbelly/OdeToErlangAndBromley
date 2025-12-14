@@ -1,19 +1,20 @@
 /**
- * Type definitions for OdeToErlang
+ * Type definitions for OdeToErlangAndBromley
  */
 
-export type ErlangModel = 'erlangC' | 'erlangA' | 'erlangX';
+export type ErlangVariant = 'A' | 'B' | 'C';
 
 export interface CalculationInputs {
   volume: number;
-  aht: number; // Average Handle Time in seconds
-  intervalMinutes: number; // 15, 30, or 60
-  targetSLPercent: number; // Target service level % (e.g., 80 for 80/20)
-  thresholdSeconds: number; // Target threshold in seconds (e.g., 20 for 80/20)
-  shrinkagePercent: number; // Shrinkage % (e.g., 25 for 25%)
-  maxOccupancy: number; // Maximum occupancy % (e.g., 90 for 90%)
-  model: ErlangModel; // Which Erlang formula to use
-  averagePatience: number; // Average customer patience in seconds (for Erlang A/X)
+  aht: number;
+  intervalMinutes: number;
+  targetSLPercent: number;
+  thresholdSeconds: number;
+  shrinkagePercent: number;
+  maxOccupancy: number;
+  model: ErlangVariant | string;
+  averagePatience: number;
+  concurrency: number;
 }
 
 export interface CalculationResults {

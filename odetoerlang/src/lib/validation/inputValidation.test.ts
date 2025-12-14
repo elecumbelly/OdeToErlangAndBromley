@@ -6,6 +6,7 @@ import {
   type ValidationResult,
 } from './inputValidation';
 import type { CalculationInputs } from '../../types';
+import { createDefaultInputs as createValidInputs } from '../../tests/fixtures/calculatorInputs';
 
 /**
  * inputValidation.ts Test Suite
@@ -18,19 +19,7 @@ import type { CalculationInputs } from '../../types';
  * - Helper functions (isValidInput, getFieldError)
  */
 
-// Default valid inputs for testing
-const createValidInputs = (overrides: Partial<CalculationInputs> = {}): CalculationInputs => ({
-  volume: 100,
-  aht: 180,
-  intervalMinutes: 30,
-  targetSLPercent: 80,
-  thresholdSeconds: 20,
-  shrinkagePercent: 25,
-  maxOccupancy: 85,
-  model: 'erlangC',
-  averagePatience: 120,
-  ...overrides,
-});
+
 
 describe('inputValidation - Basic Functionality', () => {
   test('valid inputs return valid: true with empty errors', () => {
@@ -298,7 +287,7 @@ describe('inputValidation - Max Occupancy', () => {
 describe('inputValidation - Average Patience (Model-Dependent)', () => {
   test('patience is ignored for Erlang C model', () => {
     const inputs = createValidInputs({
-      model: 'erlangC',
+      model: 'C',
       averagePatience: 5, // Below minimum, but should be ignored
     });
     const result = validateCalculationInputs(inputs);
@@ -308,7 +297,7 @@ describe('inputValidation - Average Patience (Model-Dependent)', () => {
 
   test('patience below minimum is invalid for Erlang A', () => {
     const inputs = createValidInputs({
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 9,
     });
     const result = validateCalculationInputs(inputs);
@@ -321,7 +310,7 @@ describe('inputValidation - Average Patience (Model-Dependent)', () => {
 
   test('patience at minimum (10 seconds) is valid for Erlang A', () => {
     const inputs = createValidInputs({
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 10,
     });
     const result = validateCalculationInputs(inputs);
@@ -331,7 +320,7 @@ describe('inputValidation - Average Patience (Model-Dependent)', () => {
 
   test('patience exceeding max is invalid for Erlang A', () => {
     const inputs = createValidInputs({
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 1801,
     });
     const result = validateCalculationInputs(inputs);
@@ -344,7 +333,7 @@ describe('inputValidation - Average Patience (Model-Dependent)', () => {
 
   test('patience at max (1800 seconds = 30 minutes) is valid for Erlang A', () => {
     const inputs = createValidInputs({
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 1800,
     });
     const result = validateCalculationInputs(inputs);
@@ -352,9 +341,9 @@ describe('inputValidation - Average Patience (Model-Dependent)', () => {
     expect(getFieldError(result, 'averagePatience')).toBeUndefined();
   });
 
-  test('patience below minimum is invalid for Erlang X', () => {
+  test('patience below minimum is invalid for Erlang A', () => {
     const inputs = createValidInputs({
-      model: 'erlangX',
+      model: 'A',
       averagePatience: 5,
     });
     const result = validateCalculationInputs(inputs);
@@ -365,9 +354,9 @@ describe('inputValidation - Average Patience (Model-Dependent)', () => {
     );
   });
 
-  test('typical patience (120 seconds) is valid for Erlang X', () => {
+  test('typical patience (120 seconds) is valid for Erlang A', () => {
     const inputs = createValidInputs({
-      model: 'erlangX',
+      model: 'A',
       averagePatience: 120,
     });
     const result = validateCalculationInputs(inputs);
@@ -458,8 +447,9 @@ describe('inputValidation - Multiple Errors', () => {
       thresholdSeconds: 0,
       shrinkagePercent: 100,
       maxOccupancy: 40,
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 5,
+      concurrency: 1,
     };
     const result = validateCalculationInputs(inputs);
 
@@ -519,8 +509,9 @@ describe('inputValidation - Integration / Realistic Scenarios', () => {
       thresholdSeconds: 1,
       shrinkagePercent: 0,
       maxOccupancy: 50,
-      model: 'erlangC',
+      model: 'C',
       averagePatience: 10,
+      concurrency: 1,
     };
     const result = validateCalculationInputs(inputs);
 
@@ -537,8 +528,9 @@ describe('inputValidation - Integration / Realistic Scenarios', () => {
       thresholdSeconds: 600,
       shrinkagePercent: 99,
       maxOccupancy: 100,
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 1800,
+      concurrency: 1,
     };
     const result = validateCalculationInputs(inputs);
 
@@ -555,8 +547,9 @@ describe('inputValidation - Integration / Realistic Scenarios', () => {
       thresholdSeconds: 20,
       shrinkagePercent: 25,
       maxOccupancy: 85,
-      model: 'erlangC',
+      model: 'C',
       averagePatience: 120,
+      concurrency: 1,
     };
     const result = validateCalculationInputs(inputs);
 
@@ -573,8 +566,9 @@ describe('inputValidation - Integration / Realistic Scenarios', () => {
       thresholdSeconds: 30,
       shrinkagePercent: 30,
       maxOccupancy: 90,
-      model: 'erlangA',
+      model: 'A',
       averagePatience: 60,
+      concurrency: 1,
     };
     const result = validateCalculationInputs(inputs);
 

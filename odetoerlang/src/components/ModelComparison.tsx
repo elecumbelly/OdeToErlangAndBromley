@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { calculateStaffingMetrics, calculateTrafficIntensity, calculateFTE, calculateOccupancy } from '../lib/calculations/erlangC';
 import { calculateErlangAMetrics } from '../lib/calculations/erlangA';
-import { calculateErlangXMetrics } from '../lib/calculations/erlangX';
+import { calculateErlangB, calculateRequiredLinesB } from '../lib/calculations/erlangB';
 
 interface ComparisonInputs {
   volume: number;
@@ -23,8 +23,6 @@ interface ModelResults {
   occupancy: number;
   abandonmentRate?: number;
   expectedAbandonments?: number;
-  retrialProbability?: number;
-  virtualTraffic?: number;
 }
 
 export default function ModelComparison() {
@@ -92,36 +90,23 @@ export default function ModelComparison() {
       });
     }
 
-    // Erlang X
-    const erlangX = calculateErlangXMetrics({
-      volume: inputs.volume,
-      aht: inputs.aht,
-      intervalMinutes: inputs.intervalMinutes,
-      targetSLPercent: inputs.targetSLPercent,
-      thresholdSeconds: inputs.thresholdSeconds,
-      shrinkagePercent: inputs.shrinkagePercent,
-      maxOccupancy: inputs.maxOccupancy,
-      averagePatience: inputs.averagePatience
+    // Erlang B (blocking/loss model - no queue)
+    const traffic = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
+    const targetBlocking = 1 - (inputs.targetSLPercent / 100); // Convert SL target to blocking target
+    const requiredLinesB = calculateRequiredLinesB(traffic, targetBlocking);
+    const actualBlocking = calculateErlangB(traffic, requiredLinesB);
+    const carriedTraffic = traffic * (1 - actualBlocking);
+    const occupancyB = requiredLinesB > 0 ? (carriedTraffic / requiredLinesB) * 100 : 0;
+    const fteB = calculateFTE(requiredLinesB, inputs.shrinkagePercent / 100);
+
+    comparisonResults.push({
+      modelName: 'Erlang B',
+      requiredAgents: requiredLinesB,
+      totalFTE: fteB,
+      serviceLevel: (1 - actualBlocking) * 100, // Success rate
+      asa: 0, // No queue in Erlang B
+      occupancy: occupancyB
     });
-
-    if (erlangX) {
-      const traffic = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
-      const fteX = calculateFTE(erlangX.requiredAgents, inputs.shrinkagePercent / 100);
-      const occX = calculateOccupancy(traffic, erlangX.requiredAgents);
-
-      comparisonResults.push({
-        modelName: 'Erlang X',
-        requiredAgents: erlangX.requiredAgents,
-        totalFTE: fteX,
-        serviceLevel: erlangX.serviceLevel * 100,
-        asa: erlangX.asa,
-        occupancy: occX * 100,
-        abandonmentRate: erlangX.abandonmentRate,
-        expectedAbandonments: erlangX.expectedAbandonments,
-        retrialProbability: erlangX.retrialProbability,
-        virtualTraffic: erlangX.virtualTraffic
-      });
-    }
 
     return comparisonResults;
   }, [inputs]);
@@ -152,10 +137,10 @@ export default function ModelComparison() {
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Model Comparison: Erlang C vs A vs X</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Model Comparison: Erlang B vs C vs A</h2>
         <p className="text-sm text-gray-600 mb-6">
-          Compare staffing requirements across all three mathematical models to see the impact of
-          accounting for customer abandonment and retrials.
+          Compare staffing requirements across the three Erlang models: B (blocking/loss),
+          C (infinite patience queue), and A (queue with abandonment).
         </p>
 
         {/* Input Parameters */}
@@ -367,39 +352,6 @@ export default function ModelComparison() {
                 </td>
               </tr>
 
-              {/* Retrial Probability (Erlang X only) */}
-              <tr className="hover:bg-gray-50 bg-purple-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  Retrial Probability
-                </td>
-                {results.map((result) => (
-                  <td key={result.modelName} className="px-6 py-4 whitespace-nowrap text-sm text-center text-purple-600 font-semibold">
-                    {result.retrialProbability !== undefined
-                      ? `${formatNumber(result.retrialProbability * 100, 1)}%`
-                      : 'N/A'}
-                  </td>
-                ))}
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                  -
-                </td>
-              </tr>
-
-              {/* Virtual Traffic (Erlang X only) */}
-              <tr className="hover:bg-gray-50 bg-purple-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  Virtual Traffic (Erlangs)
-                </td>
-                {results.map((result) => (
-                  <td key={result.modelName} className="px-6 py-4 whitespace-nowrap text-sm text-center text-purple-600">
-                    {result.virtualTraffic !== undefined
-                      ? formatNumber(result.virtualTraffic, 2)
-                      : 'N/A'}
-                  </td>
-                ))}
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                  -
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -408,33 +360,23 @@ export default function ModelComparison() {
       {/* Key Insights */}
       {results.length === 3 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">📊 Key Insights</h3>
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">Key Insights</h3>
           <ul className="space-y-2 text-sm text-blue-800">
             <li>
-              <strong>Agent Difference (C → X):</strong> Erlang C requires{' '}
-              {results[0].requiredAgents - results[2].requiredAgents} more agents than Erlang X
-              ({formatNumber(((results[0].requiredAgents - results[2].requiredAgents) / results[2].requiredAgents) * 100, 1)}% over-staffing)
+              <strong>Erlang B (Loss):</strong> No queue - callers blocked if all lines busy.
+              Best for trunk/line capacity planning. Shows {results.find(r => r.modelName === 'Erlang B')?.requiredAgents} lines needed.
             </li>
             <li>
-              <strong>FTE Cost Impact:</strong> Using Erlang C vs X would cost{' '}
-              {formatNumber(results[0].totalFTE - results[2].totalFTE, 1)} additional FTE
-              (${formatNumber((results[0].totalFTE - results[2].totalFTE) * 50000, 0)} annual cost at $50k/FTE)
+              <strong>Erlang C (Queue):</strong> Assumes infinite patience - all callers wait.
+              Tends to overestimate staffing needs. Shows {results.find(r => r.modelName === 'Erlang C')?.requiredAgents} agents needed.
             </li>
             <li>
-              <strong>Abandonment Reality:</strong> Erlang X predicts{' '}
-              {formatNumber((results[2].abandonmentRate || 0) * 100, 1)}% abandonment rate,
-              while Erlang C assumes 0% (unrealistic)
+              <strong>Erlang A (Abandonment):</strong> Most realistic - models customer patience.
+              Predicts {formatNumber((results.find(r => r.modelName === 'Erlang A')?.abandonmentRate || 0) * 100, 1)}% abandonment rate.
             </li>
-            {results[2].retrialProbability && (
-              <li>
-                <strong>Retrial Effect:</strong> {formatNumber((results[2].retrialProbability || 0) * 100, 1)}% of
-                abandoned customers call back, increasing virtual traffic by{' '}
-                {formatNumber(((results[2].virtualTraffic! / calculateTrafficIntensity(inputs.volume, inputs.aht, inputs.intervalMinutes * 60)) - 1) * 100, 1)}%
-              </li>
-            )}
             <li className="mt-3 pt-3 border-t border-blue-300">
-              <strong>💡 Recommendation:</strong> Use <span className="font-bold">Erlang X</span> for production capacity planning.
-              It provides the most accurate staffing levels (±2% error) and accounts for real customer behavior.
+              <strong>Recommendation:</strong> Use <span className="font-bold">Erlang A</span> for contact center staffing
+              (accounts for real customer behavior). Use <span className="font-bold">Erlang B</span> for trunk/line planning.
             </li>
           </ul>
         </div>

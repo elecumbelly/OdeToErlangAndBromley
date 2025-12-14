@@ -6,51 +6,51 @@ export default {
   ],
   theme: {
     extend: {
-      // Colors - Vivid on Black
+      // Colors - Use CSS variables for theme switching
       colors: {
         // Background layers
         bg: {
-          base: '#000000',
-          surface: '#0a0a0a',
-          elevated: '#111111',
-          hover: '#1a1a1a',
+          base: 'var(--color-bg-base)',
+          surface: 'var(--color-bg-surface)',
+          elevated: 'var(--color-bg-elevated)',
+          hover: 'var(--color-bg-hover)',
         },
         // Text
         text: {
-          primary: '#ffffff',
-          secondary: '#888888',
-          muted: '#555555',
-          inverse: '#000000',
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          muted: 'var(--color-text-muted)',
+          inverse: 'var(--color-bg-base)',
         },
         // Borders
         border: {
-          subtle: '#333333',
-          muted: '#222222',
-          active: '#00fff7',
+          subtle: 'var(--color-border-subtle)',
+          muted: 'var(--color-border-muted)',
+          active: 'var(--color-border-active)',
         },
         // Vivid accent colors
         cyan: {
-          DEFAULT: '#00fff7',
+          DEFAULT: 'var(--color-cyan)',
           dim: '#00cccc',
         },
         magenta: {
-          DEFAULT: '#ff00ff',
+          DEFAULT: 'var(--color-magenta)',
           dim: '#cc00cc',
         },
         green: {
-          DEFAULT: '#00ff00',
+          DEFAULT: 'var(--color-green)',
           dim: '#00cc00',
         },
         amber: {
-          DEFAULT: '#ffaa00',
+          DEFAULT: 'var(--color-amber)',
           dim: '#cc8800',
         },
         red: {
-          DEFAULT: '#ff3333',
+          DEFAULT: 'var(--color-red)',
           dim: '#cc2929',
         },
         blue: {
-          DEFAULT: '#0088ff',
+          DEFAULT: 'var(--color-blue)',
           dim: '#006acc',
         },
       },

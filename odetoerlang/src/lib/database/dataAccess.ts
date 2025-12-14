@@ -31,6 +31,7 @@ export interface Scenario {
   scenario_name: string;
   description: string | null;
   is_baseline: boolean;
+  erlang_model: 'B' | 'C' | 'A';  // Which Erlang model to use for this scenario
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -223,7 +224,8 @@ export function getBaselineScenario(): Scenario | null {
 export function createScenario(
   name: string,
   description?: string,
-  isBaseline: boolean = false
+  isBaseline: boolean = false,
+  erlangModel: 'B' | 'C' | 'A' = 'C'
 ): number {
   const db = getDatabase();
 
@@ -233,9 +235,9 @@ export function createScenario(
   }
 
   db.run(
-    `INSERT INTO Scenarios (scenario_name, description, is_baseline, created_by)
-     VALUES (?, ?, ?, ?)`,
-    [name, description ?? null, isBaseline ? 1 : 0, 'system']
+    `INSERT INTO Scenarios (scenario_name, description, is_baseline, erlang_model, created_by)
+     VALUES (?, ?, ?, ?, ?)`,
+    [name, description ?? null, isBaseline ? 1 : 0, erlangModel, 'system']
   );
 
   const result = db.exec('SELECT last_insert_rowid()');
@@ -309,6 +311,14 @@ export function getAssumptions(campaignId: number | null = null): Assumption[] {
 }
 
 /**
+ * Get ALL assumptions (Global + Campaign specific)
+ */
+export function getAllAssumptions(): Assumption[] {
+  const db = getDatabase();
+  return execToArray<Assumption>(db.exec('SELECT * FROM Assumptions ORDER BY campaign_id, assumption_type'));
+}
+
+/**
  * Get current valid assumptions (filters by date)
  */
 export function getCurrentAssumptions(
@@ -373,19 +383,28 @@ export function upsertAssumption(
   return result[0].values[0][0] as number;
 }
 
-// ============================================================================
-// CLIENTS
-// ============================================================================
+// --- CLIENTS ---
 
 /**
  * Get all clients
  */
-export function getClients(activeOnly: boolean = true): Client[] {
+export function getClients(activeOnly: boolean = true, limit: number = 50, offset: number = 0): PaginatedResult<Client> {
   const db = getDatabase();
+
+  const countSql = activeOnly
+    ? 'SELECT COUNT(*) as count FROM Clients WHERE active = 1'
+    : 'SELECT COUNT(*) as count FROM Clients';
+  const countResult = db.exec(countSql);
+  const total = countResult[0]?.values[0]?.[0] as number ?? 0;
+
   const sql = activeOnly
-    ? 'SELECT * FROM Clients WHERE active = 1 ORDER BY client_name'
-    : 'SELECT * FROM Clients ORDER BY client_name';
-  return execToArray<Client>(db.exec(sql));
+    ? `SELECT * FROM Clients WHERE active = 1 ORDER BY client_name LIMIT ${limit} OFFSET ${offset}`
+    : `SELECT * FROM Clients ORDER BY client_name LIMIT ${limit} OFFSET ${offset}`;
+
+  const result = db.exec(sql);
+  const data = execToArray<Client>(result);
+
+  return { data, total };
 }
 
 /**
@@ -459,7 +478,912 @@ export function saveForecast(forecast: Omit<Forecast, 'id' | 'created_at'>): num
 }
 
 // ============================================================================
-// UTILITY
+// HISTORICAL DATA
+// ============================================================================
+
+export interface HistoricalData {
+  id?: number; // Optional, as it's AUTOINCREMENT
+  import_batch_id?: number; // Optional, can be null
+  campaign_id: number;
+  date: string; // YYYY-MM-DD
+  interval_start?: string; // HH:MM:SS (optional)
+  interval_end?: string; // HH:MM:SS (optional)
+  volume: number;
+  aht?: number;
+  abandons?: number;
+  sla_achieved?: number; // 0.0-1.0
+  asa?: number; // seconds
+  actual_fte?: number;
+  actual_agents?: number;
+  created_at?: string; // Optional, defaults to CURRENT_TIMESTAMP
+}
+
+/**
+ * Saves a batch of historical data records into the HistoricalData table.
+ * @param data An array of HistoricalData objects to insert.
+ */
+export function saveHistoricalDataBatch(data: HistoricalData[]): void {
+  const db = getDatabase();
+
+  if (data.length === 0) {
+    return;
+  }
+
+  // Use a transaction for performance with batch inserts
+  db.exec('BEGIN TRANSACTION;');
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO HistoricalData (
+        import_batch_id, campaign_id, date, interval_start, interval_end,
+        volume, aht, abandons, sla_achieved, asa, actual_fte, actual_agents
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    data.forEach(row => {
+      stmt.run([
+        row.import_batch_id ?? null,
+        row.campaign_id,
+        row.date,
+        row.interval_start ?? null,
+        row.interval_end ?? null,
+        row.volume,
+        row.aht ?? null,
+        row.abandons ?? null,
+        row.sla_achieved ?? null,
+        row.asa ?? null,
+        row.actual_fte ?? null,
+        row.actual_agents ?? null,
+      ]);
+    });
+
+    stmt.free();
+    db.exec('COMMIT;');
+    saveDatabase();
+  } catch (error) {
+    db.exec('ROLLBACK;');
+    console.error('Failed to save historical data batch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get historical data for a campaign within a date range
+ */
+export function getHistoricalData(
+  campaignId: number | null,
+  startDate: string,
+  endDate: string
+): HistoricalData[] {
+  const db = getDatabase();
+  let sql = `
+    SELECT * FROM HistoricalData
+    WHERE date >= ? AND date <= ?
+  `;
+  const params: SqlValue[] = [startDate, endDate];
+
+  if (campaignId !== null) {
+    sql += ' AND campaign_id = ?';
+    params.push(campaignId);
+  }
+
+  sql += ' ORDER BY date ASC, interval_start ASC';
+
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+
+  const results: HistoricalData[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    results.push({
+      id: row.id as number,
+      import_batch_id: row.import_batch_id as number | undefined,
+      campaign_id: row.campaign_id as number,
+      date: row.date as string,
+      interval_start: row.interval_start as string | undefined,
+      interval_end: row.interval_end as string | undefined,
+      volume: row.volume as number,
+      aht: row.aht as number | undefined,
+      abandons: row.abandons as number | undefined,
+      sla_achieved: row.sla_achieved as number | undefined,
+      asa: row.asa as number | undefined,
+      actual_fte: row.actual_fte as number | undefined,
+      actual_agents: row.actual_agents as number | undefined,
+      created_at: row.created_at as string | undefined,
+    });
+  }
+  stmt.free();
+
+  return results;
+}
+
+/**
+ * Get distinct dates with historical data for a campaign
+ */
+export function getHistoricalDateRange(
+  campaignId: number | null
+): { minDate: string | null; maxDate: string | null; recordCount: number } {
+  const db = getDatabase();
+  let sql = `
+    SELECT MIN(date) as min_date, MAX(date) as max_date, COUNT(*) as record_count
+    FROM HistoricalData
+  `;
+  const params: SqlValue[] = [];
+
+  if (campaignId !== null) {
+    sql += ' WHERE campaign_id = ?';
+    params.push(campaignId);
+  }
+
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+
+  let result = { minDate: null as string | null, maxDate: null as string | null, recordCount: 0 };
+  if (stmt.step()) {
+    const row = stmt.getAsObject();
+    result = {
+      minDate: row.min_date as string | null,
+      maxDate: row.max_date as string | null,
+      recordCount: row.record_count as number
+    };
+  }
+  stmt.free();
+
+  return result;
+}
+
+/**
+ * Get daily volume summary for historical data
+ */
+export function getHistoricalVolumeSummary(
+  campaignId: number | null,
+  startDate: string,
+  endDate: string
+): Array<{ date: string; totalVolume: number; avgAht: number; avgSla: number }> {
+  const db = getDatabase();
+  let sql = `
+    SELECT
+      date,
+      SUM(volume) as total_volume,
+      AVG(aht) as avg_aht,
+      AVG(sla_achieved) as avg_sla
+    FROM HistoricalData
+    WHERE date >= ? AND date <= ?
+  `;
+  const params: SqlValue[] = [startDate, endDate];
+
+  if (campaignId !== null) {
+    sql += ' AND campaign_id = ?';
+    params.push(campaignId);
+  }
+
+  sql += ' GROUP BY date ORDER BY date ASC';
+
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+
+  const results: Array<{ date: string; totalVolume: number; avgAht: number; avgSla: number }> = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    results.push({
+      date: row.date as string,
+      totalVolume: row.total_volume as number,
+      avgAht: row.avg_aht as number || 0,
+      avgSla: row.avg_sla as number || 0
+    });
+  }
+  stmt.free();
+
+  return results;
+}
+
+/**
+ * Delete historical data by import batch
+ */
+export function deleteHistoricalDataBatch(importBatchId: number): number {
+  const db = getDatabase();
+  db.run('DELETE FROM HistoricalData WHERE import_batch_id = ?', [importBatchId]);
+  saveDatabase();
+
+  // Return count of deleted rows (SQLite doesn't directly return this, so we estimate)
+  return 0; // Simplified - real implementation would track count
+}
+
+// ============================================================================
+// CALENDAR EVENTS
+// ============================================================================
+
+export interface CalendarEvent {
+  id: number;
+  event_type: string; // 'Training', 'Meeting', 'Holiday', etc.
+  event_name: string;
+  start_datetime: string; // ISO string
+  end_datetime: string;   // ISO string
+  all_day: boolean;
+  productivity_modifier: number; // 0.0 - 1.0
+  applies_to_filter: string | null; // JSON
+  campaign_id: number | null;
+  created_at: string;
+}
+
+/**
+ * Get calendar events within a date range
+ */
+export function getCalendarEvents(
+  start: string,
+  end: string,
+  campaignId: number | null = null
+): CalendarEvent[] {
+  const db = getDatabase();
+  let sql = `
+    SELECT * FROM CalendarEvents
+    WHERE start_datetime <= ? AND end_datetime >= ?
+  `;
+  const params: SqlValue[] = [end, start];
+
+  if (campaignId) {
+    sql += ' AND (campaign_id = ? OR campaign_id IS NULL)';
+    params.push(campaignId);
+  } else {
+    // If no campaign selected, show global events (or all? usually global)
+    // For admin view, maybe all? Let's show global + all for now to be safe, or just global.
+    // Let's assume global only if no campaign, or modify logic if needed.
+    // For now: global only if no campaignId provided.
+    sql += ' AND campaign_id IS NULL';
+  }
+
+  sql += ' ORDER BY start_datetime';
+
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  return stmtToArray<CalendarEvent>(stmt);
+}
+
+/**
+ * Create a new calendar event
+ */
+export function createCalendarEvent(event: Omit<CalendarEvent, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO CalendarEvents (
+      event_type, event_name, start_datetime, end_datetime, all_day,
+      productivity_modifier, applies_to_filter, campaign_id, created_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      event.event_type,
+      event.event_name,
+      event.start_datetime,
+      event.end_datetime,
+      event.all_day ? 1 : 0,
+      event.productivity_modifier,
+      event.applies_to_filter,
+      event.campaign_id,
+      'system'
+    ]
+  );
+
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+/**
+ * Update a calendar event
+ */
+export function updateCalendarEvent(id: number, updates: Partial<CalendarEvent>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      // Handle boolean conversion for all_day
+      if (key === 'all_day') {
+        values.push(value ? 1 : 0);
+      } else {
+        values.push(value as SqlValue);
+      }
+    }
+  });
+
+  if (fields.length === 0) return;
+
+  values.push(id);
+  db.run(`UPDATE CalendarEvents SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+/**
+ * Delete a calendar event
+ */
+export function deleteCalendarEvent(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM CalendarEvents WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// ============================================================================
+// WORKFORCE (Staff, Roles, Skills)
+// ============================================================================
+
+export interface Role {
+  id: number;
+  role_name: string;
+  role_type: string; // 'Agent', 'TeamLeader', 'QA', etc.
+  reports_to_role_id: number | null;
+  created_at: string;
+}
+
+export interface Skill {
+  id: number;
+  skill_name: string;
+  skill_type: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+export interface Staff {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  primary_role_id: number;
+  employment_type: string;
+  manager_id: number | null;
+  start_date: string;
+  end_date: string | null;
+  site_id: number | null;
+  attrition_probability: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- ROLES ---
+
+export function getRoles(): Role[] {
+  const db = getDatabase();
+  return execToArray<Role>(db.exec('SELECT * FROM Roles ORDER BY role_name'));
+}
+
+export function createRole(role: Omit<Role, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO Roles (role_name, role_type, reports_to_role_id) VALUES (?, ?, ?)`,
+    [role.role_name, role.role_type, role.reports_to_role_id]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateRole(id: number, updates: Partial<Role>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      values.push(value as SqlValue);
+    }
+  });
+
+  if (fields.length === 0) return;
+  values.push(id);
+  db.run(`UPDATE Roles SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteRole(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM Roles WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// --- SKILLS ---
+
+export function getSkills(): Skill[] {
+  const db = getDatabase();
+  return execToArray<Skill>(db.exec('SELECT * FROM Skills ORDER BY skill_name'));
+}
+
+export function createSkill(skill: Omit<Skill, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO Skills (skill_name, skill_type, description) VALUES (?, ?, ?)`,
+    [skill.skill_name, skill.skill_type, skill.description]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function deleteSkill(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM Skills WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+}
+
+// --- STAFF ---
+
+export function getStaff(activeOnly: boolean = true, limit: number = 50, offset: number = 0): PaginatedResult<Staff> {
+  const db = getDatabase();
+  
+  // Get total count first
+  const countSql = activeOnly
+    ? 'SELECT COUNT(*) as count FROM Staff WHERE end_date IS NULL'
+    : 'SELECT COUNT(*) as count FROM Staff';
+  const countResult = db.exec(countSql);
+  const total = countResult[0]?.values[0]?.[0] as number ?? 0;
+
+  // Get paginated data
+  const sql = activeOnly
+    ? `SELECT * FROM Staff WHERE end_date IS NULL ORDER BY last_name, first_name LIMIT ? OFFSET ?`
+    : `SELECT * FROM Staff ORDER BY last_name, first_name LIMIT ? OFFSET ?`;
+    
+  const stmt = db.prepare(sql);
+  stmt.bind([limit, offset]);
+  const data = stmtToArray<Staff>(stmt);
+
+  return { data, total };
+}
+
+export function getStaffById(id: number): Staff | null {
+  const db = getDatabase();
+  const stmt = db.prepare('SELECT * FROM Staff WHERE id = ?');
+  stmt.bind([id]);
+  return stmtToObject<Staff>(stmt);
+}
+
+export function createStaff(staff: Omit<Staff, 'id' | 'created_at' | 'updated_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO Staff (
+      employee_id, first_name, last_name, primary_role_id, employment_type,
+      manager_id, start_date, end_date, site_id, attrition_probability
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      staff.employee_id,
+      staff.first_name,
+      staff.last_name,
+      staff.primary_role_id,
+      staff.employment_type,
+      staff.manager_id,
+      staff.start_date,
+      staff.end_date,
+      staff.site_id,
+      staff.attrition_probability
+    ]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateStaff(id: number, updates: Partial<Staff>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at' && key !== 'updated_at') {
+      fields.push(`${key} = ?`);
+      values.push(value as SqlValue);
+    }
+  });
+
+  if (fields.length === 0) return;
+
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(id);
+  db.run(`UPDATE Staff SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteStaff(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM Staff WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// ============================================================================
+// BPO MANAGEMENT (Sites, Contracts, BillingRules)
+// ============================================================================
+
+export interface Site {
+  id: number;
+  site_name: string;
+  location: string | null;
+  building_capacity: number | null;
+  desk_count: number | null;
+  timezone: string | null;
+  created_at: string;
+}
+
+export interface Contract {
+  id: number;
+  client_id: number;
+  contract_number: string;
+  start_date: string;
+  end_date: string | null;
+  currency: string;
+  auto_renew: boolean;
+  notice_period_days: number;
+  created_at: string;
+}
+
+export interface BillingRule {
+  id: number;
+  contract_id: number;
+  campaign_id: number | null;
+  billing_model: string; // 'PerSeat', 'PerFTE', 'PerHour', etc.
+  rate: number;
+  penalty_per_sla_point: number;
+  reward_per_sla_point: number;
+  valid_from: string;
+  valid_to: string | null;
+  created_at: string;
+}
+
+// --- SITES ---
+
+export function getSites(): Site[] {
+  const db = getDatabase();
+  return execToArray<Site>(db.exec('SELECT * FROM Sites ORDER BY site_name'));
+}
+
+export function createSite(site: Omit<Site, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO Sites (site_name, location, building_capacity, desk_count, timezone)
+     VALUES (?, ?, ?, ?, ?)`,
+    [site.site_name, site.location, site.building_capacity, site.desk_count, site.timezone]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateSite(id: number, updates: Partial<Site>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      values.push(value as SqlValue);
+    }
+  });
+  if (fields.length === 0) return;
+  values.push(id);
+  db.run(`UPDATE Sites SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteSite(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM Sites WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// --- CONTRACTS ---
+
+export function getContracts(clientId: number | null = null, limit: number = 50, offset: number = 0): PaginatedResult<Contract> {
+  const db = getDatabase();
+  let total = 0;
+  let data: Contract[] = [];
+
+  if (clientId) {
+    // Count
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM Contracts WHERE client_id = ?');
+    countStmt.bind([clientId]);
+    if (countStmt.step()) {
+      total = countStmt.getAsObject().count as number;
+    }
+    countStmt.free();
+
+    // Data
+    const stmt = db.prepare('SELECT * FROM Contracts WHERE client_id = ? ORDER BY start_date DESC LIMIT ? OFFSET ?');
+    stmt.bind([clientId, limit, offset]);
+    data = stmtToArray<Contract>(stmt);
+  } else {
+    // Count
+    const countResult = db.exec('SELECT COUNT(*) as count FROM Contracts');
+    total = countResult[0]?.values[0]?.[0] as number ?? 0;
+
+    // Data
+    const stmt = db.prepare('SELECT * FROM Contracts ORDER BY start_date DESC LIMIT ? OFFSET ?');
+    stmt.bind([limit, offset]);
+    data = stmtToArray<Contract>(stmt);
+  }
+
+  return { data, total };
+}
+
+export function getContractById(id: number): Contract | null {
+  const db = getDatabase();
+  const stmt = db.prepare('SELECT * FROM Contracts WHERE id = ?');
+  stmt.bind([id]);
+  return stmtToObject<Contract>(stmt);
+}
+
+export function createContract(contract: Omit<Contract, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO Contracts (
+      client_id, contract_number, start_date, end_date, currency, auto_renew, notice_period_days
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      contract.client_id,
+      contract.contract_number,
+      contract.start_date,
+      contract.end_date,
+      contract.currency,
+      contract.auto_renew ? 1 : 0,
+      contract.notice_period_days,
+    ]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateContract(id: number, updates: Partial<Contract>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      if (key === 'auto_renew') {
+        values.push(value ? 1 : 0);
+      } else {
+        values.push(value as SqlValue);
+      }
+    }
+  });
+  if (fields.length === 0) return;
+  values.push(id);
+  db.run(`UPDATE Contracts SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteContract(id: number): void {
+  const db = getDatabase();
+  // Also delete associated billing rules
+  db.run('DELETE FROM BillingRules WHERE contract_id = ?', [id]);
+  db.run('DELETE FROM Contracts WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// --- BILLING RULES ---
+
+export function getBillingRules(contractId: number, campaignId: number | null = null): BillingRule[] {
+  const db = getDatabase();
+  let sql = 'SELECT * FROM BillingRules WHERE contract_id = ?';
+  const params: SqlValue[] = [contractId];
+
+  if (campaignId !== null) {
+    sql += ' AND (campaign_id = ? OR campaign_id IS NULL)';
+    params.push(campaignId);
+  } else {
+    sql += ' ORDER BY valid_from DESC';
+  }
+
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  return stmtToArray<BillingRule>(stmt);
+}
+
+export function getBillingRuleById(id: number): BillingRule | null {
+  const db = getDatabase();
+  const stmt = db.prepare('SELECT * FROM BillingRules WHERE id = ?');
+  stmt.bind([id]);
+  return stmtToObject<BillingRule>(stmt);
+}
+
+export function createBillingRule(rule: Omit<BillingRule, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO BillingRules (
+      contract_id, campaign_id, billing_model, rate, penalty_per_sla_point,
+      reward_per_sla_point, valid_from, valid_to
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      rule.contract_id,
+      rule.campaign_id,
+      rule.billing_model,
+      rule.rate,
+      rule.penalty_per_sla_point,
+      rule.reward_per_sla_point,
+      rule.valid_from,
+      rule.valid_to,
+    ]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateBillingRule(id: number, updates: Partial<BillingRule>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      values.push(value as SqlValue);
+    }
+  });
+  if (fields.length === 0) return;
+  values.push(id);
+  db.run(`UPDATE BillingRules SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteBillingRule(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM BillingRules WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// ============================================================================
+// RECRUITMENT PIPELINE
+// ============================================================================
+
+export interface RecruitmentStage {
+  id: number;
+  stage_name: string;
+  stage_order: number;
+  pass_rate: number;  // 0.0-1.0
+  avg_duration_days: number | null;
+  created_at: string;
+}
+
+export interface RecruitmentRequest {
+  id: number;
+  role_id: number;
+  campaign_id: number | null;
+  quantity_requested: number;
+  requested_date: string;
+  target_start_date: string | null;
+  status: 'Open' | 'InProgress' | 'Filled' | 'Cancelled';
+  notes: string | null;
+  created_at: string;
+}
+
+// --- RECRUITMENT STAGES (Pipeline) ---
+
+export function getRecruitmentStages(): RecruitmentStage[] {
+  const db = getDatabase();
+  return execToArray<RecruitmentStage>(
+    db.exec('SELECT * FROM RecruitmentPipeline ORDER BY stage_order')
+  );
+}
+
+export function createRecruitmentStage(stage: Omit<RecruitmentStage, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO RecruitmentPipeline (stage_name, stage_order, pass_rate, avg_duration_days)
+     VALUES (?, ?, ?, ?)`,
+    [stage.stage_name, stage.stage_order, stage.pass_rate, stage.avg_duration_days]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateRecruitmentStage(id: number, updates: Partial<RecruitmentStage>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      values.push(value as SqlValue);
+    }
+  });
+
+  if (fields.length === 0) return;
+  values.push(id);
+  db.run(`UPDATE RecruitmentPipeline SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteRecruitmentStage(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM RecruitmentPipeline WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// --- RECRUITMENT REQUESTS ---
+
+export function getRecruitmentRequests(
+  status?: 'Open' | 'InProgress' | 'Filled' | 'Cancelled',
+  limit: number = 50,
+  offset: number = 0
+): PaginatedResult<RecruitmentRequest> {
+  const db = getDatabase();
+
+  // Count
+  const countSql = status
+    ? `SELECT COUNT(*) as count FROM RecruitmentRequests WHERE status = '${status}'`
+    : 'SELECT COUNT(*) as count FROM RecruitmentRequests';
+  const countResult = db.exec(countSql);
+  const total = countResult[0]?.values[0]?.[0] as number ?? 0;
+
+  // Data
+  let sql = 'SELECT * FROM RecruitmentRequests';
+  const params: SqlValue[] = [];
+
+  if (status) {
+    sql += ' WHERE status = ?';
+    params.push(status);
+  }
+  sql += ' ORDER BY requested_date DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const data = stmtToArray<RecruitmentRequest>(stmt);
+
+  return { data, total };
+}
+
+export function createRecruitmentRequest(request: Omit<RecruitmentRequest, 'id' | 'created_at'>): number {
+  const db = getDatabase();
+  db.run(
+    `INSERT INTO RecruitmentRequests (
+      role_id, campaign_id, quantity_requested, requested_date, target_start_date, status, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      request.role_id,
+      request.campaign_id,
+      request.quantity_requested,
+      request.requested_date,
+      request.target_start_date,
+      request.status,
+      request.notes
+    ]
+  );
+  const result = db.exec('SELECT last_insert_rowid()');
+  saveDatabase();
+  return result[0].values[0][0] as number;
+}
+
+export function updateRecruitmentRequest(id: number, updates: Partial<RecruitmentRequest>): void {
+  const db = getDatabase();
+  const fields: string[] = [];
+  const values: SqlValue[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = ?`);
+      values.push(value as SqlValue);
+    }
+  });
+
+  if (fields.length === 0) return;
+  values.push(id);
+  db.run(`UPDATE RecruitmentRequests SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDatabase();
+}
+
+export function deleteRecruitmentRequest(id: number): void {
+  const db = getDatabase();
+  db.run('DELETE FROM RecruitmentRequests WHERE id = ?', [id]);
+  saveDatabase();
+}
+
 // ============================================================================
 
 /**

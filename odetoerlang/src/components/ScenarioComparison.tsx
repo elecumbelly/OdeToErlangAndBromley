@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
+import { useCalculatorStore } from '../store/calculatorStore';
 import type { StaffingMetrics } from '../lib/calculations/erlangC';
 import type { CalculationInputs } from '../types';
 
@@ -11,52 +12,30 @@ interface Scenario {
 }
 
 export default function ScenarioComparison() {
-  const [scenarios, setScenarios] = useState<Scenario[]>([
+  const { inputs: currentInputs } = useCalculatorStore();
+
+  const [scenarios, setScenarios] = useState<Scenario[]>(() => [
     {
       id: '1',
-      name: 'Current State',
-      inputs: {
-        volume: 100,
-        aht: 240,
-        intervalMinutes: 30,
-        targetSLPercent: 80,
-        thresholdSeconds: 20,
-        shrinkagePercent: 25,
-        maxOccupancy: 90,
-        model: 'erlangC',
-        averagePatience: 120
-      },
+      name: 'Current Calculator State',
+      inputs: { ...currentInputs },
       results: null
     },
     {
       id: '2',
-      name: 'Higher SL Target',
+      name: 'High Volume Scenario (+20%)',
       inputs: {
-        volume: 100,
-        aht: 240,
-        intervalMinutes: 30,
-        targetSLPercent: 90,
-        thresholdSeconds: 20,
-        shrinkagePercent: 25,
-        maxOccupancy: 90,
-        model: 'erlangC',
-        averagePatience: 120
+        ...currentInputs,
+        volume: Math.round(currentInputs.volume * 1.2)
       },
       results: null
     },
     {
       id: '3',
-      name: 'Volume +20%',
+      name: 'Stricter Service Level',
       inputs: {
-        volume: 120,
-        aht: 240,
-        intervalMinutes: 30,
-        targetSLPercent: 80,
-        thresholdSeconds: 20,
-        shrinkagePercent: 25,
-        maxOccupancy: 90,
-        model: 'erlangC',
-        averagePatience: 120
+        ...currentInputs,
+        targetSLPercent: Math.min(95, currentInputs.targetSLPercent + 10)
       },
       results: null
     }
@@ -90,8 +69,9 @@ export default function ScenarioComparison() {
         thresholdSeconds: 20,
         shrinkagePercent: 25,
         maxOccupancy: 90,
-        model: 'erlangC',
-        averagePatience: 120
+        model: 'C',
+        averagePatience: 120,
+        concurrency: 1
       },
       results: null
     };
@@ -119,6 +99,22 @@ export default function ScenarioComparison() {
 
   return (
     <div className="space-y-6">
+      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-yellow-700">
+              <strong>Sandbox Mode:</strong> These scenarios are temporary and for quick comparison only. 
+              To save forecasts permanently, use the Scenario Manager in the main Calculator tab.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <div>

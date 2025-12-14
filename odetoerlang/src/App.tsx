@@ -1,10 +1,12 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
-import ActualStaffPanel from './components/ActualStaffPanel';
+import StaffingModelPanel from './components/StaffingModelPanel';
 import CampaignSelector from './components/CampaignSelector';
 import ScenarioManager from './components/ScenarioManager';
 import type { InitStage } from './components/InitializationProgress';
+import AssumptionsPanel from './components/AssumptionsPanel';
+import ThemeToggle from './components/ui/ThemeToggle';
 
 // Lazy-loaded components for code splitting - reduces initial bundle size
 const ChartsPanel = lazy(() => import('./components/ChartsPanel'));
@@ -18,7 +20,12 @@ const ScenarioComparison = lazy(() => import('./components/ScenarioComparison'))
 const ModelComparison = lazy(() => import('./components/ModelComparison'));
 const ReverseCalculator = lazy(() => import('./components/ReverseCalculator'));
 const SimulationTab = lazy(() => import('./components/SimulationTab'));
+const CalendarView = lazy(() => import('./components/Calendar/CalendarView'));
+const HistoricalAnalysis = lazy(() => import('./components/HistoricalAnalysis'));
+const WorkforceTab = lazy(() => import('./components/Workforce/WorkforceTab'));
+const BPOTab = lazy(() => import('./components/BPO/BPOTab'));
 
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useCalculatorStore } from './store/calculatorStore';
 
 // Loading fallback for lazy-loaded components
@@ -39,7 +46,51 @@ import { useDatabaseStore } from './store/databaseStore';
 import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
-type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'simulation' | 'import' | 'export' | 'learn';
+type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
+
+function DbLoadingState({ stage, error }: { stage: InitStage; error: string | null }) {
+  if (stage === 'error') {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-bg-surface border border-red/20 rounded-lg text-center">
+        <div className="w-16 h-16 bg-red/10 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-bold text-red mb-2">Database Error</h3>
+        <p className="text-sm text-text-secondary mb-6 max-w-md">
+          {error || 'The database could not be initialized. Please check your browser console.'}
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-bg-elevated hover:bg-bg-hover text-text-primary rounded transition-colors"
+        >
+          Reload Application
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center p-12 bg-bg-surface border border-border-subtle rounded-lg">
+      <div className="w-16 h-16 bg-cyan/10 rounded-full flex items-center justify-center mb-4 relative">
+        <div className="absolute inset-0 rounded-full border-4 border-cyan/20 animate-ping"></div>
+        <svg className="w-8 h-8 text-cyan animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-text-primary mb-2">
+        {stage === 'loading-wasm' && 'Loading Engine...'}
+        {stage === 'loading-db' && 'Opening Database...'}
+        {stage === 'seeding' && 'Creating Demo Data...'}
+        {stage === 'idle' && 'Initializing...'}
+      </h3>
+      <p className="text-sm text-text-secondary">
+        Setting up the secure browser-based database. This may take a moment.
+      </p>
+    </div>
+  );
+}
 
 function App() {
   const calculate = useCalculatorStore((state) => state.calculate);
@@ -47,6 +98,9 @@ function App() {
   const [activeTab, setActiveTab] = useState<Tab>('calculator');
   const [initStage, setInitStage] = useState<InitStage>('idle');
   const [dbError, setDbError] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
+  const [showTour, setShowTour] = useState<boolean>(false);
+  const [tourStep, setTourStep] = useState<number>(0);
 
   const dbReady = initStage === 'ready';
 
@@ -79,6 +133,72 @@ function App() {
     }
   }, [dbReady, calculate, refreshAll]);
 
+  // Onboarding banner persistence
+  useEffect(() => {
+    const stored = localStorage.getItem('ode_onboarding_dismissed');
+    if (stored === 'true') {
+      setShowOnboarding(false);
+    }
+    const tourSeen = localStorage.getItem('ode_tour_seen');
+    if (tourSeen === 'true') {
+      setShowTour(false);
+    }
+  }, []);
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('ode_onboarding_dismissed', 'true');
+  };
+
+  const startTour = () => {
+    setShowTour(true);
+    setTourStep(0);
+  };
+
+  const tourSteps = [
+    {
+      title: 'Import or Paste Data',
+      body: 'Use the Import tab to paste or load CSV/Excel. Example data is available to try instantly.',
+      action: () => setActiveTab('import'),
+      cta: 'Open Import',
+    },
+    {
+      title: 'Tune Inputs & Constraints',
+      body: 'Adjust volume, AHT, occupancy cap, and staffing model. Results update automatically.',
+      action: () => setActiveTab('calculator'),
+      cta: 'Go to Calculator',
+    },
+    {
+      title: 'Review & Export',
+      body: 'Check “With Your Agents”, copy results for Excel, or export from the Export tab.',
+      action: () => setActiveTab('export'),
+      cta: 'Open Export',
+    },
+  ];
+
+  const handleTourNext = () => {
+    const next = tourStep + 1;
+    if (next < tourSteps.length) {
+      setTourStep(next);
+      tourSteps[next].action();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setShowTour(false);
+      localStorage.setItem('ode_tour_seen', 'true');
+    }
+  };
+
+  const handleTourBack = () => {
+    const prev = Math.max(0, tourStep - 1);
+    setTourStep(prev);
+    tourSteps[prev].action();
+  };
+
+  const skipTour = () => {
+    setShowTour(false);
+    localStorage.setItem('ode_tour_seen', 'true');
+  };
+
   const tabs: { id: Tab; name: string; shortName?: string }[] = [
     { id: 'calculator', name: 'Calculator', shortName: 'CALC' },
     { id: 'charts', name: 'Analytics', shortName: 'CHARTS' },
@@ -86,6 +206,11 @@ function App() {
     { id: 'scenarios', name: 'What-If', shortName: 'SCENAR' },
     { id: 'modelcomp', name: 'Compare', shortName: 'COMP' },
     { id: 'capacity', name: 'Capacity', shortName: 'CAP' },
+    { id: 'assumptions', name: 'Assumptions', shortName: 'ASSUM' },
+    { id: 'historical', name: 'Historical', shortName: 'HIST' },
+    { id: 'calendar', name: 'Calendar', shortName: 'CAL' },
+    { id: 'workforce', name: 'Workforce', shortName: 'STAFF' },
+    { id: 'bpo', name: 'BPO', shortName: 'BPO' },
     { id: 'simulation', name: 'Simulate', shortName: 'SIM' },
     { id: 'import', name: 'Import', shortName: 'IN' },
     { id: 'export', name: 'Export', shortName: 'OUT' },
@@ -156,23 +281,30 @@ function App() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-text-primary tracking-tight">
-                  OdeToErlang
+                  OdeToErlangAndBromley
                 </h1>
                 <p className="text-2xs text-text-muted uppercase tracking-widest">
                   Contact Center Capacity Planning
                 </p>
               </div>
             </div>
-            {/* Status Indicators */}
-            <div className="hidden md:flex items-center space-x-6 text-xs">
-              <div className="flex items-center space-x-2">
-                <span className="status-dot status-dot-success"></span>
-                <span className="text-text-secondary">BROWSER-ONLY</span>
+            {/* Status Indicators & Theme Toggle */}
+            <div className="flex items-center space-x-4">
+              <div className="hidden md:flex items-center space-x-6 text-xs">
+                <div className="flex items-center space-x-2">
+                  <span className="status-dot status-dot-success"></span>
+                  <span className="text-text-secondary">BROWSER-ONLY</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="status-dot status-dot-success"></span>
+                  <span className="text-text-secondary">NO CLOUD / NO DATA LEAVES</span>
+                </div>
+                <div className="text-text-muted">|</div>
+                <div className="text-text-secondary">
+                  ERLANG B / C / A
+                </div>
               </div>
-              <div className="text-text-muted">|</div>
-              <div className="text-text-secondary">
-                ERLANG C / A / X
-              </div>
+              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -209,24 +341,75 @@ function App() {
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Hero Section - Calculator Tab Only */}
         {activeTab === 'calculator' && (
-          <div className="mb-6 p-4 bg-bg-surface border border-border-subtle rounded-lg bg-grid">
-            <div className="flex items-start space-x-4">
-              <div className="hidden sm:block w-12 h-12 bg-cyan/10 border border-cyan/30 rounded-lg flex-shrink-0 flex items-center justify-center">
-                <svg className="w-6 h-6 text-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-semibold text-text-primary mb-1">
-                  Erlang Calculator
-                </h2>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  Calculate staffing requirements using <span className="text-cyan">Erlang C</span>, <span className="text-green">A</span>, and <span className="text-magenta">X</span> models.
-                  Multi-channel support, CSV import/export, interactive charts.
-                  All calculations run locally in your browser.
-                </p>
+          <div className="space-y-4 mb-6">
+            <div className="p-4 bg-bg-surface border border-border-subtle rounded-lg bg-grid">
+              <div className="flex items-start space-x-4">
+                <div className="hidden sm:block w-12 h-12 bg-cyan/10 border border-cyan/30 rounded-lg flex-shrink-0 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-semibold text-text-primary mb-1">
+                    Erlang Calculator
+                  </h2>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    Calculate staffing requirements using <span className="text-cyan">Erlang C</span>, <span className="text-green">A</span>, and <span className="text-magenta">X</span> models.
+                    Multi-channel support, CSV import/export, interactive charts.
+                    All calculations run locally in your browser.
+                  </p>
+                </div>
               </div>
             </div>
+
+            {showOnboarding && (
+              <div className="p-4 bg-bg-surface border border-cyan/20 rounded-lg shadow-glow-cyan/40">
+                <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 bg-cyan/10 border border-cyan/30 rounded-lg flex items-center justify-center">
+                      <span className="text-cyan font-bold text-lg">1-2-3</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-text-primary">Get started in 60 seconds</h3>
+                      <ol className="text-2xs text-text-secondary space-y-1 mt-1 list-decimal list-inside">
+                        <li>Paste or load example data → <button className="text-cyan hover:text-cyan-dim underline" onClick={() => setActiveTab('import')}>Import tab</button></li>
+                        <li>Adjust volume/AHT and occupancy cap</li>
+                        <li>Review “With Your Agents” and copy results to Excel</li>
+                      </ol>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setActiveTab('import')}
+                      className="px-3 py-2 bg-cyan text-bg-base rounded text-2xs font-semibold uppercase tracking-widest hover:bg-cyan/90 transition-colors"
+                    >
+                      Open Import
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('learn')}
+                      className="px-3 py-2 bg-bg-elevated border border-border-muted rounded text-2xs font-semibold uppercase tracking-widest hover:bg-bg-hover transition-colors"
+                    >
+                      Learn Mode
+                    </button>
+                    <button
+                      onClick={() => {
+                        startTour();
+                        setActiveTab('import');
+                      }}
+                      className="px-3 py-2 bg-bg-elevated border border-cyan/30 rounded text-2xs font-semibold uppercase tracking-widest hover:bg-cyan/10 transition-colors"
+                    >
+                      Start Tour
+                    </button>
+                    <button
+                      onClick={dismissOnboarding}
+                      className="text-2xs text-text-muted hover:text-text-secondary"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -256,7 +439,7 @@ function App() {
               {/* Main Calculator Area */}
               <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <ActualStaffPanel />
+                  <StaffingModelPanel />
                 </div>
                 <div>
                   <InputPanel />
@@ -269,28 +452,41 @@ function App() {
           )}
 
           {/* Lazy-loaded tabs */}
-          <Suspense fallback={<TabLoadingFallback />}>
-            {activeTab === 'charts' && <ChartsPanel />}
-            {activeTab === 'multichannel' && <MultiChannelPanel />}
-            {activeTab === 'scenarios' && <ScenarioComparison />}
-            {activeTab === 'modelcomp' && <ModelComparison />}
-            {activeTab === 'capacity' && <ReverseCalculator />}
-            {activeTab === 'simulation' && <SimulationTab />}
-            {activeTab === 'import' && (
-              <div className="space-y-6">
-                <SmartCSVImport />
-                <div className="border-t border-border-subtle pt-6">
-                  <h3 className="text-sm font-semibold text-text-secondary mb-4 uppercase tracking-wide">Legacy Importers</h3>
-                  <div className="space-y-6 opacity-60">
-                    <ACDImport />
-                    <CSVImport onDataImported={handleDataImported} />
-                  </div>
-                </div>
-              </div>
-            )}
-            {activeTab === 'export' && <ExportPanel />}
-            {activeTab === 'learn' && <EducationalMode />}
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<TabLoadingFallback />}>
+              {!dbReady && ['historical', 'calendar', 'workforce', 'bpo', 'assumptions', 'import'].includes(activeTab) ? (
+                <DbLoadingState stage={initStage} error={dbError} />
+              ) : (
+                <>
+                  {activeTab === 'charts' && <ChartsPanel />}
+                  {activeTab === 'multichannel' && <MultiChannelPanel />}
+                  {activeTab === 'scenarios' && <ScenarioComparison />}
+                  {activeTab === 'modelcomp' && <ModelComparison />}
+                  {activeTab === 'capacity' && <ReverseCalculator />}
+                  {activeTab === 'assumptions' && <AssumptionsPanel />}
+                  {activeTab === 'historical' && <HistoricalAnalysis />}
+                  {activeTab === 'calendar' && <CalendarView />}
+                  {activeTab === 'workforce' && <WorkforceTab />}
+                  {activeTab === 'bpo' && <BPOTab />}
+                  {activeTab === 'simulation' && <SimulationTab />}
+                  {activeTab === 'import' && (
+                    <div className="space-y-6">
+                      <SmartCSVImport />
+                      <div className="border-t border-border-subtle pt-6">
+                        <h3 className="text-sm font-semibold text-text-secondary mb-4 uppercase tracking-wide">Legacy Importers</h3>
+                        <div className="space-y-6 opacity-60">
+                          <ACDImport />
+                          <CSVImport onDataImported={handleDataImported} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {activeTab === 'export' && <ExportPanel />}
+                  {activeTab === 'learn' && <EducationalMode />}
+                </>
+              )}
+            </Suspense>
+          </ErrorBoundary>
         </div>
 
         {/* Feature Cards - Calculator Tab Only */}
@@ -358,7 +554,7 @@ function App() {
               <h4 className="font-semibold text-text-primary mb-2 uppercase tracking-wide text-2xs">Links</h4>
               <ul className="text-text-muted space-y-1">
                 <li>
-                  <a href="https://github.com/elecumbelly/OdeToErlang" className="text-cyan hover:text-cyan-dim transition-colors">
+                  <a href="https://github.com/elecumbelly/OdeToErlangAndBromley" className="text-cyan hover:text-cyan-dim transition-colors">
                     GitHub Repository
                   </a>
                 </li>
@@ -372,6 +568,51 @@ function App() {
           </div>
         </footer>
       </main>
+
+      {/* Guided Tour Overlay */}
+      {showTour && (
+        <div className="fixed inset-0 z-40 bg-bg-base/80 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-bg-surface border border-border-subtle rounded-lg shadow-lg max-w-md w-full p-5 space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-3xs text-text-muted uppercase tracking-widest">Quick Tour</p>
+                <h3 className="text-lg font-semibold text-text-primary">{tourSteps[tourStep].title}</h3>
+              </div>
+              <button
+                onClick={skipTour}
+                className="text-2xs text-text-muted hover:text-text-secondary"
+              >
+                Skip
+              </button>
+            </div>
+            <p className="text-sm text-text-secondary leading-relaxed">{tourSteps[tourStep].body}</p>
+            <button
+              onClick={tourSteps[tourStep].action}
+              className="text-2xs font-semibold text-cyan uppercase tracking-widest underline"
+            >
+              {tourSteps[tourStep].cta}
+            </button>
+            <div className="flex items-center justify-between text-2xs text-text-muted">
+              <span>Step {tourStep + 1} / {tourSteps.length}</span>
+              <div className="space-x-2">
+                <button
+                  onClick={handleTourBack}
+                  disabled={tourStep === 0}
+                  className="px-3 py-1 border border-border-subtle rounded disabled:opacity-40"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleTourNext}
+                  className="px-3 py-1 bg-cyan text-bg-base rounded"
+                >
+                  {tourStep === tourSteps.length - 1 ? 'Done' : 'Next'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

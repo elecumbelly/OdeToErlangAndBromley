@@ -1,30 +1,46 @@
 # Changelog
 
-All notable changes to OdeToErlang will be documented in this file.
+All notable changes to OdeToErlangAndBromley will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2025-12-08
 
 ### Added
 - Universal CSV importer with smart column mapping
 - Educational mode with formula breakdowns
 - Comprehensive documentation (README, CONTRIBUTING, FORMULAS, CSV-FORMATS)
-- Model comparison tool (Erlang C vs A vs X)
+- Model comparison tool (Erlang B vs C vs A)
 - Capacity planning (reverse calculator)
 - Multi-channel support with concurrency handling
 - What-if scenario analysis
 - Interactive charts and analytics
+- **Calendar and Scheduling UI**
+- **React Error Boundary**
+- **GitHub Actions CI**
 
 ### Changed
 - Improved Erlang C edge case handling for low volume scenarios
 - Enhanced shrinkage calculations in scenario comparison
 - Optimized mathematical formula implementations
+- **Refactored Erlang Model types (ErlangModel -> ErlangVariant)**
+- **Removed Erlang X UI/model (legacy X now maps to Erlang A)**
+- **Extracted CalculationService from store**
+- **Sanitized user-facing error messages in store**
+- **Removed module-level debounce singleton**
+- **Updated theme for InitializationProgress**
 
 ### Fixed
 - Critical Erlang C edge case for low volume scenarios
 - Shrinkage calculation bug in ScenarioComparison and MultiChannelPanel
+- **Numerous TypeScript compilation errors (verbatimModuleSyntax, concurrency)**
+- **Inconsistent ErlangModel/ErlangVariant usage**
+- **Missing Dialog component**
+- **SmartCSVImport avgVolume destructuring**
+- **databaseStore getAssumptions parameter issue**
+
+## [Unreleased]
 
 ## [0.1.0] - 2025-01-23
 
