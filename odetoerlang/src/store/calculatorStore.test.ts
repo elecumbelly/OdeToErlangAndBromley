@@ -1,16 +1,47 @@
 import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useCalculatorStore } from './calculatorStore';
+import { createDefaultInputs } from '../tests/fixtures/calculatorInputs';
 
 /**
  * calculatorStore.ts Test Suite
  *
  * Tests the Zustand store for calculator state management.
  * Covers input mutations, model selection, constraint modes, and calculations.
+ *
+ * Note: The store's calculate() method is debounced (300ms). Tests that need
+ * to verify calculation results must either:
+ * 1. Use vi.useFakeTimers() and advance past debounce delay
+ * 2. Wait for the debounce to complete
  */
+
+// Helper to wait for debounced calculation to complete
+const DEBOUNCE_DELAY = 300;
+
+const waitForCalculation = async () => {
+  await vi.advanceTimersByTimeAsync(DEBOUNCE_DELAY + 50);
+};
+
+const DEFAULT_STAFFING_MODEL = {
+  totalHeadcount: 0,
+  operatingHoursPerDay: 12,
+  daysOpenPerWeek: 5,
+  shiftLengthHours: 8,
+  useAsConstraint: false,
+};
 
 describe('calculatorStore - Initial State', () => {
   beforeEach(() => {
-    useCalculatorStore.getState().reset();
+    vi.useFakeTimers();
+    useCalculatorStore.setState({
+      inputs: createDefaultInputs(),
+      results: null,
+      validation: { valid: true, errors: [] },
+      staffingModel: DEFAULT_STAFFING_MODEL
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test('has default inputs', () => {
@@ -19,7 +50,7 @@ describe('calculatorStore - Initial State', () => {
     expect(state.inputs.aht).toBe(240);
     expect(state.inputs.intervalMinutes).toBe(30);
     expect(state.inputs.targetSLPercent).toBe(80);
-    expect(state.inputs.model).toBe('erlangC');
+    expect(state.inputs.model).toBe('C');
   });
 
   test('has empty results initially', () => {
@@ -29,18 +60,24 @@ describe('calculatorStore - Initial State', () => {
     expect(state.validation.valid).toBe(true);
   });
 
-  test('has default actual staff state', () => {
+  test('has default staffing model state', () => {
     const state = useCalculatorStore.getState();
-    expect(state.actualStaff.totalFTE).toBe(0);
-    expect(state.actualStaff.productiveAgents).toBe(0);
-    expect(state.actualStaff.useAsConstraint).toBe(false);
+    expect(state.staffingModel.totalHeadcount).toBe(0);
+    expect(state.staffingModel.operatingHoursPerDay).toBe(12);
+    expect(state.staffingModel.shiftLengthHours).toBe(8);
+    expect(state.staffingModel.useAsConstraint).toBe(false);
   });
 });
 
 describe('calculatorStore - Input Mutations', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    useCalculatorStore.getState().reset();
+    useCalculatorStore.setState({
+      inputs: createDefaultInputs(),
+      results: null,
+      validation: { valid: true, errors: [] },
+      staffingModel: DEFAULT_STAFFING_MODEL
+    });
   });
 
   afterEach(() => {
@@ -58,11 +95,14 @@ describe('calculatorStore - Input Mutations', () => {
   });
 
   test('setInput updates model', () => {
-    useCalculatorStore.getState().setInput('model', 'erlangA');
-    expect(useCalculatorStore.getState().inputs.model).toBe('erlangA');
+    useCalculatorStore.getState().setInput('model', 'A');
+    expect(useCalculatorStore.getState().inputs.model).toBe('A');
 
-    useCalculatorStore.getState().setInput('model', 'erlangX');
-    expect(useCalculatorStore.getState().inputs.model).toBe('erlangX');
+    useCalculatorStore.getState().setInput('model', 'B');
+    expect(useCalculatorStore.getState().inputs.model).toBe('B');
+
+    useCalculatorStore.getState().setInput('model', 'C');
+    expect(useCalculatorStore.getState().inputs.model).toBe('C');
   });
 
   test('setInput updates shrinkage', () => {
@@ -75,54 +115,84 @@ describe('calculatorStore - Input Mutations', () => {
     expect(useCalculatorStore.getState().inputs.averagePatience).toBe(180);
   });
 
-  test('setInput triggers debounced calculate', () => {
-    const spy = vi.spyOn(useCalculatorStore.getState(), 'calculate');
+  test('setInput triggers debounced calculate', async () => {
+    // Reset first to clear any pending state
+    useCalculatorStore.getState().reset();
+    await waitForCalculation();
+
+    // Get baseline results before changing input
+    const baselineTraffic = useCalculatorStore.getState().results?.trafficIntensity || 0;
+
+    // Change volume - this triggers a debounced calculate
     useCalculatorStore.getState().setInput('volume', 200);
 
-    // Should not be called immediately (debounced)
-    expect(spy).not.toHaveBeenCalled();
+    // Results should NOT be updated immediately (debounced)
+    const immediateTraffic = useCalculatorStore.getState().results?.trafficIntensity || 0;
+    expect(immediateTraffic).toBe(baselineTraffic); // Still baseline
 
     // Advance timers past debounce delay (300ms)
-    vi.advanceTimersByTime(350);
+    await waitForCalculation();
 
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+    // Now results should be updated
+    const finalTraffic = useCalculatorStore.getState().results?.trafficIntensity || 0;
+    expect(finalTraffic).toBeGreaterThan(baselineTraffic); // Should have increased
   });
 });
 
-describe('calculatorStore - Actual Staff Constraint', () => {
+describe('calculatorStore - Staffing Model', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    useCalculatorStore.getState().reset();
+    useCalculatorStore.setState({
+      inputs: createDefaultInputs(),
+      results: null,
+      validation: { valid: true, errors: [] },
+      staffingModel: DEFAULT_STAFFING_MODEL
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  test('setActualStaff updates productiveAgents', () => {
-    useCalculatorStore.getState().setActualStaff('productiveAgents', 15);
-    expect(useCalculatorStore.getState().actualStaff.productiveAgents).toBe(15);
+  test('setStaffingModel updates totalHeadcount', () => {
+    useCalculatorStore.getState().setStaffingModel('totalHeadcount', 150);
+    expect(useCalculatorStore.getState().staffingModel.totalHeadcount).toBe(150);
   });
 
-  test('setActualStaff updates useAsConstraint', () => {
-    useCalculatorStore.getState().setActualStaff('useAsConstraint', true);
-    expect(useCalculatorStore.getState().actualStaff.useAsConstraint).toBe(true);
+  test('setStaffingModel updates useAsConstraint', () => {
+    useCalculatorStore.getState().setStaffingModel('useAsConstraint', true);
+    expect(useCalculatorStore.getState().staffingModel.useAsConstraint).toBe(true);
   });
 
-  test('setActualStaff updates totalFTE', () => {
-    useCalculatorStore.getState().setActualStaff('totalFTE', 20);
-    expect(useCalculatorStore.getState().actualStaff.totalFTE).toBe(20);
+  test('setStaffingModel updates operatingHoursPerDay', () => {
+    useCalculatorStore.getState().setStaffingModel('operatingHoursPerDay', 16);
+    expect(useCalculatorStore.getState().staffingModel.operatingHoursPerDay).toBe(16);
+  });
+
+  test('setStaffingModel updates shiftLengthHours', () => {
+    useCalculatorStore.getState().setStaffingModel('shiftLengthHours', 10);
+    expect(useCalculatorStore.getState().staffingModel.shiftLengthHours).toBe(10);
   });
 });
 
 describe('calculatorStore - Calculate Method', () => {
   beforeEach(() => {
-    useCalculatorStore.getState().reset();
+    vi.useFakeTimers();
+    useCalculatorStore.setState({
+      inputs: createDefaultInputs(),
+      results: null,
+      validation: { valid: true, errors: [] },
+      staffingModel: DEFAULT_STAFFING_MODEL
+    });
   });
 
-  test('calculate produces valid results for default inputs', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('calculate produces valid results for default inputs', async () => {
     useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.validation.valid).toBe(true);
@@ -132,19 +202,19 @@ describe('calculatorStore - Calculate Method', () => {
     expect(state.results?.serviceLevel).toBeGreaterThan(0);
   });
 
-  test('calculate handles Erlang C model', () => {
-    useCalculatorStore.getState().setInput('model', 'erlangC');
-    useCalculatorStore.getState().calculate();
+  test('calculate handles Erlang C model', async () => {
+    useCalculatorStore.getState().setInput('model', 'C');
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.results).not.toBeNull();
     expect(state.abandonmentMetrics).toBeNull(); // Erlang C doesn't have abandonment
   });
 
-  test('calculate handles Erlang A model with abandonment metrics', () => {
+  test('calculate handles Erlang A model with abandonment metrics', async () => {
     const store = useCalculatorStore.getState();
-    store.setInput('model', 'erlangA');
-    store.calculate();
+    store.setInput('model', 'A');
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.results).not.toBeNull();
@@ -153,47 +223,73 @@ describe('calculatorStore - Calculate Method', () => {
     expect(state.abandonmentMetrics?.expectedAbandonments).toBeDefined();
   });
 
-  test('calculate handles Erlang X model with abandonment metrics', () => {
+  test('calculate handles Erlang A model (formerly X) with abandonment metrics', async () => {
+    // Note: Erlang X has been merged into Erlang A in the unified engine
     const store = useCalculatorStore.getState();
-    store.setInput('model', 'erlangX');
-    store.calculate();
+    store.setInput('model', 'A');
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.results).not.toBeNull();
     expect(state.abandonmentMetrics).not.toBeNull();
-    expect(state.abandonmentMetrics?.retrialProbability).toBeDefined();
-    expect(state.abandonmentMetrics?.virtualTraffic).toBeDefined();
+    // retrialProbability and virtualTraffic are optional in Erlang A
+    // They may or may not be present depending on implementation
+    expect(state.abandonmentMetrics?.abandonmentRate).toBeDefined();
   });
 
-  test('calculate with staff constraint uses actual agents', () => {
+  test('calculate with staffing model constraint shows optimal staffing and achievable metrics', async () => {
     const store = useCalculatorStore.getState();
-    store.setActualStaff('productiveAgents', 10);
-    store.setActualStaff('useAsConstraint', true);
-    store.calculate();
+    // With staffing model:
+    // totalHeadcount = 150, operatingHoursPerDay = 12, shiftLengthHours = 8
+    // shiftsToFillDay = 12 / 8 = 1.5
+    // staffPerShift = 150 / 1.5 = 100
+    // productiveAgents = 100 * (1 - 0.25) = 75 (with 25% shrinkage)
+    store.setStaffingModel('totalHeadcount', 150);
+    store.setStaffingModel('operatingHoursPerDay', 12);
+    store.setStaffingModel('shiftLengthHours', 8);
+    await waitForCalculation();
+    store.setStaffingModel('useAsConstraint', true);
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
+    // Results should show what's REQUIRED for the workload (optimal staffing)
     expect(state.results).not.toBeNull();
-    expect(state.results?.requiredAgents).toBe(10);
+    expect(state.results?.requiredAgents).toBeGreaterThan(0);
+
+    // achievableMetrics should show what you can achieve with your 75 agents
+    expect(state.achievableMetrics).not.toBeNull();
+    expect(state.achievableMetrics?.serviceLevel).toBeGreaterThan(0);
   });
 });
 
 describe('calculatorStore - Validation', () => {
   beforeEach(() => {
-    useCalculatorStore.getState().reset();
+    vi.useFakeTimers();
+    useCalculatorStore.setState({
+      inputs: createDefaultInputs(),
+      results: null,
+      validation: { valid: true, errors: [] },
+      staffingModel: DEFAULT_STAFFING_MODEL
+    });
   });
 
-  test('validates valid inputs', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('validates valid inputs', async () => {
     useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.validation.valid).toBe(true);
     expect(state.validation.errors).toHaveLength(0);
   });
 
-  test('handles zero volume gracefully', () => {
+  test('handles zero volume gracefully', async () => {
     // Zero volume is valid - it means no calls, requiring minimal agents
     useCalculatorStore.getState().setInput('volume', 0);
-    useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     // Zero volume should still produce valid results
@@ -203,18 +299,18 @@ describe('calculatorStore - Validation', () => {
     expect(state.results?.requiredAgents).toBeGreaterThanOrEqual(0);
   });
 
-  test('invalidates negative AHT', () => {
+  test('invalidates negative AHT', async () => {
     useCalculatorStore.getState().setInput('aht', -10);
-    useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.validation.valid).toBe(false);
     expect(state.results).toBeNull();
   });
 
-  test('invalidates 100% shrinkage', () => {
+  test('invalidates 100% shrinkage', async () => {
     useCalculatorStore.getState().setInput('shrinkagePercent', 100);
-    useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.validation.valid).toBe(false);
@@ -223,66 +319,93 @@ describe('calculatorStore - Validation', () => {
 });
 
 describe('calculatorStore - Reset', () => {
-  test('reset restores default inputs', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('reset restores default inputs', async () => {
     // Change some inputs
     useCalculatorStore.getState().setInput('volume', 999);
-    useCalculatorStore.getState().setInput('model', 'erlangX');
+    await waitForCalculation();
+    useCalculatorStore.getState().setInput('model', 'A');
+    await waitForCalculation();
 
     // Reset
     useCalculatorStore.getState().reset();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.inputs.volume).toBe(100);
-    expect(state.inputs.model).toBe('erlangC');
+    expect(state.inputs.model).toBe('C');
   });
 
-  test('reset restores default actual staff values', () => {
-    // Note: reset() only resets inputs, not actualStaff in current implementation
-    // This test documents actual behavior - actualStaff persists through reset
-    useCalculatorStore.getState().setActualStaff('productiveAgents', 50);
-    useCalculatorStore.getState().setActualStaff('useAsConstraint', true);
+  test('reset preserves staffing model values', async () => {
+    // Note: reset() only resets inputs, not staffingModel in current implementation
+    // This test documents actual behavior - staffingModel persists through reset
+    useCalculatorStore.getState().setStaffingModel('totalHeadcount', 200);
+    await waitForCalculation();
+    useCalculatorStore.getState().setStaffingModel('useAsConstraint', true);
+    await waitForCalculation();
 
     useCalculatorStore.getState().reset();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
-    // actualStaff is not reset by reset() - this is intentional
+    // staffingModel is not reset by reset() - this is intentional
     // Staff constraints often persist across input changes
-    expect(state.actualStaff.productiveAgents).toBe(50);
-    expect(state.actualStaff.useAsConstraint).toBe(true);
+    expect(state.staffingModel.totalHeadcount).toBe(200);
+    expect(state.staffingModel.useAsConstraint).toBe(true);
   });
 });
 
 describe('calculatorStore - Traffic Intensity Calculation', () => {
   beforeEach(() => {
-    useCalculatorStore.getState().reset();
+    vi.useFakeTimers();
+    useCalculatorStore.setState({
+      inputs: createDefaultInputs(),
+      results: null,
+      validation: { valid: true, errors: [] },
+      staffingModel: DEFAULT_STAFFING_MODEL
+    });
   });
 
-  test('calculates correct traffic intensity', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('calculates correct traffic intensity', async () => {
     // Volume=100, AHT=240s, Interval=30min=1800s
     // Traffic = 100 * 240 / 1800 = 13.33 Erlangs
     useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const state = useCalculatorStore.getState();
 
     expect(state.results?.trafficIntensity).toBeCloseTo(13.33, 1);
   });
 
-  test('higher volume increases traffic intensity', () => {
+  test('higher volume increases traffic intensity', async () => {
     useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const baseline = useCalculatorStore.getState().results?.trafficIntensity || 0;
 
     useCalculatorStore.getState().setInput('volume', 200);
-    useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const higher = useCalculatorStore.getState().results?.trafficIntensity || 0;
 
     expect(higher).toBeGreaterThan(baseline);
   });
 
-  test('higher AHT increases traffic intensity', () => {
+  test('higher AHT increases traffic intensity', async () => {
     useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const baseline = useCalculatorStore.getState().results?.trafficIntensity || 0;
 
     useCalculatorStore.getState().setInput('aht', 480);
-    useCalculatorStore.getState().calculate();
+    await waitForCalculation();
     const higher = useCalculatorStore.getState().results?.trafficIntensity || 0;
 
     expect(higher).toBeGreaterThan(baseline);

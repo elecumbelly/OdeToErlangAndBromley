@@ -1,7 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
+import { useDatabaseStore } from '../store/databaseStore';
 import { useCSVWorker } from '../hooks/useCSVWorker';
 import { useToast } from './ui/Toast';
+import { type HistoricalData, saveHistoricalDataBatch } from '../lib/database/dataAccess';
+import FileUploader from './Import/SubComponents/FileUploader';
+import ColumnMapper from './Import/SubComponents/ColumnMapper';
+import DataPreview from './Import/SubComponents/DataPreview';
+import ImportSummary from './Import/SubComponents/ImportSummary';
+import { cn } from '../utils/cn';
 
 interface ColumnMapping {
   field: string;
@@ -17,57 +24,91 @@ interface PreviewData {
   rowCount: number;
 }
 
+const SAMPLE_PASTED_DATA = [
+  ['Date', 'Volume', 'AHT', 'Service Level'],
+  ['2025-01-01', '950', '240', '82'],
+  ['2025-01-01', '1000', '230', '85'],
+  ['2025-01-01', '1050', '220', '86'],
+].map((row) => row.join(',')).join('\n');
+
+const DEFAULT_MAPPINGS: ColumnMapping[] = [
+  { field: 'date', label: 'Date', required: true, mappedTo: null, description: 'Date of the interval (YYYY-MM-DD)' },
+  { field: 'interval_start', label: 'Interval Start', required: false, mappedTo: null, description: 'Start time of the interval (HH:MM:SS)' },
+  { field: 'interval_end', label: 'Interval End', required: false, mappedTo: null, description: 'End time of the interval (HH:MM:SS)' },
+  { field: 'volume', label: 'Call Volume', required: true, mappedTo: null, description: 'Total incoming calls/contacts' },
+  { field: 'answered', label: 'Answered Calls', required: false, mappedTo: null, description: 'Calls answered by agents' },
+  { field: 'aht', label: 'Average Handle Time', required: true, mappedTo: null, description: 'Talk time in seconds or HH:MM:SS' },
+  { field: 'answerRate', label: 'Answer Rate %', required: false, mappedTo: null, description: 'Percentage of calls answered' },
+  { field: 'abandoned', label: 'Abandoned Calls', required: false, mappedTo: null, description: 'Calls abandoned before answer' },
+  { field: 'serviceLevel', label: 'Service Level %', required: false, mappedTo: null, description: 'Achieved service level percentage' },
+  { field: 'asa', label: 'Average Speed of Answer', required: false, mappedTo: null, description: 'Average wait time in seconds or HH:MM:SS' },
+  { field: 'actual_agents', label: 'Actual Agents', required: false, mappedTo: null, description: 'Number of agents logged in' },
+  { field: 'actual_fte', label: 'Actual FTE', required: false, mappedTo: null, description: 'Full-time equivalents logged in' },
+  { field: 'threshold', label: 'SL Threshold', required: false, mappedTo: null, description: 'Service level threshold in seconds' }
+];
+
 export default function SmartCSVImport() {
   const setInput = useCalculatorStore((state) => state.setInput);
+  const { selectedCampaignId, refreshAll } = useDatabaseStore();
   const { parseCSV, isLoading: isWorkerLoading, error: workerError } = useCSVWorker();
   const { addToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentFile, setCurrentFile] = useState<File | null>(null);
-
+  
+  const [parsedData, setParsedData] = useState<(string | number | null | undefined)[][] | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [mappings, setMappings] = useState<ColumnMapping[]>([
-    { field: 'volume', label: 'Call Volume', required: true, mappedTo: null, description: 'Total incoming calls/contacts' },
-    { field: 'answered', label: 'Answered Calls', required: false, mappedTo: null, description: 'Calls answered by agents' },
-    { field: 'aht', label: 'Average Handle Time', required: true, mappedTo: null, description: 'Talk time in seconds or HH:MM:SS' },
-    { field: 'answerRate', label: 'Answer Rate %', required: false, mappedTo: null, description: 'Percentage of calls answered' },
-    { field: 'abandoned', label: 'Abandoned Calls', required: false, mappedTo: null, description: 'Calls abandoned before answer' },
-    { field: 'serviceLevel', label: 'Service Level %', required: false, mappedTo: null, description: 'Achieved service level percentage' },
-    { field: 'asa', label: 'Average Speed of Answer', required: false, mappedTo: null, description: 'Average wait time in seconds or HH:MM:SS' },
-    { field: 'waitingTime', label: 'Waiting Time', required: false, mappedTo: null, description: 'Average queue wait time' },
-    { field: 'threshold', label: 'SL Threshold', required: false, mappedTo: null, description: 'Service level threshold in seconds' }
-  ]);
-  const [importedData, setImportedData] = useState<Record<string, number>[] | null>(null);
+  const [mappings, setMappings] = useState<ColumnMapping[]>(DEFAULT_MAPPINGS);
+  const [lastImportSummary, setLastImportSummary] = useState<{
+    intervals: number;
+    totalVolume: number;
+    avgAHT: number;
+    avgSL: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pastedText, setPastedText] = useState('');
+  const [sourceLabel, setSourceLabel] = useState<string | null>(null);
+
+  const resetImportState = () => {
+    setError(null);
+    setPreview(null);
+    setLastImportSummary(null);
+    setMappings(DEFAULT_MAPPINGS);
+    setParsedData(null);
+    setSourceLabel(null);
+  };
+
+  const applyParsedData = (rows: (string | number | null | undefined)[][], label: string) => {
+    if (!rows || rows.length < 2) {
+      setError('Data must include a header row and at least one data row');
+      return;
+    }
+
+    const headers = rows[0] as string[];
+    const sampleRows = rows.slice(1, 6) as (string | number | null | undefined)[][];
+
+    setParsedData(rows);
+    setPreview({
+      headers,
+      rows: sampleRows,
+      rowCount: rows.length - 1
+    });
+    setSourceLabel(label);
+
+    autoDetectMappings(headers);
+    addToast(`Loaded ${rows.length - 1} rows from ${label}`, 'info');
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setError(null);
-    setPreview(null);
-    setImportedData(null);
-    setCurrentFile(file);
+    // Reset state
+    resetImportState();
 
     try {
+      const start = performance.now();
       const results = await parseCSV(file);
+      setLastParseDuration(performance.now() - start);
 
-      if (results.data.length < 2) {
-        setError('File must have at least a header row and one data row');
-        return;
-      }
-
-      const headers = results.data[0] as string[];
-      const rows = results.data.slice(1, 6) as (string | number | null | undefined)[][]; // First 5 rows for preview
-
-      setPreview({
-        headers,
-        rows,
-        rowCount: results.data.length - 1
-      });
-
-      // Auto-detect mappings
-      autoDetectMappings(headers);
-      addToast(`Loaded ${results.data.length - 1} rows from ${file.name}`, 'info');
+      applyParsedData(results.data as (string | number | null | undefined)[][], file.name);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error parsing CSV';
       setError(message);
@@ -77,6 +118,9 @@ export default function SmartCSVImport() {
 
   const autoDetectMappings = (headers: string[]) => {
     const detectionRules: { [key: string]: string[] } = {
+      date: ['date', 'day', 'yyyy-mm-dd'],
+      interval_start: ['start time', 'time', 'interval'],
+      interval_end: ['end time'],
       volume: ['incoming', 'volume', 'calls', 'contacts', 'offered'],
       answered: ['answered', 'handled', 'connected'],
       aht: ['aht', 'handle time', 'talk time', 'talk duration', 'duration'],
@@ -84,31 +128,32 @@ export default function SmartCSVImport() {
       abandoned: ['abandoned', 'lost', 'dropped'],
       serviceLevel: ['service level', 'sl %', 'sla', 'service %'],
       asa: ['asa', 'answer speed', 'avg speed', 'speed of answer'],
-      waitingTime: ['wait', 'waiting time', 'queue time'],
+      actual_agents: ['agents', 'staff', 'productive agents'],
+      actual_fte: ['fte', 'full time equivalent'],
       threshold: ['threshold', 'target seconds', 'sl threshold']
     };
 
-    const newMappings = [...mappings];
+    setMappings(prev => {
+      const newMappings = [...prev];
+      newMappings.forEach(mapping => {
+        const rules = detectionRules[mapping.field];
+        if (!rules) return;
 
-    newMappings.forEach(mapping => {
-      const rules = detectionRules[mapping.field];
-      if (!rules) return;
+        const matchedHeader = headers.find(header => {
+          const headerLower = header.toLowerCase().trim();
+          return rules.some(rule => headerLower.includes(rule.toLowerCase()));
+        });
 
-      const matchedHeader = headers.find(header => {
-        const headerLower = header.toLowerCase().trim();
-        return rules.some(rule => headerLower.includes(rule.toLowerCase()));
+        if (matchedHeader) {
+          mapping.mappedTo = matchedHeader;
+        }
       });
-
-      if (matchedHeader) {
-        mapping.mappedTo = matchedHeader;
-      }
+      return newMappings;
     });
-
-    setMappings(newMappings);
   };
 
   const handleMappingChange = (field: string, header: string | null) => {
-    setMappings(mappings.map(m =>
+    setMappings(prev => prev.map(m =>
       m.field === field ? { ...m, mappedTo: header } : m
     ));
   };
@@ -119,7 +164,6 @@ export default function SmartCSVImport() {
 
     const str = value.toString().trim();
 
-    // Check for HH:MM:SS format
     if (str.includes(':')) {
       const parts = str.split(':');
       if (parts.length === 3) {
@@ -135,7 +179,6 @@ export default function SmartCSVImport() {
       }
     }
 
-    // Try parsing as number
     const num = parseFloat(str);
     return isNaN(num) ? 0 : num;
   };
@@ -150,13 +193,57 @@ export default function SmartCSVImport() {
     return isNaN(num) ? 0 : num;
   };
 
-  const validateAndImport = async () => {
-    if (!preview || !currentFile) {
-      setError('No file loaded');
+  const handlePasteImport = async () => {
+    const text = pastedText.trim();
+    if (!text) {
+      setError('Paste rows from Excel/CSV first.');
       return;
     }
 
-    // Check required fields are mapped
+    const start = performance.now();
+    await parseTextAndApply(text, 'pasted data');
+    setLastParseDuration(performance.now() - start);
+  };
+
+  const parseTextAndApply = async (text: string, label: string) => {
+    resetImportState();
+    try {
+      const Papa = await import('papaparse');
+      const parsed = Papa.default.parse(text, {
+        delimiter: '', // auto-detect (commas or tabs)
+        skipEmptyLines: true,
+      });
+
+      if (parsed.errors && parsed.errors.length > 0) {
+        addToast(`Warning: ${parsed.errors.length} parsing issues found. Using parsed rows.`, 'warning');
+      }
+
+      applyParsedData(parsed.data as (string | number | null | undefined)[][], label);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error parsing data';
+      setError(message);
+      addToast(message, 'error');
+    }
+  };
+
+  const handleSampleImport = async () => {
+    setPastedText(SAMPLE_PASTED_DATA);
+    await parseTextAndApply(SAMPLE_PASTED_DATA, 'example data');
+  };
+
+  const validateAndImport = async () => {
+    if (!preview || !parsedData) {
+      setError('No data loaded');
+      return;
+    }
+
+    if (selectedCampaignId === null) {
+      const msg = 'Please select a campaign before importing historical data.';
+      setError(msg);
+      addToast(msg, 'warning');
+      return;
+    }
+
     const unmappedRequired = mappings.filter(m => m.required && !m.mappedTo);
     if (unmappedRequired.length > 0) {
       const message = `Required fields not mapped: ${unmappedRequired.map(m => m.label).join(', ')}`;
@@ -166,20 +253,25 @@ export default function SmartCSVImport() {
     }
 
     try {
-      // Re-parse full file with worker
-      const results = await parseCSV(currentFile);
+      const headers = parsedData[0] as string[];
+      const dataRows = parsedData.slice(1) as (string | number | null | undefined)[][];
+      const importBatchId = Date.now();
 
-      const headers = results.data[0] as string[];
-      const dataRows = results.data.slice(1) as (string | number | null | undefined)[][];
-
-      const processedData = dataRows
+      const historicalDataToSave: HistoricalData[] = dataRows
         .filter(row => row.some(cell => cell && cell.toString().trim() !== ''))
         .map((row, index) => {
-          const rowData: Record<string, number> = { index: index + 1 };
+          const rowData: Partial<HistoricalData> = {
+            import_batch_id: importBatchId,
+            campaign_id: selectedCampaignId,
+            date: new Date().toISOString().split('T')[0],
+          };
+
+          let volume = 0;
+          let answered = 0;
+          let serviceLevel = 0;
 
           mappings.forEach(mapping => {
             if (!mapping.mappedTo) return;
-
             const columnIndex = headers.indexOf(mapping.mappedTo);
             if (columnIndex === -1) return;
 
@@ -187,30 +279,57 @@ export default function SmartCSVImport() {
             const valueStr = value != null ? String(value) : '';
             const valueNum = typeof value === 'number' ? value : parseFloat(valueStr) || 0;
 
-            // Parse based on field type
-            if (mapping.field === 'aht' || mapping.field === 'asa' || mapping.field === 'waitingTime') {
-              rowData[mapping.field] = parseTimeToSeconds(valueStr || valueNum);
-            } else if (mapping.field === 'answerRate' || mapping.field === 'serviceLevel') {
-              rowData[mapping.field] = parsePercentage(valueStr || valueNum);
-            } else {
-              rowData[mapping.field] = valueNum;
+            switch (mapping.field) {
+              case 'volume': volume = valueNum; rowData.volume = valueNum; break;
+              case 'answered': answered = valueNum; rowData.actual_agents = valueNum; break;
+              case 'aht': rowData.aht = parseTimeToSeconds(valueStr || valueNum); break;
+              case 'abandoned': rowData.abandons = valueNum; break;
+              case 'serviceLevel': 
+                serviceLevel = parsePercentage(valueStr || valueNum);
+                rowData.sla_achieved = serviceLevel / 100;
+                break;
+              case 'asa': rowData.asa = parseTimeToSeconds(valueStr || valueNum); break;
+              case 'actual_agents': rowData.actual_agents = valueNum; break;
+              case 'actual_fte': rowData.actual_fte = valueNum; break;
+              case 'date':
+                if (valueStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  rowData.date = valueStr;
+                } else {
+                  // Only warn once per batch to avoid spam
+                  if (index === 0) addToast(`Invalid date format. Using current date.`, 'warning');
+                }
+                break;
+              case 'interval_start': rowData.interval_start = valueStr; break;
+              case 'interval_end': rowData.interval_end = valueStr; break;
             }
           });
 
-          // Calculate derived fields
-          if (rowData.volume && rowData.answerRate && !rowData.answered) {
-            rowData.answered = Math.round(rowData.volume * (rowData.answerRate / 100));
-          }
-          if (rowData.volume && rowData.answered && !rowData.abandoned) {
-            rowData.abandoned = rowData.volume - rowData.answered;
-          }
+          if (!rowData.abandons && volume && answered) rowData.abandons = volume - answered;
+          if (!rowData.sla_achieved && serviceLevel) rowData.sla_achieved = serviceLevel / 100;
+          if (!rowData.actual_agents && answered) rowData.actual_agents = answered;
 
-          return rowData;
+          return rowData as HistoricalData;
         });
 
-      setImportedData(processedData);
+      saveHistoricalDataBatch(historicalDataToSave);
+      addToast(`Successfully imported ${historicalDataToSave.length} records!`, 'success');
       setError(null);
-      addToast(`Successfully imported ${processedData.length} intervals`, 'success');
+
+      const totalVolume = historicalDataToSave.reduce((sum, row) => sum + (row.volume || 0), 0);
+      const totalAHT = historicalDataToSave.reduce((sum, row) => sum + (row.aht || 0), 0);
+      const totalSL = historicalDataToSave.reduce((sum, row) => sum + ((row.sla_achieved || 0) * 100), 0);
+      const validRowsForAHT = historicalDataToSave.filter(row => row.aht !== undefined);
+      const validRowsForSL = historicalDataToSave.filter(row => row.sla_achieved !== undefined);
+
+      setLastImportSummary({
+        intervals: historicalDataToSave.length,
+        totalVolume,
+        avgAHT: validRowsForAHT.length > 0 ? Math.round(totalAHT / validRowsForAHT.length) : 0,
+        avgSL: validRowsForSL.length > 0 ? parseFloat((totalSL / validRowsForSL.length).toFixed(1)) : 0,
+      });
+
+      refreshAll();
+
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Import error';
       setError(message);
@@ -219,242 +338,117 @@ export default function SmartCSVImport() {
   };
 
   const applyToCalculator = () => {
-    if (!importedData || importedData.length === 0) return;
-
-    // Calculate aggregates
-    const totalVolume = importedData.reduce((sum, row) => sum + (row.volume || 0), 0);
-    const totalAnswered = importedData.reduce((sum, row) => sum + (row.answered || 0), 0);
-
-    // Weighted average AHT (by answered contacts)
-    const totalTalkTime = importedData.reduce((sum, row) => sum + ((row.aht || 0) * (row.answered || row.volume || 0)), 0);
-    const avgAHT = totalAnswered > 0
-      ? Math.round(totalTalkTime / totalAnswered)
-      : Math.round(totalTalkTime / totalVolume) || 240;
-
-    // Average per interval (for typical 30-min interval calculation)
-    const avgVolumePerInterval = Math.round(totalVolume / importedData.length);
-
-    // Average service level
-    const avgSL = importedData.reduce((sum, row) => sum + (row.serviceLevel || 0), 0) / importedData.length;
-
-    console.log('Imported Data Summary:', {
-      intervals: importedData.length,
-      totalVolume,
-      avgVolumePerInterval,
-      totalAnswered,
-      avgAHT,
-      avgSL: avgSL.toFixed(2) + '%'
-    });
-
-    // Actually update the calculator store with imported values
-    setInput('volume', avgVolumePerInterval > 0 ? avgVolumePerInterval : totalVolume);
-    setInput('aht', avgAHT > 0 ? avgAHT : 240);
-
-    // If service level threshold was imported, use it
-    const avgThreshold = importedData.reduce((sum, row) => sum + (row.threshold || 0), 0) / importedData.length;
-    if (avgThreshold > 0) {
-      setInput('thresholdSeconds', Math.round(avgThreshold));
+    if (!lastImportSummary) {
+      addToast('No data imported to apply.', 'warning');
+      return;
     }
 
-    const volume = avgVolumePerInterval > 0 ? avgVolumePerInterval : totalVolume;
+    const avgVolume = lastImportSummary.intervals > 0 
+      ? Math.round(lastImportSummary.totalVolume / lastImportSummary.intervals) 
+      : 0;
+
+    setInput('volume', avgVolume > 0 ? avgVolume : lastImportSummary.totalVolume);
+    setInput('aht', lastImportSummary.avgAHT > 0 ? lastImportSummary.avgAHT : 240);
+
     addToast(
-      `Applied: ${volume} contacts, ${avgAHT}s AHT. Switch to Calculator tab to see results.`,
+      `Applied: ${avgVolume} contacts, ${lastImportSummary.avgAHT}s AHT. Switch to Calculator tab.`,
       'success',
       5000
     );
   };
 
-  // Show worker error if present
   const displayError = error || workerError;
+  const [lastParseDuration, setLastParseDuration] = useState<number | null>(null);
 
   return (
     <div className="space-y-6">
-      {/* Upload Section */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Universal CSV Importer</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Upload any CSV file and map your columns to our fields. Works with any ACD export format!
-            </p>
-          </div>
-        </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <FileUploader 
+          isLoading={isWorkerLoading} 
+          onFileUpload={handleFileUpload} 
+          error={displayError} 
+        />
 
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="smart-csv-upload"
-            disabled={isWorkerLoading}
-          />
-          <label htmlFor="smart-csv-upload" className={`cursor-pointer ${isWorkerLoading ? 'opacity-50' : ''}`}>
-            <div className="flex flex-col items-center">
-              {isWorkerLoading ? (
-                <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-3" />
-              ) : (
-                <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-              )}
-              <p className="text-sm text-gray-600 mb-1">
-                {isWorkerLoading ? (
-                  <span className="text-primary-600 font-semibold">Processing...</span>
-                ) : (
-                  <>
-                    <span className="text-primary-600 font-semibold">Click to upload</span> or drag and drop
-                  </>
-                )}
+        <div className="bg-bg-surface rounded-lg shadow-md p-6 border border-border-subtle">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">Paste from Excel</h2>
+              <p className="text-xs text-text-secondary mt-1">
+                Copy rows from Excel or Sheets (header row + data) and paste here. Works with commas or tabs.
               </p>
-              <p className="text-xs text-gray-500">Any CSV file with call center data (max 50MB)</p>
             </div>
-          </label>
-        </div>
-
-        {displayError && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-800">{displayError}</p>
+            <span className="text-2xs text-text-muted uppercase tracking-wide bg-bg-elevated border border-border-muted rounded px-2 py-1">
+              Quick ingest
+            </span>
           </div>
-        )}
-      </div>
-
-      {/* Column Mapping */}
-      {preview && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Step 2: Map Your Columns
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Match your CSV columns to our fields. Required fields are marked with *
-          </p>
-
-          <div className="space-y-3">
-            {mappings.map(mapping => (
-              <div key={mapping.field} className="grid grid-cols-12 gap-4 items-center p-3 bg-gray-50 rounded-lg">
-                <div className="col-span-4">
-                  <label className="text-sm font-medium text-gray-700">
-                    {mapping.label}
-                    {mapping.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1">{mapping.description}</p>
-                </div>
-                <div className="col-span-1 text-center">
-                  <svg className="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </div>
-                <div className="col-span-7">
-                  <select
-                    value={mapping.mappedTo || ''}
-                    onChange={(e) => handleMappingChange(mapping.field, e.target.value || null)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 text-sm"
-                  >
-                    <option value="">-- Not Mapped --</option>
-                    {preview.headers.map((header, idx) => (
-                      <option key={idx} value={header}>
-                        {header}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 flex gap-3">
+          <textarea
+            className={cn(
+              'w-full h-32 p-3 rounded border border-border-subtle bg-bg-elevated text-sm text-text-primary',
+              'focus:outline-none focus:ring-2 focus:ring-cyan/40 resize-y'
+            )}
+            placeholder="Date,Volume,AHT,Service Level&#10;2025-01-01,950,240,82&#10;2025-01-01,1000,230,85"
+            value={pastedText}
+            onChange={(e) => setPastedText(e.target.value)}
+          />
+          <div className="flex items-center flex-wrap gap-2 mt-3">
             <button
-              onClick={validateAndImport}
-              disabled={isWorkerLoading}
-              className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+          onClick={handlePasteImport}
+          className="px-3 py-2 bg-cyan text-bg-base rounded font-semibold text-xs hover:bg-cyan/90 transition-colors"
+        >
+          Parse Pasted Data
+        </button>
+            <button
+              type="button"
+              onClick={handleSampleImport}
+              className="px-3 py-2 bg-bg-elevated text-text-primary border border-border-muted rounded font-semibold text-xs hover:bg-bg-hover transition-colors"
             >
-              {isWorkerLoading ? 'Processing...' : 'Import Data'}
+              Load Example Data
             </button>
-            {importedData && (
-              <button
-                onClick={applyToCalculator}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                Apply to Calculator
-              </button>
+            {sourceLabel && (
+              <span className="text-2xs text-text-muted">Loaded: {sourceLabel}</span>
             )}
           </div>
         </div>
+      </div>
+
+      {displayError && (
+        <div className="p-3 bg-red/10 border border-red/30 rounded-md text-sm text-red">
+          {displayError}
+        </div>
       )}
 
-      {/* Preview */}
+      {lastParseDuration !== null && (
+        <div className="text-2xs text-text-muted">
+          Parse time: {lastParseDuration.toFixed(1)} ms
+        </div>
+      )}
+
       {preview && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Preview (First 5 Rows of {preview.rowCount})
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {preview.headers.map((header, idx) => (
-                    <th key={idx} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {preview.rows.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="hover:bg-gray-50">
-                    {row.map((cell, cellIdx) => (
-                      <td key={cellIdx} className="px-4 py-2 whitespace-nowrap text-gray-700">
-                        {cell}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ColumnMapper
+          mappings={mappings}
+          headers={preview.headers}
+          onMappingChange={handleMappingChange}
+          onImport={validateAndImport}
+          isLoading={isWorkerLoading}
+          canApply={!!lastImportSummary}
+          onApply={applyToCalculator}
+        />
       )}
 
-      {/* Imported Data Summary */}
-      {importedData && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <h3 className="text-lg font-bold text-green-900 mb-3">
-            Data Imported Successfully!
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-green-700 font-medium">Intervals</p>
-              <p className="text-2xl font-bold text-green-900">{importedData.length}</p>
-            </div>
-            <div>
-              <p className="text-green-700 font-medium">Total Volume</p>
-              <p className="text-2xl font-bold text-green-900">
-                {importedData.reduce((sum, row) => sum + (row.volume || 0), 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-green-700 font-medium">Avg AHT</p>
-              <p className="text-2xl font-bold text-green-900">
-                {Math.round(
-                  importedData.reduce((sum, row) => sum + (row.aht || 0), 0) / importedData.length
-                )}s
-              </p>
-            </div>
-            <div>
-              <p className="text-green-700 font-medium">Avg SL</p>
-              <p className="text-2xl font-bold text-green-900">
-                {(importedData.reduce((sum, row) => sum + (row.serviceLevel || 0), 0) / importedData.length).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={applyToCalculator}
-            className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          >
-            Apply This Data to Calculator
-          </button>
-        </div>
+      {preview && (
+        <DataPreview 
+          headers={preview.headers} 
+          rows={preview.rows} 
+          rowCount={preview.rowCount} 
+        />
+      )}
+
+      {lastImportSummary && (
+        <ImportSummary 
+          summary={lastImportSummary} 
+          onApply={applyToCalculator} 
+        />
       )}
     </div>
   );

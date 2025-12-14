@@ -1,16 +1,8 @@
 import { create } from 'zustand';
 import type { CalculationInputs, CalculationResults } from '../types';
-import {
-  calculateStaffingMetrics,
-  calculateTrafficIntensity,
-  calculateFTE,
-  calculateOccupancy,
-  calculateServiceLevel,
-  calculateASA
-} from '../lib/calculations/erlangC';
-import { calculateErlangAMetrics, calculateServiceLevelWithAbandonment, calculateASAWithAbandonment, calculateAbandonmentProbability, calculateExpectedAbandonments } from '../lib/calculations/erlangA';
-import { calculateErlangXMetrics, calculateServiceLevelX, calculateRetrialProbability, calculateVirtualTraffic, solveEquilibriumAbandonment } from '../lib/calculations/erlangX';
-import { validateCalculationInputs, type ValidationResult } from '../lib/validation/inputValidation';
+import { CalculationService } from '../lib/services/CalculationService';
+import type { ValidationResult } from '../lib/validation/inputValidation';
+import { useDatabaseStore } from './databaseStore'; // Import database store
 
 // Simple debounce utility - avoids lodash dependency
 function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
@@ -24,30 +16,36 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
 // Debounce delay in ms - prevents excessive recalculation on rapid input
 const DEBOUNCE_DELAY = 300;
 
-// Module-level debounced calculate trigger
-// This is created once and shared across all store operations
-let debouncedCalculateTrigger: (() => void) | null = null;
-
-function triggerDebouncedCalculate(calculate: () => void) {
-  if (!debouncedCalculateTrigger) {
-    debouncedCalculateTrigger = debounce(() => {
-      calculate();
-    }, DEBOUNCE_DELAY);
-  }
-  debouncedCalculateTrigger();
+interface StaffingModel {
+  totalHeadcount: number;        // Total staff on books
+  operatingHoursPerDay: number;  // Hours center is open (e.g., 12)
+  daysOpenPerWeek: number;       // Days open per week (e.g., 5)
+  shiftLengthHours: number;      // Standard shift length (e.g., 8)
+  useAsConstraint: boolean;      // Use this staffing as constraint vs optimal calc
 }
 
-interface ActualStaff {
-  totalFTE: number;
-  productiveAgents: number;
-  useAsConstraint: boolean;
+interface AchievableMetrics {
+  serviceLevel: number;
+  asa: number;
+  occupancy: number;
+  actualOccupancy?: number;
+  abandonmentRate?: number;
+  expectedAbandonments?: number;
+  effectiveAgents: number;
+  actualAgents: number;
+  occupancyCapApplied?: boolean;
+  requiredAgentsForMaxOccupancy?: number;
+  occupancyPenalty?: number;
 }
 
 interface CalculatorState {
   inputs: CalculationInputs;
+  date: string; // Add date for calendar integration
   results: CalculationResults | null;
-  actualStaff: ActualStaff;
+  staffingModel: StaffingModel;
   validation: ValidationResult;
+  activeProductivityModifier?: number;
+  achievableMetrics?: AchievableMetrics | null; // What you can achieve with your staff
   abandonmentMetrics?: {
     abandonmentRate: number;
     expectedAbandonments: number;
@@ -56,7 +54,8 @@ interface CalculatorState {
     virtualTraffic?: number;
   } | null;
   setInput: <K extends keyof CalculationInputs>(key: K, value: CalculationInputs[K]) => void;
-  setActualStaff: <K extends keyof ActualStaff>(key: K, value: ActualStaff[K]) => void;
+  setDate: (date: string) => void; // Add setDate action
+  setStaffingModel: <K extends keyof StaffingModel>(key: K, value: StaffingModel[K]) => void;
   calculate: () => void;
   reset: () => void;
 }
@@ -69,259 +68,130 @@ const DEFAULT_INPUTS: CalculationInputs = {
   thresholdSeconds: 20,
   shrinkagePercent: 25,
   maxOccupancy: 90,
-  model: 'erlangC', // Start with simplest model
-  averagePatience: 120 // 2 minutes default patience (for Erlang A/X)
+  model: 'C', // Start with simplest model
+  averagePatience: 120, // 2 minutes default patience (for Erlang A/X)
+  concurrency: 1 // Default concurrency
 };
+
+const DEFAULT_STAFFING_MODEL: StaffingModel = {
+  totalHeadcount: 0,
+  operatingHoursPerDay: 12,
+  daysOpenPerWeek: 5,
+  shiftLengthHours: 8,
+  useAsConstraint: false,
+};
+
+// Helper to calculate productive agents from staffing model
+export function calculateProductiveAgents(
+  staffingModel: StaffingModel,
+  shrinkagePercent: number
+): { staffPerShift: number; productiveAgents: number; shiftsToFillDay: number } {
+  if (staffingModel.totalHeadcount <= 0 || staffingModel.shiftLengthHours <= 0) {
+    return { staffPerShift: 0, productiveAgents: 0, shiftsToFillDay: 0 };
+  }
+
+  // How many shifts needed to cover the operating hours
+  const shiftsToFillDay = staffingModel.operatingHoursPerDay / staffingModel.shiftLengthHours;
+
+  // Staff available per shift (simple coverage model)
+  const staffPerShift = Math.round(staffingModel.totalHeadcount / shiftsToFillDay);
+
+  // Apply shrinkage to get productive agents
+  const productiveAgents = Math.round(staffPerShift * (1 - shrinkagePercent / 100));
+
+  return { staffPerShift, productiveAgents, shiftsToFillDay };
+}
 
 export const useCalculatorStore = create<CalculatorState>((set, get) => ({
   inputs: DEFAULT_INPUTS,
+  date: new Date().toISOString().split('T')[0], // Default to today
   results: null,
-  actualStaff: {
-    totalFTE: 0,
-    productiveAgents: 0,
-    useAsConstraint: false
-  },
+  staffingModel: DEFAULT_STAFFING_MODEL,
   validation: { valid: true, errors: [] },
+  achievableMetrics: null,
   abandonmentMetrics: null,
 
   setInput: (key, value) => {
     set((state) => ({
       inputs: { ...state.inputs, [key]: value }
     }));
-    // Auto-calculate on input change with debouncing to prevent excessive recalculation
-    triggerDebouncedCalculate(() => get().calculate());
+    // Auto-calculate on input change
+    get().calculate();
   },
 
-  setActualStaff: (key, value) => {
+  setDate: (date) => {
+    set({ date });
+    get().calculate();
+  },
+
+  setStaffingModel: (key, value) => {
     set((state) => ({
-      actualStaff: { ...state.actualStaff, [key]: value }
+      staffingModel: { ...state.staffingModel, [key]: value }
     }));
-    // Auto-calculate when staff constraint changes with debouncing
-    triggerDebouncedCalculate(() => get().calculate());
+    // Auto-calculate when staffing model changes
+    get().calculate();
   },
 
-  calculate: () => {
-    const { inputs, actualStaff } = get();
+  calculate: debounce(() => {
+    const { inputs, staffingModel, date } = get();
+    const { calendarEvents } = useDatabaseStore.getState();
 
-    // Validate inputs before calculating
-    const validationResult = validateCalculationInputs(inputs);
-    set({ validation: validationResult });
+    // Calculate productivity modifier from calendar events for the selected date
+    let productivityModifier = 1.0;
+    
+    if (calendarEvents.length > 0) {
+      // Filter events that overlap with the selected date
+      // Simple logic: if event starts or ends on this date, or encompasses it.
+      // Assuming event times are in ISO format.
+      // We'll just check if the event *starts* on this date for simplicity for now, 
+      // or ideally, if the date falls within the range.
+      
+      const targetDateStart = new Date(date + 'T00:00:00');
+      const targetDateEnd = new Date(date + 'T23:59:59');
 
-    // If invalid, clear results and stop
-    if (!validationResult.valid) {
-      set({ results: null, abandonmentMetrics: null });
-      return;
-    }
+      const dailyEvents = calendarEvents.filter(event => {
+        const eventStart = new Date(event.start_datetime);
+        const eventEnd = new Date(event.end_datetime);
+        return eventStart <= targetDateEnd && eventEnd >= targetDateStart;
+      });
 
-    const intervalSeconds = inputs.intervalMinutes * 60;
-    const trafficIntensity = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
-
-    // If using actual staff as constraint, calculate achievable metrics
-    if (actualStaff.useAsConstraint && actualStaff.productiveAgents > 0) {
-      const agents = actualStaff.productiveAgents;
-
-      if (inputs.model === 'erlangC') {
-        const sl = calculateServiceLevel(agents, trafficIntensity, inputs.aht, inputs.thresholdSeconds);
-        const asa = calculateASA(agents, trafficIntensity, inputs.aht);
-        const occupancy = calculateOccupancy(trafficIntensity, agents);
-        const totalFTE = calculateFTE(agents, inputs.shrinkagePercent / 100);
-
-        set({
-          results: {
-            trafficIntensity,
-            requiredAgents: agents,
-            totalFTE,
-            serviceLevel: sl * 100,
-            asa,
-            occupancy: occupancy * 100,
-            canAchieveTarget: sl >= inputs.targetSLPercent / 100
-          },
-          abandonmentMetrics: null
-        });
-        return;
-      } else if (inputs.model === 'erlangA') {
-        const theta = inputs.averagePatience / inputs.aht;
-        const sl = calculateServiceLevelWithAbandonment(agents, trafficIntensity, inputs.aht, inputs.thresholdSeconds, inputs.averagePatience);
-        const asa = calculateASAWithAbandonment(agents, trafficIntensity, inputs.aht, inputs.averagePatience);
-        const abandonProb = calculateAbandonmentProbability(agents, trafficIntensity, theta);
-        const expectedAbandons = calculateExpectedAbandonments(inputs.volume, agents, trafficIntensity, theta);
-        const occupancy = calculateOccupancy(trafficIntensity, agents);
-        const totalFTE = calculateFTE(agents, inputs.shrinkagePercent / 100);
-
-        set({
-          results: {
-            trafficIntensity,
-            requiredAgents: agents,
-            totalFTE,
-            serviceLevel: sl * 100,
-            asa,
-            occupancy: occupancy * 100,
-            canAchieveTarget: sl >= inputs.targetSLPercent / 100
-          },
-          abandonmentMetrics: {
-            abandonmentRate: abandonProb,
-            expectedAbandonments: expectedAbandons,
-            answeredContacts: inputs.volume - expectedAbandons
-          }
-        });
-        return;
-      } else if (inputs.model === 'erlangX') {
-        const abandonRate = solveEquilibriumAbandonment(trafficIntensity, agents, inputs.aht, inputs.averagePatience);
-        const sl = calculateServiceLevelX(agents, trafficIntensity, inputs.aht, inputs.thresholdSeconds, inputs.averagePatience);
-        const avgWait = agents > trafficIntensity ? (inputs.aht / (agents - trafficIntensity)) : Infinity;
-        const retrialProb = calculateRetrialProbability(avgWait, inputs.averagePatience);
-        const virtualTraffic = calculateVirtualTraffic(trafficIntensity, abandonRate, retrialProb);
-        const expectedAbandons = inputs.volume * abandonRate;
-        const occupancy = calculateOccupancy(trafficIntensity, agents);
-        const totalFTE = calculateFTE(agents, inputs.shrinkagePercent / 100);
-
-        set({
-          results: {
-            trafficIntensity,
-            requiredAgents: agents,
-            totalFTE,
-            serviceLevel: sl * 100,
-            asa: avgWait,
-            occupancy: occupancy * 100,
-            canAchieveTarget: sl >= inputs.targetSLPercent / 100
-          },
-          abandonmentMetrics: {
-            abandonmentRate: abandonRate,
-            expectedAbandonments: expectedAbandons,
-            answeredContacts: inputs.volume - expectedAbandons,
-            retrialProbability: retrialProb,
-            virtualTraffic
-          }
-        });
-        return;
+      if (dailyEvents.length > 0) {
+        // Calculate weighted average or simple min?
+        // If there's a 0% productivity event (Holiday), modifier should be 0?
+        // Or does it apply to specific staff?
+        // "Productivity modifier" in CalendarEvents table usually means "staff available during this event are X% productive".
+        // But does the event apply to ALL staff? The `applies_to_filter` field exists but is currently null/JSON.
+        // Assumption: Events apply to ALL staff for the Calculator tab (global planner).
+        
+        // If multiple events, how do they combine?
+        // Simple approach: Take the minimum productivity (pessimistic).
+        // E.g. Holiday (0%) overrides Training (50%).
+        productivityModifier = dailyEvents.reduce((min, event) => {
+          return Math.min(min, event.productivity_modifier);
+        }, 1.0);
       }
     }
 
-    // Normal mode: solve for optimal staffing
-    // Dispatch to appropriate model
-    if (inputs.model === 'erlangC') {
-      // Erlang C (infinite patience)
-      const metrics = calculateStaffingMetrics({
-        volume: inputs.volume,
-        aht: inputs.aht,
-        intervalSeconds,
-        targetSL: inputs.targetSLPercent / 100,
-        thresholdSeconds: inputs.thresholdSeconds,
-        shrinkagePercent: inputs.shrinkagePercent / 100,
-        maxOccupancy: inputs.maxOccupancy / 100
-      });
+    const serviceResult = CalculationService.calculate(inputs, staffingModel, productivityModifier);
 
-      set({
-        results: {
-          ...metrics,
-          serviceLevel: metrics.serviceLevel * 100,
-          occupancy: metrics.occupancy * 100
-        },
-        abandonmentMetrics: null
-      });
-    } else if (inputs.model === 'erlangA') {
-      // Erlang A (with abandonment)
-      const metricsA = calculateErlangAMetrics({
-        volume: inputs.volume,
-        aht: inputs.aht,
-        intervalMinutes: inputs.intervalMinutes,
-        targetSLPercent: inputs.targetSLPercent,
-        thresholdSeconds: inputs.thresholdSeconds,
-        shrinkagePercent: inputs.shrinkagePercent,
-        maxOccupancy: inputs.maxOccupancy,
-        averagePatience: inputs.averagePatience
-      });
-
-      if (metricsA) {
-        const trafficIntensity = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
-        const totalFTE = calculateFTE(metricsA.requiredAgents, inputs.shrinkagePercent / 100);
-        const occupancy = calculateOccupancy(trafficIntensity, metricsA.requiredAgents);
-
-        set({
-          results: {
-            trafficIntensity,
-            requiredAgents: metricsA.requiredAgents,
-            totalFTE,
-            serviceLevel: metricsA.serviceLevel * 100,
-            asa: metricsA.asa,
-            occupancy: occupancy * 100,
-            canAchieveTarget: true
-          },
-          abandonmentMetrics: {
-            abandonmentRate: metricsA.abandonmentProbability,
-            expectedAbandonments: metricsA.expectedAbandonments,
-            answeredContacts: metricsA.answeredContacts
-          }
-        });
-      } else {
-        set({
-          results: {
-            trafficIntensity: 0,
-            requiredAgents: 0,
-            totalFTE: 0,
-            serviceLevel: 0,
-            asa: Infinity,
-            occupancy: 0,
-            canAchieveTarget: false
-          },
-          abandonmentMetrics: null
-        });
-      }
-    } else if (inputs.model === 'erlangX') {
-      // Erlang X (most accurate)
-      const metricsX = calculateErlangXMetrics({
-        volume: inputs.volume,
-        aht: inputs.aht,
-        intervalMinutes: inputs.intervalMinutes,
-        targetSLPercent: inputs.targetSLPercent,
-        thresholdSeconds: inputs.thresholdSeconds,
-        shrinkagePercent: inputs.shrinkagePercent,
-        maxOccupancy: inputs.maxOccupancy,
-        averagePatience: inputs.averagePatience
-      });
-
-      if (metricsX) {
-        const baseTraffic = calculateTrafficIntensity(inputs.volume, inputs.aht, intervalSeconds);
-        const totalFTE = calculateFTE(metricsX.requiredAgents, inputs.shrinkagePercent / 100);
-        const occupancy = calculateOccupancy(baseTraffic, metricsX.requiredAgents);
-
-        set({
-          results: {
-            trafficIntensity: baseTraffic,
-            requiredAgents: metricsX.requiredAgents,
-            totalFTE,
-            serviceLevel: metricsX.serviceLevel * 100,
-            asa: metricsX.asa,
-            occupancy: occupancy * 100,
-            canAchieveTarget: true
-          },
-          abandonmentMetrics: {
-            abandonmentRate: metricsX.abandonmentRate,
-            expectedAbandonments: metricsX.expectedAbandonments,
-            answeredContacts: metricsX.answeredContacts,
-            retrialProbability: metricsX.retrialProbability,
-            virtualTraffic: metricsX.virtualTraffic
-          }
-        });
-      } else {
-        set({
-          results: {
-            trafficIntensity: 0,
-            requiredAgents: 0,
-            totalFTE: 0,
-            serviceLevel: 0,
-            asa: Infinity,
-            occupancy: 0,
-            canAchieveTarget: false
-          },
-          abandonmentMetrics: null
-        });
-      }
-    }
-  },
+    set({
+      results: serviceResult.results,
+      achievableMetrics: serviceResult.achievableMetrics,
+      abandonmentMetrics: serviceResult.abandonmentMetrics,
+      validation: serviceResult.validation,
+      activeProductivityModifier: productivityModifier,
+    });
+  }, DEBOUNCE_DELAY),
 
   reset: () => {
-    set({ inputs: DEFAULT_INPUTS, results: null, abandonmentMetrics: null, validation: { valid: true, errors: [] } });
+    set({ 
+      inputs: DEFAULT_INPUTS, 
+      date: new Date().toISOString().split('T')[0], 
+      results: null, 
+      abandonmentMetrics: null, 
+      activeProductivityModifier: 1.0,
+      validation: { valid: true, errors: [] } 
+    });
     setTimeout(() => get().calculate(), 0);
   }
 }));

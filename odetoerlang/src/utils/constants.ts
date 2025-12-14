@@ -34,7 +34,7 @@ export const MIN_AGENTS_FOR_LOW_TRAFFIC = 10; // Minimum search range for traffi
 export const EQUILIBRIUM_TOLERANCE = 0.0001; // Convergence threshold
 export const EQUILIBRIUM_MAX_ITERATIONS = 100;
 
-// Erlang X specific
+// Retrial / time-varying model constants (currently unused; kept for future experimentation)
 export const BASE_RETRIAL_RATE = 0.4; // 40% of abandoned customers retry
 export const MAX_RETRIAL_RATE = 0.7; // Maximum 70% retrial rate
 export const DEFAULT_PATIENCE_SHAPE = 1.2; // Weibull shape parameter

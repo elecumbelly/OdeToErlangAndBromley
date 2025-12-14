@@ -43,7 +43,7 @@ export default function EducationalMode() {
           <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mt-2">
             <p className="text-xs text-blue-900">
               <strong>💡 Pro Tip:</strong> For more accurate results, use Erlang A (accounts for abandonment)
-              or Erlang X (includes retrials and time-varying patterns).
+              or Erlang B (loss/blocking model for trunks and pure loss systems).
             </p>
           </div>
         </div>
@@ -215,7 +215,6 @@ export default function EducationalMode() {
             <ul className="list-disc list-inside text-xs space-y-1">
               <li>Assumes infinite patience - customers never abandon</li>
               <li>Overestimates service level by 5-15% in typical contact centers</li>
-              <li>Doesn't account for retrials (customers calling back)</li>
               <li>Assumes constant arrival rate (not realistic for intraday patterns)</li>
               <li>Assumes all agents have identical skill levels</li>
             </ul>
@@ -233,10 +232,9 @@ export default function EducationalMode() {
             </div>
 
             <div>
-              <div className="font-semibold text-sm">Erlang X (2012+)</div>
+              <div className="font-semibold text-sm">Erlang B (1917)</div>
               <p className="text-xs text-gray-600">
-                Most accurate model - includes abandonment, retrials, and time-varying arrivals.
-                Used in professional WFM tools. Accuracy: ±2%.
+                Loss/blocking model with no queue. Use for trunks/circuits or pure loss systems.
               </p>
             </div>
           </div>
@@ -244,7 +242,7 @@ export default function EducationalMode() {
           <div className="bg-blue-50 p-3 rounded-lg">
             <p className="text-xs text-gray-700">
               <strong>Recommendation:</strong> Use Erlang C for quick estimates and planning.
-              For production staffing decisions, validate with Erlang A or X, or use historical data
+              For production staffing decisions, validate with Erlang A, or use historical data
               to calibrate your assumptions.
             </p>
           </div>

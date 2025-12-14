@@ -7,7 +7,7 @@ import { getDatabase, saveDatabase } from './initDatabase';
 export async function seedDatabase() {
   const db = getDatabase();
 
-  console.log('🌱 Seeding database with test data...');
+
 
   // ========================================================================
   // 1. SITES
@@ -233,7 +233,8 @@ export async function seedDatabase() {
     VALUES
       ('Baseline 2025', 'Current assumptions and volume trends', 1),
       ('Optimistic Growth', '+20% volume increase', 0),
-      ('AHT Improvement', 'AHT reduced by 15%', 0);
+      ('AHT Improvement', 'AHT reduced by 15%', 0),
+      ('High Abandonment Stress Test', 'Voice + chat spike with low patience', 0);
   `);
 
   // ========================================================================
@@ -291,16 +292,16 @@ export async function seedDatabase() {
   // ========================================================================
   saveDatabase();
 
-  console.log('✅ Database seeded successfully!');
-  console.log('📊 Created:');
-  console.log('  - 3 sites');
-  console.log('  - 7 roles');
-  console.log('  - 50+ staff members');
-  console.log('  - 10 skills');
-  console.log('  - 4 clients');
-  console.log('  - 7 campaigns');
-  console.log('  - 4 contracts');
-  console.log('  - Billing rules, assumptions, scenarios, and more!');
+
+
+
+
+
+
+
+
+
+
 }
 
 /**

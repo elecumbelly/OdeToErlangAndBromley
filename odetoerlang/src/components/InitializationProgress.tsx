@@ -34,8 +34,8 @@ export function InitializationProgress({
   const isError = stage === 'error';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4">
+    <div className="min-h-screen bg-bg-base flex items-center justify-center">
+      <div className="bg-bg-surface p-8 rounded-xl shadow-lg max-w-md w-full mx-4 border border-border-subtle">
         {/* Icon and Title */}
         <div className="text-center mb-6">
           {isError ? (
@@ -45,12 +45,12 @@ export function InitializationProgress({
               </svg>
             </div>
           ) : (
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4" />
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-cyan mx-auto mb-4" />
           )}
-          <h2 className={`text-xl font-bold ${isError ? 'text-red-600' : 'text-gray-900'}`}>
+          <h2 className={`text-xl font-bold ${isError ? 'text-red' : 'text-text-primary'}`}>
             {stageMessages[stage]}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-text-secondary mt-1">
             {isError && errorMessage ? errorMessage : stageTips[stage]}
           </p>
         </div>
@@ -64,7 +64,7 @@ export function InitializationProgress({
               showLabel={true}
               label="Loading..."
               size="lg"
-              variant="default"
+              variant="cyan"
             />
           </div>
         )}
@@ -95,7 +95,7 @@ export function InitializationProgress({
           <div className="mt-6 flex justify-center">
             <button
               onClick={() => window.location.reload()}
-              className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+              className="bg-red/20 text-red px-6 py-2 rounded-lg hover:bg-red/30 transition-colors"
             >
               Reload Page
             </button>
@@ -104,8 +104,8 @@ export function InitializationProgress({
 
         {/* First-time tip */}
         {!isError && progress < 50 && (
-          <div className="mt-6 p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-700">
+          <div className="mt-6 p-3 bg-cyan/10 rounded-lg border border-cyan/20">
+            <p className="text-xs text-cyan">
               <strong>First visit?</strong> Initial setup may take a few seconds while we prepare your workspace.
             </p>
           </div>
@@ -128,11 +128,11 @@ function StageIndicator({
     <div className="flex items-center space-x-3">
       <div
         className={`w-5 h-5 rounded-full flex items-center justify-center text-xs
-          ${isComplete ? 'bg-green-500 text-white' : isActive ? 'bg-primary-500 text-white animate-pulse' : 'bg-gray-200 text-gray-400'}`}
+          ${isComplete ? 'bg-green text-text-primary' : isActive ? 'bg-cyan text-text-primary animate-pulse' : 'bg-bg-elevated text-text-muted'}`}
       >
         {isComplete ? '✓' : isActive ? '•' : '○'}
       </div>
-      <span className={`text-sm ${isComplete ? 'text-green-700' : isActive ? 'text-primary-700 font-medium' : 'text-gray-400'}`}>
+      <span className={`text-sm ${isComplete ? 'text-green' : isActive ? 'text-cyan font-medium' : 'text-text-muted'}`}>
         {label}
       </span>
     </div>

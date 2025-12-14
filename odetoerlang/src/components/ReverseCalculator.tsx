@@ -2,15 +2,14 @@ import { useState, useMemo } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { calculateServiceLevel, calculateASA, calculateOccupancy, calculateTrafficIntensity } from '../lib/calculations/erlangC';
 import { calculateServiceLevelWithAbandonment, calculateASAWithAbandonment, calculateAbandonmentProbability } from '../lib/calculations/erlangA';
-import { calculateServiceLevelX, solveEquilibriumAbandonment } from '../lib/calculations/erlangX';
-import type { ErlangModel } from '../types';
+import type { ErlangVariant } from '../types';
 
 export default function ReverseCalculator() {
   const { inputs } = useCalculatorStore();
 
   const [availableAgents, setAvailableAgents] = useState(10);
   const [availableSeats, setAvailableSeats] = useState(12);
-  const [model, setModel] = useState<ErlangModel>('erlangC');
+  const [model, setModel] = useState<ErlangVariant>('C');
 
   const results = useMemo(() => {
     const intervalSeconds = inputs.intervalMinutes * 60;
@@ -21,7 +20,7 @@ export default function ReverseCalculator() {
     let abandonmentRate: number | undefined;
     let expectedAbandonments: number | undefined;
 
-    if (model === 'erlangC') {
+    if (model === 'C') {
       serviceLevel = calculateServiceLevel(
         availableAgents,
         trafficIntensity,
@@ -29,7 +28,7 @@ export default function ReverseCalculator() {
         inputs.thresholdSeconds
       );
       asa = calculateASA(availableAgents, trafficIntensity, inputs.aht);
-    } else if (model === 'erlangA') {
+    } else if (model === 'A') { // Now covers both Erlang A and former X
       serviceLevel = calculateServiceLevelWithAbandonment(
         availableAgents,
         trafficIntensity,
@@ -46,28 +45,6 @@ export default function ReverseCalculator() {
       const theta = inputs.averagePatience / inputs.aht;
       abandonmentRate = calculateAbandonmentProbability(availableAgents, trafficIntensity, theta);
       expectedAbandonments = inputs.volume * abandonmentRate;
-    } else if (model === 'erlangX') {
-      serviceLevel = calculateServiceLevelX(
-        availableAgents,
-        trafficIntensity,
-        inputs.aht,
-        inputs.thresholdSeconds,
-        inputs.averagePatience
-      );
-      abandonmentRate = solveEquilibriumAbandonment(
-        trafficIntensity,
-        availableAgents,
-        inputs.aht,
-        inputs.averagePatience
-      );
-      expectedAbandonments = inputs.volume * abandonmentRate;
-      // Calculate ASA similar to Erlang A for now
-      asa = calculateASAWithAbandonment(
-        availableAgents,
-        trafficIntensity,
-        inputs.aht,
-        inputs.averagePatience
-      );
     }
 
     const occupancy = calculateOccupancy(trafficIntensity, availableAgents);
@@ -175,17 +152,15 @@ export default function ReverseCalculator() {
             <select
               id="model"
               value={model}
-              onChange={(e) => setModel(e.target.value as ErlangModel)}
+              onChange={(e) => setModel(e.target.value as ErlangVariant)}
               className={inputClass}
             >
-              <option value="erlangC">Erlang C</option>
-              <option value="erlangA">Erlang A</option>
-              <option value="erlangX">Erlang X</option>
+              <option value="C">Erlang C</option>
+              <option value="A">Erlang A</option>
             </select>
             <p className="mt-2 text-xs text-gray-600">
-              {model === 'erlangC' && 'Infinite patience (classic)'}
-              {model === 'erlangA' && 'With abandonment'}
-              {model === 'erlangX' && 'Most accurate'}
+              {model === 'C' && 'Infinite patience (classic)'}
+              {model === 'A' && 'With abandonment (includes retrials)'}
             </p>
           </div>
         </div>

@@ -18,9 +18,9 @@ export async function initDatabase(): Promise<Database> {
   if (db) return db;
 
   // Load sql.js WASM from local bundle (enables offline support)
-  // Uses import.meta.url for dynamic path resolution - supports subdirectory deployments
+  // WASM file is in /public folder, served at root
   const SQL = await initSqlJs({
-    locateFile: (file) => new URL(`/${file}`, import.meta.url).href,
+    locateFile: (file) => `/${file}`,
   });
 
   // One-time migration from localStorage to IndexedDB
@@ -31,7 +31,7 @@ export async function initDatabase(): Promise<Database> {
   if (savedDbBinary) {
     try {
       db = new SQL.Database(savedDbBinary);
-      console.log('✅ Database loaded from IndexedDB');
+
 
       // Check schema version and run migrations if needed
       await runMigrations();
@@ -44,7 +44,7 @@ export async function initDatabase(): Promise<Database> {
 
   // Create new database
   db = new SQL.Database();
-  console.log('🆕 Creating new database');
+
 
   // Load and execute schema
   createTables();
@@ -56,7 +56,7 @@ export async function initDatabase(): Promise<Database> {
 }
 
 // Current schema version - increment when adding migrations
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 2;
 
 /**
  * Get the current schema version from the database
@@ -86,7 +86,7 @@ async function runMigrations(): Promise<void> {
   const currentVersion = getSchemaVersion();
 
   if (currentVersion < CURRENT_SCHEMA_VERSION) {
-    console.log(`🔄 Running migrations from v${currentVersion} to v${CURRENT_SCHEMA_VERSION}`);
+
 
     // Migration 0 → 1: Add schema_version table to legacy databases
     if (currentVersion < 1) {
@@ -99,14 +99,20 @@ async function runMigrations(): Promise<void> {
         INSERT OR IGNORE INTO schema_version (version, description)
         VALUES (1, 'Initial schema - WFM Ready Reckoner');
       `);
-      console.log('✅ Migration 1 applied: schema_version table created');
+
     }
 
-    // Future migrations would be added here:
-    // if (currentVersion < 2) { ... }
+    // Migration 1 → 2: Add erlang_model column to Scenarios table
+    if (currentVersion < 2) {
+      db.exec(`
+        ALTER TABLE Scenarios ADD COLUMN erlang_model TEXT DEFAULT 'C';
+        INSERT OR REPLACE INTO schema_version (version, description)
+        VALUES (2, 'Add erlang_model column to Scenarios');
+      `);
+    }
 
     await saveDatabase();
-    console.log(`✅ Migrations complete. Schema now at v${CURRENT_SCHEMA_VERSION}`);
+
   }
 }
 
@@ -119,7 +125,7 @@ function createTables() {
   // Execute schema (imported as raw string via Vite)
   db.exec(schemaSql);
 
-  console.log('✅ All 22 tables created (including schema_version)');
+
 }
 
 /**
@@ -131,7 +137,7 @@ export async function saveDatabase(): Promise<void> {
   try {
     const data = db.export();
     await saveDatabaseBinary(data);
-    console.log('💾 Database saved to IndexedDB');
+
   } catch (error) {
     console.error('❌ Failed to save database:', error);
   }
@@ -152,7 +158,7 @@ export async function resetDatabase() {
   await deleteDatabaseBinary();
   db = null;
   await initDatabase();
-  console.log('🔄 Database reset');
+
 }
 
 /**
@@ -182,5 +188,12 @@ export async function importDatabase(file: File) {
   await runMigrations();
   await saveDatabase();
 
-  console.log('📥 Database imported from file');
+
+}
+
+/**
+ * Expose current schema version for diagnostics
+ */
+export function getCurrentSchemaVersion(): number {
+  return getSchemaVersion();
 }

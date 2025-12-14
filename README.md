@@ -1,4 +1,4 @@
-# 📊 OdeToErlangAndBromleyAndBromley
+# 📊 OdeToErlangAndBromley
 
 > **The Ultimate Contact Center Capacity Planning Calculator**
 
@@ -17,7 +17,7 @@ A comprehensive, browser-based workforce management tool for calculating staffin
 
 **Solution:** OdeToErlangAndBromley is a 100% browser-based, mathematically correct capacity planning calculator that:
 - ✅ Works entirely in your browser (no data leaves your machine)
-- ✅ Supports Erlang C, A, and X models (from basic to most accurate)
+- ✅ Supports Erlang B, C, and A models (from basic to most accurate)
 - ✅ Handles multi-channel environments (voice, chat, email, video, custom)
 - ✅ Imports CSV data from any ACD system
 - ✅ Provides instant "what-if" scenario analysis
@@ -28,9 +28,9 @@ A comprehensive, browser-based workforce management tool for calculating staffin
 ## 🚀 Key Features
 
 ### 📐 **Mathematically Correct Models**
+- **Erlang B** - Blocking model (no queuing, for trunk/circuit planning)
 - **Erlang C** - Classic formula (infinite patience assumption)
-- **Erlang A** - With customer abandonment modeling (~5% accuracy improvement)
-- **Erlang X** - Most accurate (±2% error, industry best practice)
+- **Erlang A** - With customer abandonment modeling (most accurate for contact centers)
 - **Model Comparison** - Compare results side-by-side to see the difference
 
 ### 📞 **Multi-Channel Support**
@@ -58,7 +58,7 @@ A comprehensive, browser-based workforce management tool for calculating staffin
 - Optimize resource utilization
 
 ### 📤 **Export & Reporting**
-- Export to CSV, Excel, PDF
+- Export to CSV, JSON, and text reports
 - Customizable reports for different audiences
 - Save/load configurations
 
@@ -134,15 +134,15 @@ Production files will be in `dist/` directory. Deploy to any static hosting serv
 4. **Preview & Import**
 5. **Apply to Calculator**
 
-### Comparing Models (C vs A vs X)
+### Comparing Models (B vs C vs A)
 
 1. **Go to Model Comparison tab**
 2. **Enter scenario parameters**
-3. **See side-by-side results** for Erlang C, A, and X
-4. **Understand the accuracy differences:**
-   - Erlang C overestimates (5-15% error)
-   - Erlang A is more accurate (~5% error)
-   - Erlang X is most accurate (±2% error)
+3. **See side-by-side results** for Erlang B, C, and A
+4. **Understand the differences:**
+   - Erlang B: blocking probability (no queue)
+   - Erlang C: assumes infinite patience (overestimates service level)
+   - Erlang A: accounts for abandonment (most realistic)
 
 ### What-If Scenarios
 
@@ -198,28 +198,15 @@ where:
 
 **Additional Parameter:** θ (theta) = Average Patience / AHT
 
-#### Erlang X (2012+)
-**Assumptions:** Most realistic model with retrials and virtual waiting time
-
-**Use Case:** Professional-grade WFM accuracy
-
-**Advantages:**
-- Most accurate predictions (±2% error)
-- Models customer retrial behavior
-- Handles time-varying arrival rates
-- Industry best practice for enterprise WFM
-
-**Complexity:** More computationally intensive, requires iterative solving
-
 ### When to Use Each Model
 
 | Scenario | Recommended Model | Reason |
 |----------|-------------------|--------|
+| Trunk/circuit planning | Erlang B | Calculates blocking probability |
 | Quick estimates | Erlang C | Fast, simple, widely understood |
-| Budget planning | Erlang A | Good accuracy without complexity |
-| Operational staffing | Erlang X | Most accurate for real-world decisions |
-| Matching legacy tools | Erlang C | Many older systems use this |
-| High-abandonment queues | Erlang A or X | Critical to account for lost contacts |
+| Budget planning | Erlang C | Conservative staffing estimate |
+| Operational staffing | Erlang A | Accounts for real-world abandonment |
+| High-abandonment queues | Erlang A | Critical to account for lost contacts |
 
 ### Key Metrics Explained
 
@@ -253,7 +240,7 @@ Typical: 20-35%
 ## 🏗️ Technology Stack
 
 ### Frontend
-- **React 18** - UI framework
+- **React 19** - UI framework
 - **TypeScript** - Type safety for complex calculations
 - **Tailwind CSS** - Utility-first styling
 - **Zustand** - Lightweight state management
@@ -261,7 +248,7 @@ Typical: 20-35%
 ### Data & Visualization
 - **Recharts** - Interactive charts and graphs
 - **Papa Parse** - CSV parsing and generation
-- **date-fns** - Date/time handling
+- **FullCalendar** - Calendar & scheduling UI
 
 ### Build & Development
 - **Vite** - Fast build tool and dev server
@@ -270,9 +257,9 @@ Typical: 20-35%
 
 ### Mathematics
 - Custom implementations of:
+  - Erlang B formula (blocking model)
   - Erlang C formula (iterative method, factorial-safe)
   - Erlang A formula with abandonment
-  - Erlang X equilibrium solver
   - Multi-skill routing algorithms
 
 ---
@@ -285,22 +272,25 @@ OdeToErlangAndBromley/
 │   ├── public/                # Static assets
 │   ├── src/
 │   │   ├── components/        # React components
+│   │   │   ├── BPO/                 # Client, Contract, Billing
+│   │   │   ├── Calendar/            # Event management
+│   │   │   ├── Workforce/           # Staff, Roles management
 │   │   │   ├── InputPanel.tsx         # Main input form
 │   │   │   ├── ResultsDisplay.tsx     # Results output
 │   │   │   ├── ChartsPanel.tsx        # Visualizations
 │   │   │   ├── SmartCSVImport.tsx     # Universal CSV importer
 │   │   │   ├── MultiChannelPanel.tsx  # Multi-channel config
 │   │   │   ├── ScenarioComparison.tsx # What-if scenarios
-│   │   │   ├── ModelComparison.tsx    # C vs A vs X comparison
+│   │   │   ├── ModelComparison.tsx    # B vs C vs A comparison
 │   │   │   ├── ReverseCalculator.tsx  # Capacity planning
 │   │   │   ├── EducationalMode.tsx    # Learning resources
 │   │   │   └── ExportPanel.tsx        # Export functionality
 │   │   ├── lib/
 │   │   │   ├── calculations/  # Mathematical formulas
-│   │   │   │   ├── erlangC.ts         # Erlang C implementation
-│   │   │   │   ├── erlangA.ts         # Erlang A with abandonment
-│   │   │   │   ├── erlangX.ts         # Erlang X (most accurate)
-│   │   │   │   └── multiChannel.ts    # Multi-channel logic
+│   │   │   │   ├── erlangEngine.ts    # Unified Erlang B/C/A engine
+│   │   │   │   ├── erlangA.ts         # Erlang A (abandonment model)
+│   │   │   │   ├── erlangB.ts         # Erlang B (blocking model)
+│   │   │   │   └── erlangC.ts         # Erlang C (queuing model)
 │   │   │   └── utils/         # Helper functions
 │   │   ├── store/
 │   │   │   └── calculatorStore.ts     # Zustand state management
@@ -313,10 +303,6 @@ OdeToErlangAndBromley/
 ├── docs/                      # Documentation
 │   ├── FORMULAS.md           # Mathematical reference
 │   ├── CSV-FORMATS.md        # CSV import specifications
-│   └── USER-GUIDE.md         # Detailed user guide
-├── examples/                  # Sample data files
-│   ├── sample-acd-export.csv
-│   └── sample-forecast.csv
 ├── LICENSE                    # MIT License
 ├── README.md                  # This file
 ├── CLAUDE.md                  # AI assistant guide
@@ -339,9 +325,9 @@ npm run test:coverage
 ```
 
 ### Key Test Areas
+- ✅ Erlang B blocking probability calculations
 - ✅ Erlang C formula accuracy (validated against published tables)
 - ✅ Erlang A abandonment calculations
-- ✅ Erlang X equilibrium solver
 - ✅ CSV parsing and validation
 - ✅ Component rendering
 - ✅ Edge cases (zero volume, 100% shrinkage, impossible SLAs)
@@ -387,7 +373,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ### Academic References
 - **A.K. Erlang** (1917) - Original Erlang B and C formulas
 - **Garnett, Mandelbaum & Reiman** (2002) - Erlang A with abandonment
-- **Janssen, Koole & Pot** (2011) - Erlang X model
 
 ### Inspiration
 - Contact center professionals worldwide
@@ -411,8 +396,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## 🗺️ Roadmap
 
-### Current Version (v0.1.0)
-- ✅ Erlang C, A, X models
+### Current Version (v0.2.0)
+- ✅ Erlang B, C, A models
 - ✅ Multi-channel support
 - ✅ Universal CSV import
 - ✅ Model comparison

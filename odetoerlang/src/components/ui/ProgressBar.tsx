@@ -1,6 +1,6 @@
 import { cn } from '../../utils/cn';
 
-export type ProgressVariant = 'default' | 'success' | 'warning' | 'error';
+export type ProgressVariant = 'default' | 'success' | 'warning' | 'error' | 'cyan';
 
 interface ProgressBarProps {
   value: number;
@@ -14,10 +14,11 @@ interface ProgressBarProps {
 }
 
 const variantStyles: Record<ProgressVariant, string> = {
-  default: 'bg-primary-500',
-  success: 'bg-success-500',
-  warning: 'bg-warning-500',
-  error: 'bg-error-500',
+  default: 'bg-cyan', // Default to cyan
+  success: 'bg-green',
+  warning: 'bg-amber',
+  error: 'bg-red',
+  cyan: 'bg-cyan',
 };
 
 const sizeStyles = {
@@ -28,10 +29,10 @@ const sizeStyles = {
 
 function getVariantFromValue(value: number, max: number): ProgressVariant {
   const percent = (value / max) * 100;
-  if (percent >= 95) return 'error';
-  if (percent >= 85) return 'warning';
-  if (percent >= 70) return 'success';
-  return 'default';
+  if (percent >= 95) return 'error'; // Error if near full
+  if (percent >= 85) return 'warning'; // Warning if getting high
+  if (percent >= 70) return 'success'; // Success if over 70
+  return 'default'; // Default for lower progress
 }
 
 export function ProgressBar({

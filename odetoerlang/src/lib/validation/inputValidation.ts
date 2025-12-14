@@ -74,7 +74,7 @@ export function validateCalculationInputs(inputs: CalculationInputs): Validation
   }
 
   // Patience validation (for Erlang A/X models)
-  if (inputs.model !== 'erlangC' && inputs.averagePatience !== undefined) {
+  if (inputs.model !== 'C' && inputs.averagePatience !== undefined) {
     if (inputs.averagePatience < VALIDATION.averagePatienceSeconds.min) {
       errors.push({ field: 'averagePatience', message: 'Average patience must be at least 10 seconds' });
     }

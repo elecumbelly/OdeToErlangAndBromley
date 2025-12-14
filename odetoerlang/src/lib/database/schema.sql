@@ -266,6 +266,7 @@ CREATE TABLE IF NOT EXISTS Scenarios (
   scenario_name TEXT UNIQUE NOT NULL,
   description TEXT,
   is_baseline BOOLEAN DEFAULT 0,
+  erlang_model TEXT DEFAULT 'C',  -- 'B', 'C', or 'A' - which Erlang model to use
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   created_by TEXT

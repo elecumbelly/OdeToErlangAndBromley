@@ -12,12 +12,18 @@ import {
   setBaselineScenario,
   saveForecast,
   getCurrentAssumptions,
+  getAllAssumptions,
   upsertAssumption,
+  getCalendarEvents,
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
   getTableCounts,
   type Campaign,
   type Scenario,
   type Client,
   type Assumption,
+  type CalendarEvent,
 } from '../lib/database/dataAccess';
 
 interface DatabaseState {
@@ -25,7 +31,9 @@ interface DatabaseState {
   campaigns: Campaign[];
   scenarios: Scenario[];
   clients: Client[];
-  currentAssumptions: Assumption[];
+  assumptions: Assumption[]; // All assumptions
+  campaignAssumptions: Assumption[]; // Assumptions filtered by selected campaign
+  calendarEvents: CalendarEvent[];
 
   // Selection state
   selectedCampaignId: number | null;
@@ -39,7 +47,9 @@ interface DatabaseState {
   refreshCampaigns: () => void;
   refreshScenarios: () => void;
   refreshClients: () => void;
-  refreshCurrentAssumptions: () => void;
+  fetchAssumptions: () => void; // Fetch all assumptions
+  refreshCampaignAssumptions: () => void; // Fetch assumptions for current campaign
+  fetchCalendarEvents: (start: string, end: string) => void;
   refreshAll: () => void;
 
   // Actions - Selection
@@ -58,6 +68,11 @@ interface DatabaseState {
 
   // Actions - Clients
   addClient: (name: string, industry?: string) => number;
+
+  // Actions - Calendar
+  addCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'created_at'>) => number;
+  editCalendarEvent: (id: number, updates: Partial<CalendarEvent>) => void;
+  removeCalendarEvent: (id: number) => void;
 
   // Actions - Assumptions
   saveAssumption: (
@@ -88,11 +103,13 @@ interface DatabaseState {
 }
 
 export const useDatabaseStore = create<DatabaseState>((set, get) => ({
-  // Initial state
+  currentAssumptions: [], // Initial state
   campaigns: [],
   scenarios: [],
   clients: [],
-  currentAssumptions: [],
+  assumptions: [], // Initial state for all assumptions
+  campaignAssumptions: [], // Initial state for campaign-specific assumptions
+  calendarEvents: [],
   selectedCampaignId: null,
   selectedScenarioId: null,
   isLoading: false,
@@ -104,7 +121,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       const campaigns = getCampaigns(false); // Include inactive
       set({ campaigns, error: null });
     } catch (err) {
-      set({ error: `Failed to load campaigns: ${err}` });
+      console.error('Failed to load campaigns:', err);
+      set({ error: 'Failed to load campaigns.' });
     }
   },
 
@@ -113,26 +131,50 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       const scenarios = getScenarios();
       set({ scenarios, error: null });
     } catch (err) {
-      set({ error: `Failed to load scenarios: ${err}` });
+      console.error('Failed to load scenarios:', err);
+      set({ error: 'Failed to load scenarios.' });
     }
   },
 
   refreshClients: () => {
     try {
-      const clients = getClients(false);
-      set({ clients, error: null });
+      const result = getClients(false, 1000, 0); // Fetch up to 1000 clients for legacy support
+      set({ clients: result.data, error: null });
     } catch (err) {
-      set({ error: `Failed to load clients: ${err}` });
+      console.error('Failed to load clients:', err);
+      set({ error: 'Failed to load clients.' });
     }
   },
 
-  refreshCurrentAssumptions: () => {
+  fetchAssumptions: () => {
+    try {
+      const allAssumptions = getAllAssumptions(); // Fetches ALL assumptions
+      set({ assumptions: allAssumptions, error: null });
+    } catch (err) {
+      console.error('Failed to load all assumptions:', err);
+      set({ error: 'Failed to load assumptions.' });
+    }
+  },
+
+  refreshCampaignAssumptions: () => {
     const { selectedCampaignId } = get();
     try {
-      const assumptions = getCurrentAssumptions(selectedCampaignId);
-      set({ currentAssumptions: assumptions, error: null });
+      const campaignAssumptions = getCurrentAssumptions(selectedCampaignId);
+      set({ campaignAssumptions, error: null });
     } catch (err) {
-      set({ error: `Failed to load assumptions: ${err}` });
+      console.error('Failed to load campaign assumptions:', err);
+      set({ error: 'Failed to load campaign assumptions.' });
+    }
+  },
+
+  fetchCalendarEvents: (start, end) => {
+    const { selectedCampaignId } = get();
+    try {
+      const events = getCalendarEvents(start, end, selectedCampaignId);
+      set({ calendarEvents: events, error: null });
+    } catch (err) {
+      console.error('Failed to load calendar events:', err);
+      set({ error: 'Failed to load calendar events.' });
     }
   },
 
@@ -141,14 +183,15 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
     get().refreshCampaigns();
     get().refreshScenarios();
     get().refreshClients();
-    get().refreshCurrentAssumptions();
+    get().fetchAssumptions(); // Fetch all assumptions
+    get().refreshCampaignAssumptions(); // Fetch campaign-specific assumptions
     set({ isLoading: false });
   },
 
   // Selection
   selectCampaign: (id) => {
     set({ selectedCampaignId: id });
-    get().refreshCurrentAssumptions();
+    get().refreshCampaignAssumptions(); // Refresh campaign-specific assumptions
   },
 
   selectScenario: (id) => {
@@ -162,7 +205,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       get().refreshCampaigns();
       return id;
     } catch (err) {
-      set({ error: `Failed to create campaign: ${err}` });
+      console.error('Failed to create campaign:', err);
+      set({ error: 'Failed to create campaign.' });
       return -1;
     }
   },
@@ -172,7 +216,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       updateCampaign(id, updates);
       get().refreshCampaigns();
     } catch (err) {
-      set({ error: `Failed to update campaign: ${err}` });
+      console.error('Failed to update campaign:', err);
+      set({ error: 'Failed to update campaign.' });
     }
   },
 
@@ -183,7 +228,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       get().refreshScenarios();
       return id;
     } catch (err) {
-      set({ error: `Failed to create scenario: ${err}` });
+      console.error('Failed to create scenario:', err);
+      set({ error: 'Failed to create scenario.' });
       return -1;
     }
   },
@@ -193,7 +239,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       updateScenario(id, updates);
       get().refreshScenarios();
     } catch (err) {
-      set({ error: `Failed to update scenario: ${err}` });
+      console.error('Failed to update scenario:', err);
+      set({ error: 'Failed to update scenario.' });
     }
   },
 
@@ -206,7 +253,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       }
       get().refreshScenarios();
     } catch (err) {
-      set({ error: `Failed to delete scenario: ${err}` });
+      console.error('Failed to delete scenario:', err);
+      set({ error: 'Failed to delete scenario.' });
     }
   },
 
@@ -215,7 +263,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       setBaselineScenario(id);
       get().refreshScenarios();
     } catch (err) {
-      set({ error: `Failed to set baseline: ${err}` });
+      console.error('Failed to set baseline:', err);
+      set({ error: 'Failed to set baseline.' });
     }
   },
 
@@ -226,8 +275,39 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       get().refreshClients();
       return id;
     } catch (err) {
-      set({ error: `Failed to create client: ${err}` });
+      console.error('Failed to create client:', err);
+      set({ error: 'Failed to create client.' });
       return -1;
+    }
+  },
+
+  // Calendar
+  addCalendarEvent: (event) => {
+    try {
+      const id = createCalendarEvent(event);
+      return id;
+    } catch (err) {
+      console.error('Failed to create event:', err);
+      set({ error: 'Failed to create event.' });
+      return -1;
+    }
+  },
+
+  editCalendarEvent: (id, updates) => {
+    try {
+      updateCalendarEvent(id, updates);
+    } catch (err) {
+      console.error('Failed to update event:', err);
+      set({ error: 'Failed to update event.' });
+    }
+  },
+
+  removeCalendarEvent: (id) => {
+    try {
+      deleteCalendarEvent(id);
+    } catch (err) {
+      console.error('Failed to delete event:', err);
+      set({ error: 'Failed to delete event.' });
     }
   },
 
@@ -235,10 +315,11 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
   saveAssumption: (type, value, unit, validFrom, campaignId = null, validTo = null) => {
     try {
       const id = upsertAssumption(type, value, unit, validFrom, campaignId, validTo);
-      get().refreshCurrentAssumptions();
+      get().fetchAssumptions(); // Refresh ALL assumptions
       return id;
     } catch (err) {
-      set({ error: `Failed to save assumption: ${err}` });
+      console.error('Failed to save assumption:', err);
+      set({ error: 'Failed to save assumption.' });
       return -1;
     }
   },
@@ -272,7 +353,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       });
       return id;
     } catch (err) {
-      set({ error: `Failed to save forecast: ${err}` });
+      console.error('Failed to save forecast:', err);
+      set({ error: 'Failed to save forecast.' });
       return null;
     }
   },
@@ -281,7 +363,8 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
   getTableStats: () => {
     try {
       return getTableCounts();
-    } catch {
+    } catch (err) {
+      console.error('Failed to get table stats:', err); // Sanitize this too
       return {};
     }
   },

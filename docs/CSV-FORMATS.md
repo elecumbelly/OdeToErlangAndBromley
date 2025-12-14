@@ -1,6 +1,6 @@
 # CSV Import Formats
 
-**OdeToErlang CSV Import Specification**
+**OdeToErlangAndBromley CSV Import Specification**
 
 This document describes all supported CSV import formats and provides examples for importing data from various ACD (Automatic Call Distribution) systems and custom sources.
 
@@ -21,7 +21,7 @@ This document describes all supported CSV import formats and provides examples f
 
 ### Overview
 
-OdeToErlang's **SmartCSVImport** component accepts **any CSV format** from any source. You simply upload your file and map your columns to our expected fields.
+OdeToErlangAndBromley's **SmartCSVImport** component accepts **any CSV format** from any source. You simply upload your file and map your columns to our expected fields.
 
 ### How It Works
 
@@ -50,6 +50,7 @@ These fields **must** be mapped for import to succeed:
 
 | Field | Description | Expected Data Type | Example Values |
 |-------|-------------|-------------------|----------------|
+| **Date** | Date of the interval | YYYY-MM-DD | 2025-01-20 |
 | **Call Volume** | Total incoming calls/contacts in interval | Integer | 100, 1523, 45 |
 | **Average Handle Time (AHT)** | Talk time + after-call work | Seconds or HH:MM:SS | 240, 00:04:00, 4:12 |
 
@@ -490,7 +491,7 @@ const [importedData, setImportedData] = useState<any[]>([]);
 
 ### CSV Generation for Export
 
-To generate CSV files compatible with OdeToErlang:
+To generate CSV files compatible with OdeToErlangAndBromley:
 
 ```javascript
 import Papa from 'papaparse';
@@ -535,8 +536,8 @@ Planned improvements to CSV import:
 
 ### Getting Help
 
-- **GitHub Issues:** [Report CSV import bugs](https://github.com/elecumbelly/OdeToErlang/issues)
-- **Discussions:** [Ask questions about CSV formats](https://github.com/elecumbelly/OdeToErlang/discussions)
+- **GitHub Issues:** [Report CSV import bugs](https://github.com/elecumbelly/OdeToErlangAndBromley/issues)
+- **Discussions:** [Ask questions about CSV formats](https://github.com/elecumbelly/OdeToErlangAndBromley/discussions)
 - **Documentation:** [Main README](../README.md)
 
 ### Contributing
@@ -551,7 +552,7 @@ Have an ACD system not listed? Contribute an example CSV format!
 
 **Last Updated:** 2025-01-23
 **Version:** 0.1.0
-**Maintained by:** OdeToErlang Project
+**Maintained by:** OdeToErlangAndBromley Project
 
 For questions about CSV import, please open an issue with:
 - Screenshot of your CSV columns

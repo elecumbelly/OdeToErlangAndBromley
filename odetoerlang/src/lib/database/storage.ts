@@ -15,21 +15,21 @@ const DB_VERSION = 1;
 const STORE_NAME = 'database';
 const DB_KEY = 'sqlite_binary';
 
-interface OdeToErlangDB {
+interface OdeToErlangAndBromleyDB {
   database: {
     key: string;
     value: Uint8Array;
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<OdeToErlangDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<OdeToErlangAndBromleyDB>> | null = null;
 
 /**
  * Get or create the IndexedDB connection
  */
-function getDB(): Promise<IDBPDatabase<OdeToErlangDB>> {
+function getDB(): Promise<IDBPDatabase<OdeToErlangAndBromleyDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<OdeToErlangDB>(DB_NAME, DB_VERSION, {
+    dbPromise = openDB<OdeToErlangAndBromleyDB>(DB_NAME, DB_VERSION, {
       upgrade(db) {
         // Create the object store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -124,7 +124,7 @@ export async function migrateFromLocalStorage(): Promise<boolean> {
     // Remove from localStorage
     localStorage.removeItem(LEGACY_KEY);
 
-    console.log('✅ Migrated database from localStorage to IndexedDB');
+  
     return true;
   } catch (error) {
     console.warn('⚠️ Failed to migrate from localStorage:', error);

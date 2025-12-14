@@ -7,44 +7,39 @@ Load this context when understanding project structure, module responsibilities,
 ## Directory Structure
 
 ```
-OdeToErlang/
+OdeToErlangAndBromley/
 ├── odetoerlang/              # Main application
-│   ├── public/               # Static assets
-│   │   ├── index.html        # HTML entry point
-│   │   └── favicon.ico       # App icon
+│   ├── public/               # Static assets (wasm, etc.)
 │   ├── src/
-│   │   ├── components/       # React components
-│   │   │   ├── import/       # CSV import components
-│   │   │   ├── configuration/# Parameter editors
-│   │   │   ├── calculations/ # Calculation displays
-│   │   │   ├── results/      # Results visualization
-│   │   │   ├── export/       # Export functionality
-│   │   │   └── help/         # Help system components
-│   │   ├── lib/              # Core libraries
-│   │   │   ├── calculations/ # Erlang formulas
-│   │   │   │   ├── erlangB.ts
-│   │   │   │   ├── erlangC.ts
-│   │   │   │   ├── erlangA.ts
-│   │   │   │   └── erlangX.ts
-│   │   │   ├── parsers/      # CSV parsing
-│   │   │   ├── models/       # Data models
-│   │   │   └── utils/        # Utilities
-│   │   ├── content/          # Help content
-│   │   │   ├── glossary.json
-│   │   │   ├── tooltips.json
-│   │   │   └── tutorials/
-│   │   ├── styles/           # CSS/styling
-│   │   ├── App.tsx           # Main app component
+│   │   ├── components/       # UI Components (Flat structure + some folders)
+│   │   │   ├── ui/           # Reusable atomic components (Button, Dialog, etc.)
+│   │   │   ├── Calendar/     # Calendar specific components
+│   │   │   └── ...           # Feature components (InputPanel, ResultsDisplay, etc.)
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── lib/              # Core logic
+│   │   │   ├── calculations/ # Erlang formulas & Engine
+│   │   │   ├── database/     # SQLite (sql.js) abstraction & Schema
+│   │   │   ├── forecasting/  # Forecasting logic
+│   │   │   ├── services/     # Business logic services (CalculationService)
+│   │   │   └── validation/   # Input validation rules
+│   │   ├── store/            # Zustand state management
+│   │   ├── styles/           # Tailwind config & tokens
+│   │   ├── types/            # Global TypeScript definitions
+│   │   ├── utils/            # Helper functions
+│   │   ├── workers/          # Web Workers (CSV processing)
+│   │   ├── App.tsx           # Main layout & routing
 │   │   └── main.tsx          # Entry point
-│   ├── tests/                # Test files
-│   ├── package.json          # Dependencies
-│   └── vite.config.ts        # Vite config
-├── .claude/                  # Claude Code config
-│   ├── commands/             # Slash commands
-│   └── settings.local.json   # Local settings
-├── CLAUDE.md                 # AI assistant context
-├── README.md                 # Human documentation
-└── LICENSE                   # MIT License
+│   ├── .gitignore
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── docs/                     # Documentation
+│   └── archive/              # Old planning docs
+├── .claude/                  # AI context & commands
+├── CLAUDE.md                 # Assistant instructions
+├── GEMINI.md                 # Assistant memories
+└── README.md                 # Project Overview
 ```
 
 ---
@@ -53,58 +48,43 @@ OdeToErlang/
 
 ### 1. Calculation Engine (`src/lib/calculations/`)
 
-**Purpose:** Mathematically correct Erlang implementations
+**Purpose:** Mathematically rigorous Erlang implementations.
 
 | File | Function |
 |------|----------|
-| `erlangB.ts` | Blocking probability (no queue) |
-| `erlangC.ts` | Queue with infinite patience |
-| `erlangA.ts` | Queue with abandonment |
-| `erlangX.ts` | Advanced model with retrials |
-| `serviceLevels.ts` | SLA, ASA, occupancy calculations |
+| `erlangEngine.ts` | Unified entry point for all calculations |
+| `erlangC.ts` | Queue with infinite patience (Standard) |
+| `erlangA.ts` | Queue with abandonment (Patience-based) |
+| `erlangB.ts` | Blocking probability (No queue) |
+| `erlangX.ts` | Advanced model with retrials (Internal use) |
 
-**Key Principle:** Pure functions, no side effects, fully tested.
+**Key Principle:** Pure functions, no side effects, heavy unit testing.
 
-### 2. Data Management (`src/lib/parsers/`, `src/lib/models/`)
+### 2. Database Layer (`src/lib/database/`)
 
-**Parsers:**
-- CSV parsing and validation
-- Data normalization
-- Format detection
+**Tech:** `sql.js` (SQLite in WASM) + `idb` (IndexedDB persistence).
 
-**Models:**
-- TypeScript interfaces for all data types
-- State management types
-- Configuration schemas
+**Purpose:** "Headless" backend running entirely in the browser.
 
-### 3. UI Components (`src/components/`)
+- `schema.sql`: Defines the 20+ table relational schema.
+- `dataAccess.ts`: Typed CRUD wrappers for the database.
+- `initDatabase.ts`: Handles WASM loading and persistence.
 
-**Import:**
-- Drag-and-drop CSV upload
-- Data preview tables
-- Validation feedback
+### 3. State Management (`src/store/`)
 
-**Configuration:**
-- Editable assumption panels
-- SLA target editors
-- Shrinkage breakdown
+**Tech:** Zustand.
 
-**Results:**
-- Charts (staffing curves, service levels)
-- Tables (interval breakdown)
-- Summary cards
+- `calculatorStore.ts`: Transient UI state for the Calculator tab. Delegates logic to `CalculationService`.
+- `databaseStore.ts`: Syncs DB tables (Campaigns, Scenarios) with UI.
 
-**Export:**
-- CSV export
-- PDF generation
-- Excel export
+### 4. UI Components (`src/components/`)
 
-### 4. Help System (`src/components/help/`)
+**Structure:** Mostly flat, moving towards feature folders.
 
-- `Tooltip.tsx` - Contextual tooltips
-- `Glossary.tsx` - Searchable glossary
-- `Tutorial.tsx` - Step-by-step guides
-- `HelpSearch.tsx` - Help search
+- `InputPanel.tsx`: Main calculator inputs.
+- `ResultsDisplay.tsx`: KPI cards and summary.
+- `CalendarView.tsx`: FullCalendar integration.
+- `SmartCSVImport.tsx`: Web-worker powered CSV parsing.
 
 ---
 
@@ -112,85 +92,44 @@ OdeToErlang/
 
 | Layer | Technology |
 |-------|------------|
-| Framework | React 18+ |
-| Language | TypeScript |
-| Build | Vite |
+| Framework | React 19 (Vite) |
+| Language | TypeScript 5.x |
+| Database | SQLite (sql.js) |
+| State | Zustand |
+| Styling | Tailwind CSS |
+| Charts | Recharts |
+| Calendar | FullCalendar |
 | Testing | Vitest |
-| Styling | Tailwind CSS / CSS Modules |
-| Charts | Recharts / Chart.js |
-| CSV | Papa Parse |
-| State | React Context / Zustand |
 
 ---
 
-## File Naming Conventions
+## Key Patterns
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Components | PascalCase | `ServiceLevelChart.tsx` |
-| Utilities | camelCase | `formatNumber.ts` |
-| Tests | `.test.ts` suffix | `erlangC.test.ts` |
-| Types | PascalCase | `CalculationResult.ts` |
-| CSS Modules | camelCase | `dashboard.module.css` |
-
----
-
-## Component Patterns
-
-### Standard Component Structure
+### Calculation Service
+Business logic is separated from the UI and Store.
 ```typescript
-// ComponentName.tsx
-import { FC } from 'react';
-import styles from './ComponentName.module.css';
-
-interface ComponentNameProps {
-  // Props with explicit types
-}
-
-export const ComponentName: FC<ComponentNameProps> = ({ prop1, prop2 }) => {
-  // Hooks at top
-  // Event handlers
-  // Render
-  return (
-    <div className={styles.container}>
-      {/* JSX */}
-    </div>
-  );
-};
-```
-
-### Calculation Function Pattern
-```typescript
-// Pure function, no side effects
-export function calculateServiceLevel(
-  agents: number,
-  trafficIntensity: number,
-  aht: number,
-  threshold: number
-): number {
-  // Validation
-  if (agents <= 0) throw new Error('Agents must be positive');
-
-  // Calculation
-  const result = /* ... */;
-
-  // Return typed result
-  return result;
+// src/lib/services/CalculationService.ts
+class CalculationService {
+  static calculate(inputs, constraints) {
+    // Validation
+    // Model Selection
+    // Execution
+    return results;
+  }
 }
 ```
 
----
-
-## Data Flow
-
+### Database Access
+Direct SQL execution via typed helpers.
+```typescript
+// src/lib/database/dataAccess.ts
+export function getCampaigns() {
+  const db = getDatabase();
+  return db.exec('SELECT * FROM Campaigns...')[0].values...
+}
 ```
-CSV Import → Parser → Validation → State → Calculations → Results
-                                      ↑
-                          Configuration Panel
-```
 
-1. User imports CSV or enters data
-2. Parser normalizes and validates
-3. State stores current configuration
-4. Calculations run on state changes
-5. Results render in real-time
+### Error Handling
+- **UI:** React Error Boundaries wrap major tabs.
+- **Stores:** User-facing errors are sanitized.
+- **Database:** Transactions used for batch operations.

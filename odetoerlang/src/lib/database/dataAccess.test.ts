@@ -387,6 +387,9 @@ describe('dataAccess - Assumptions', () => {
 
 describe('dataAccess - Clients', () => {
   test('getClients returns active clients by default', () => {
+    // Mock count query
+    mockExec.mockReturnValueOnce([{ values: [[5]] }]);
+    // Mock data query
     mockExec.mockReturnValueOnce([
       {
         columns: ['id', 'client_name', 'active'],
@@ -397,11 +400,14 @@ describe('dataAccess - Clients', () => {
     getClients();
 
     expect(mockExec).toHaveBeenCalledWith(
-      'SELECT * FROM Clients WHERE active = 1 ORDER BY client_name'
+      'SELECT * FROM Clients WHERE active = 1 ORDER BY client_name LIMIT 50 OFFSET 0'
     );
   });
 
   test('getClients with activeOnly=false returns all', () => {
+    // Mock count query
+    mockExec.mockReturnValueOnce([{ values: [[10]] }]);
+    // Mock data query
     mockExec.mockReturnValueOnce([
       {
         columns: ['id', 'client_name', 'active'],
@@ -414,7 +420,7 @@ describe('dataAccess - Clients', () => {
 
     getClients(false);
 
-    expect(mockExec).toHaveBeenCalledWith('SELECT * FROM Clients ORDER BY client_name');
+    expect(mockExec).toHaveBeenCalledWith('SELECT * FROM Clients ORDER BY client_name LIMIT 50 OFFSET 0');
   });
 
   test('createClient inserts and returns new ID', () => {
