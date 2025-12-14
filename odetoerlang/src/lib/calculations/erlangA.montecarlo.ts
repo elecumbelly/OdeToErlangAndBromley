@@ -73,9 +73,8 @@ export function compareEngineToMonteCarlo(config: Omit<MonteCarloConfig, 'agents
   });
 
   const sim = monteCarloAbandonment({
-    trials: 1,
-    agents: config.agents,
     ...config,
+    trials: 1,
   });
 
   return {

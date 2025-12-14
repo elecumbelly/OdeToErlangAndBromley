@@ -66,6 +66,37 @@ const ResultsDisplay = memo(() => {
     { label: 'Occ', value: `${formatNumber(results.occupancy, 1)}%`, color: getOccupancyColor(results.occupancy) },
   ];
 
+  const sensitivityData = useMemo(() => {
+    const data: Array<{ agents: number; sl: number }> = [];
+    if (!results) return data;
+    const start = Math.max(1, results.requiredAgents - 5);
+    const end = results.requiredAgents + 5;
+    for (let agents = start; agents <= end; agents++) {
+      const achievable = calculateAchievableMetrics({
+        model: inputs.model,
+        fixedAgents: agents,
+        workload: {
+          volume: inputs.volume,
+          aht: inputs.aht,
+          intervalMinutes: inputs.intervalMinutes,
+        },
+        constraints: {
+          thresholdSeconds: inputs.thresholdSeconds,
+          maxOccupancy: inputs.maxOccupancy,
+        },
+        behavior: {
+          shrinkagePercent: inputs.shrinkagePercent,
+          averagePatience: inputs.averagePatience,
+          concurrency: inputs.concurrency,
+        },
+      });
+      if (achievable?.serviceLevel !== undefined) {
+        data.push({ agents, sl: parseFloat(achievable.serviceLevel.toFixed(1)) });
+      }
+    }
+    return data;
+  }, [results, inputs]);
+
   const copyResultsForExcel = async () => {
     const headers = [
       'Model',
@@ -563,33 +594,3 @@ const ResultsDisplay = memo(() => {
 });
 
 export default ResultsDisplay;
-  const sensitivityData = useMemo(() => {
-    const data: Array<{ agents: number; sl: number }> = [];
-    if (!results) return data;
-    const start = Math.max(1, results.requiredAgents - 5);
-    const end = results.requiredAgents + 5;
-    for (let agents = start; agents <= end; agents++) {
-      const achievable = calculateAchievableMetrics({
-        model: inputs.model,
-        fixedAgents: agents,
-        workload: {
-          volume: inputs.volume,
-          aht: inputs.aht,
-          intervalMinutes: inputs.intervalMinutes,
-        },
-        constraints: {
-          thresholdSeconds: inputs.thresholdSeconds,
-          maxOccupancy: inputs.maxOccupancy,
-        },
-        behavior: {
-          shrinkagePercent: inputs.shrinkagePercent,
-          averagePatience: inputs.averagePatience,
-          concurrency: inputs.concurrency,
-        },
-      });
-      if (achievable?.serviceLevel !== undefined) {
-        data.push({ agents, sl: parseFloat(achievable.serviceLevel.toFixed(1)) });
-      }
-    }
-    return data;
-  }, [results, inputs]);
