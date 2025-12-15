@@ -419,22 +419,8 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               {/* Left Sidebar - Data Management */}
               <div className="lg:col-span-1 space-y-4">
-                {dbReady ? (
-                  <>
-                    <CampaignSelector />
-                    <ScenarioManager />
-                  </>
-                ) : (
-                  <div className="bg-bg-surface border border-border-subtle rounded-lg p-4 space-y-4">
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-3 bg-bg-elevated rounded w-3/4"></div>
-                      <div className="h-8 bg-bg-hover rounded"></div>
-                      <div className="h-3 bg-bg-elevated rounded w-1/2"></div>
-                      <div className="h-8 bg-bg-hover rounded"></div>
-                    </div>
-                    <p className="text-2xs text-text-muted text-center uppercase">Loading campaigns...</p>
-                  </div>
-                )}
+                <CampaignSelector />
+                <ScenarioManager />
               </div>
               {/* Main Calculator Area */}
               <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
