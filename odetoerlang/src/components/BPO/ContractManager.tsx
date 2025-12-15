@@ -421,7 +421,17 @@ export default function ContractManager({ clientId }: ContractManagerProps) {
               </select>
             </FormField>
             <FormField label="Rate" id="rate">
-              <input type="number" id="rate" value={rate} onChange={e => setRate(Number(e.target.value))} className={inputClass} required />
+              <input 
+                type="number" 
+                id="rate" 
+                value={rate} 
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setRate(isNaN(val) ? 0 : val);
+                }} 
+                className={inputClass} 
+                required 
+              />
             </FormField>
             <FormField label="Campaign (Optional)" id="ruleCampaignId">
               <select

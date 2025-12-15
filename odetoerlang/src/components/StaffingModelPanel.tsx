@@ -10,10 +10,7 @@ const StaffingModelPanel: React.FC = () => {
     inputs.shrinkagePercent
   );
 
-  const handleNumberChange = (key: keyof typeof staffingModel) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const rawValue = e.target.value;
+  const updateModel = (key: keyof typeof staffingModel, rawValue: string) => {
     if (rawValue === '') {
       setStaffingModel(key, 0 as never);
       return;
@@ -55,7 +52,7 @@ const StaffingModelPanel: React.FC = () => {
             min="0"
             step="1"
             value={staffingModel.totalHeadcount || ''}
-            onChange={handleNumberChange('totalHeadcount')}
+            onChange={(e) => updateModel('totalHeadcount', e.target.value)}
             className={inputClass}
             placeholder="150"
           />
@@ -75,7 +72,7 @@ const StaffingModelPanel: React.FC = () => {
               max="24"
               step="0.5"
               value={staffingModel.operatingHoursPerDay || ''}
-              onChange={handleNumberChange('operatingHoursPerDay')}
+              onChange={(e) => updateModel('operatingHoursPerDay', e.target.value)}
               className={inputClass}
               placeholder="12"
             />
@@ -92,7 +89,7 @@ const StaffingModelPanel: React.FC = () => {
               max="7"
               step="1"
               value={staffingModel.daysOpenPerWeek || ''}
-              onChange={handleNumberChange('daysOpenPerWeek')}
+              onChange={(e) => updateModel('daysOpenPerWeek', e.target.value)}
               className={inputClass}
               placeholder="5"
             />
@@ -113,7 +110,7 @@ const StaffingModelPanel: React.FC = () => {
             max="12"
             step="0.5"
             value={staffingModel.shiftLengthHours || ''}
-            onChange={handleNumberChange('shiftLengthHours')}
+            onChange={(e) => updateModel('shiftLengthHours', e.target.value)}
             className={inputClass}
             placeholder="8"
           />

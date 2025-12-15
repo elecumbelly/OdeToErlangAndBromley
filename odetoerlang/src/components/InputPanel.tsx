@@ -55,15 +55,13 @@ const InputPanel: React.FC = () => {
     loadResolvedInputs();
   }, [selectedCampaignId, date, campaigns, setInput]);
 
-  const handleChange = (key: keyof CalculationInputs) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const value = parseFloat(e.target.value);
+  const updateInput = (key: keyof CalculationInputs, rawValue: string) => {
+    const value = parseFloat(rawValue);
     if (!isNaN(value)) {
       setInput(key, value);
     } else {
       // Handle string values for select elements (like model type)
-      setInput(key, e.target.value as ErlangVariant);
+      setInput(key, rawValue as ErlangVariant);
     }
   };
 
@@ -126,7 +124,7 @@ const InputPanel: React.FC = () => {
             min="0"
             step="1"
             value={inputs.volume}
-            onChange={handleChange('volume')}
+            onChange={(e) => updateInput('volume', e.target.value)}
             className={getInputClass(getError('volume'))}
             placeholder="100"
           />
@@ -145,7 +143,7 @@ const InputPanel: React.FC = () => {
             min="0"
             step="1"
             value={inputs.aht}
-            onChange={handleChange('aht')}
+            onChange={(e) => updateInput('aht', e.target.value)}
             className={getInputClass(getError('aht'))}
             placeholder="240"
           />
@@ -160,7 +158,7 @@ const InputPanel: React.FC = () => {
           <select
             id="intervalMinutes"
             value={inputs.intervalMinutes}
-            onChange={handleChange('intervalMinutes')}
+            onChange={(e) => updateInput('intervalMinutes', e.target.value)}
             className={getInputClass(getError('intervalMinutes'))}
           >
             <option value={15}>15 min</option>
@@ -178,7 +176,7 @@ const InputPanel: React.FC = () => {
           <select
             id="model"
             value={inputs.model}
-            onChange={handleChange('model')}
+            onChange={(e) => updateInput('model', e.target.value)}
             className={getInputClass()}
           >
             <option value="B">Erlang B (blocking/loss)</option>
@@ -219,7 +217,7 @@ const InputPanel: React.FC = () => {
               min="0"
               step="1"
               value={inputs.averagePatience}
-              onChange={handleChange('averagePatience')}
+              onChange={(e) => updateInput('averagePatience', e.target.value)}
               className={getInputClass(getError('averagePatience'))}
               placeholder="120"
             />
@@ -240,7 +238,7 @@ const InputPanel: React.FC = () => {
               max="100"
               step="1"
               value={inputs.targetSLPercent}
-              onChange={handleChange('targetSLPercent')}
+              onChange={(e) => updateInput('targetSLPercent', e.target.value)}
               className={getInputClass(getError('targetSLPercent'))}
               placeholder="80"
             />
@@ -257,7 +255,7 @@ const InputPanel: React.FC = () => {
               min="0"
               step="1"
               value={inputs.thresholdSeconds}
-              onChange={handleChange('thresholdSeconds')}
+              onChange={(e) => updateInput('thresholdSeconds', e.target.value)}
               className={getInputClass(getError('thresholdSeconds'))}
               placeholder="20"
             />
@@ -286,7 +284,7 @@ const InputPanel: React.FC = () => {
             max="100"
             step="0.1"
             value={inputs.shrinkagePercent}
-            onChange={handleChange('shrinkagePercent')}
+            onChange={(e) => updateInput('shrinkagePercent', e.target.value)}
             className={getInputClass(getError('shrinkagePercent'))}
             placeholder="25"
           />
@@ -305,7 +303,7 @@ const InputPanel: React.FC = () => {
             max="100"
             step="1"
             value={inputs.maxOccupancy}
-            onChange={handleChange('maxOccupancy')}
+            onChange={(e) => updateInput('maxOccupancy', e.target.value)}
             className={getInputClass(getError('maxOccupancy'))}
             placeholder="90"
           />
@@ -323,7 +321,7 @@ const InputPanel: React.FC = () => {
             min="1"
             step="1"
             value={inputs.concurrency}
-            onChange={handleChange('concurrency')}
+            onChange={(e) => updateInput('concurrency', e.target.value)}
             className={getInputClass()}
             placeholder="1"
           />
