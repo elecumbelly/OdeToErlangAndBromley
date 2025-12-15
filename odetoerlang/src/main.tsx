@@ -2,6 +2,7 @@ import { StrictMode, Component, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { ToastProvider } from './components/ui/Toast'
 
 // Simple error boundary that doesn't depend on any UI components
 class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -44,7 +45,9 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RootErrorBoundary>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </RootErrorBoundary>
   </StrictMode>,
 )
