@@ -16,11 +16,15 @@ import {
 const DEFAULT_SHIFT_START_MIN = 9 * 60;
 const DEFAULT_SHIFT_DURATION_MIN = 9 * 60;
 
+const DEFAULT_SHIFT_TYPES = [
+  { hours: 8, enabled: true, proportion: 100 },
+];
+
 const DEFAULT_STAFFING_MODEL = {
   totalHeadcount: 0,
   operatingHoursPerDay: 0,
   daysOpenPerWeek: 5,
-  shiftLengthHours: 8,
+  shiftTypes: DEFAULT_SHIFT_TYPES,
   useAsConstraint: false,
 };
 

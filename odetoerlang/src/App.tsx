@@ -346,21 +346,20 @@ function App() {
         {/* Hero Section - Calculator Tab Only */}
         {activeTab === 'calculator' && (
           <div className="space-y-4 mb-6">
-            <div className="p-4 bg-bg-surface border border-border-subtle rounded-lg bg-grid">
+            <div className="p-5 bg-gradient-to-r from-bg-surface to-bg-elevated border border-border-subtle/50 rounded-xl">
               <div className="flex items-start space-x-4">
-                <div className="hidden sm:block w-12 h-12 bg-cyan/10 border border-cyan/30 rounded-lg flex-shrink-0 flex items-center justify-center">
+                <div className="hidden sm:flex w-12 h-12 bg-cyan/10 border border-cyan/20 rounded-xl flex-shrink-0 items-center justify-center">
                   <svg className="w-6 h-6 text-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold text-text-primary mb-1">
+                  <h2 className="text-lg font-bold text-text-primary mb-2">
                     Erlang Calculator
                   </h2>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    Calculate staffing requirements using <span className="text-cyan">Erlang C</span>, <span className="text-green">A</span>, and <span className="text-magenta">X</span> models.
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    Calculate staffing requirements using <span className="text-cyan font-medium">Erlang B</span>, <span className="text-green font-medium">C</span>, and <span className="text-magenta font-medium">A</span> models.
                     Multi-channel support, CSV import/export, interactive charts.
-                    All calculations run locally in your browser.
                   </p>
                 </div>
               </div>
@@ -535,7 +534,7 @@ function App() {
             <div>
               <h4 className="font-semibold text-text-primary mb-2 uppercase tracking-wide text-2xs">Features</h4>
               <ul className="text-text-muted space-y-1">
-                <li><span className="text-green">+</span> Erlang C, A, X formulas</li>
+                <li><span className="text-green">+</span> Erlang B, C, A formulas</li>
                 <li><span className="text-green">+</span> Multi-channel with concurrency</li>
                 <li><span className="text-green">+</span> CSV import/export</li>
                 <li><span className="text-green">+</span> What-if scenarios</li>

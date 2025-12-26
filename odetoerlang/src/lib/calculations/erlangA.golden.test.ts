@@ -7,11 +7,17 @@ import { createDefaultInputs } from '../../tests/fixtures/calculatorInputs';
  * We treat these as sanity checks, not exact table matches (since Erlang A depends on patience).
  */
 
+const DEFAULT_SHIFT_TYPES = [
+  { hours: 8, enabled: true, proportion: 60 },
+  { hours: 6, enabled: true, proportion: 30 },
+  { hours: 4, enabled: true, proportion: 10 },
+];
+
 const DEFAULT_STAFFING_MODEL = {
   totalHeadcount: 0,
   operatingHoursPerDay: 12,
   daysOpenPerWeek: 5,
-  shiftLengthHours: 8,
+  shiftTypes: DEFAULT_SHIFT_TYPES,
   useAsConstraint: false,
 };
 

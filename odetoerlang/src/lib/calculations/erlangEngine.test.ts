@@ -46,7 +46,9 @@ describe('CalculationService.calculate - staffing constraint uses maxOccupancy',
     totalHeadcount: 120,
     operatingHoursPerDay: 12,
     daysOpenPerWeek: 5,
-    shiftLengthHours: 8,
+    shiftTypes: [
+      { hours: 8, enabled: true, proportion: 100 },
+    ],
     useAsConstraint: true,
   };
 
