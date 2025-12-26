@@ -21,11 +21,17 @@ const waitForCalculation = async () => {
   await vi.advanceTimersByTimeAsync(DEBOUNCE_DELAY + 50);
 };
 
+const DEFAULT_SHIFT_TYPES = [
+  { hours: 8, enabled: true, proportion: 60 },
+  { hours: 6, enabled: true, proportion: 30 },
+  { hours: 4, enabled: true, proportion: 10 },
+];
+
 const DEFAULT_STAFFING_MODEL = {
   totalHeadcount: 0,
   operatingHoursPerDay: 12,
   daysOpenPerWeek: 5,
-  shiftLengthHours: 8,
+  shiftTypes: DEFAULT_SHIFT_TYPES,
   useAsConstraint: false,
 };
 
@@ -65,7 +71,8 @@ describe('calculatorStore - Initial State', () => {
     const state = useCalculatorStore.getState();
     expect(state.staffingModel.totalHeadcount).toBe(0);
     expect(state.staffingModel.operatingHoursPerDay).toBe(12);
-    expect(state.staffingModel.shiftLengthHours).toBe(8);
+    expect(state.staffingModel.shiftTypes).toHaveLength(3);
+    expect(state.staffingModel.shiftTypes[0].hours).toBe(8);
     expect(state.staffingModel.useAsConstraint).toBe(false);
   });
 });
@@ -177,9 +184,16 @@ describe('calculatorStore - Staffing Model', () => {
     expect(useCalculatorStore.getState().staffingModel.operatingHoursPerDay).toBe(16);
   });
 
-  test('setStaffingModel updates shiftLengthHours', () => {
-    useCalculatorStore.getState().setStaffingModel('shiftLengthHours', 10);
-    expect(useCalculatorStore.getState().staffingModel.shiftLengthHours).toBe(10);
+  test('setShiftType updates shift enabled state', () => {
+    useCalculatorStore.getState().setShiftType(8, { enabled: false });
+    const shift = useCalculatorStore.getState().staffingModel.shiftTypes.find(s => s.hours === 8);
+    expect(shift?.enabled).toBe(false);
+  });
+
+  test('setShiftType updates shift proportion', () => {
+    useCalculatorStore.getState().setShiftType(8, { proportion: 80 });
+    const shift = useCalculatorStore.getState().staffingModel.shiftTypes.find(s => s.hours === 8);
+    expect(shift?.proportion).toBe(80);
   });
 });
 
@@ -248,14 +262,13 @@ describe('calculatorStore - Calculate Method', () => {
 
   test('calculate with staffing model constraint shows optimal staffing and achievable metrics', async () => {
     const store = useCalculatorStore.getState();
-    // With staffing model:
-    // totalHeadcount = 150, operatingHoursPerDay = 12, shiftLengthHours = 8
-    // shiftsToFillDay = 12 / 8 = 1.5
-    // staffPerShift = 150 / 1.5 = 100
-    // productiveAgents = 100 * (1 - 0.25) = 75 (with 25% shrinkage)
+    // With staffing model using multiple shift types:
+    // totalHeadcount = 150, operatingHoursPerDay = 12
+    // Shift types: 8h (60%), 6h (30%), 4h (10%)
+    // Calculation produces productive agents based on weighted shifts
     store.setStaffingModel('totalHeadcount', 150);
     store.setStaffingModel('operatingHoursPerDay', 12);
-    store.setStaffingModel('shiftLengthHours', 8);
+    // Use default shiftTypes from DEFAULT_STAFFING_MODEL
     await waitForCalculation();
     store.setStaffingModel('useAsConstraint', true);
     await waitForCalculation();
@@ -265,7 +278,7 @@ describe('calculatorStore - Calculate Method', () => {
     expect(state.results).not.toBeNull();
     expect(state.results?.requiredAgents).toBeGreaterThan(0);
 
-    // achievableMetrics should show what you can achieve with your 75 agents
+    // achievableMetrics should show what you can achieve with productive agents
     expect(state.achievableMetrics).not.toBeNull();
     expect(state.achievableMetrics?.serviceLevel).toBeGreaterThan(0);
   });

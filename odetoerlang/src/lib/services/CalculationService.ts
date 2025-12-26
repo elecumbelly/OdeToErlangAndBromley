@@ -7,24 +7,54 @@ import {
 import { validateCalculationInputs, type ValidationResult } from '../validation/inputValidation';
 import type { CalculationInputs, CalculationResults } from '../../types';
 
+interface ShiftType {
+  hours: number;
+  enabled: boolean;
+  proportion: number;
+}
+
 interface StaffingModel {
   totalHeadcount: number;
   operatingHoursPerDay: number;
   daysOpenPerWeek: number;
-  shiftLengthHours: number;
+  shiftTypes: ShiftType[];
   useAsConstraint: boolean;
 }
 
-// Helper to calculate productive agents from staffing model
+// Helper to calculate productive agents from staffing model with multiple shift types
 function calculateProductiveAgentsFromModel(
   staffingModel: StaffingModel,
   shrinkagePercent: number
 ): number {
-  if (staffingModel.totalHeadcount <= 0 || staffingModel.shiftLengthHours <= 0) {
+  const enabledShifts = staffingModel.shiftTypes.filter(s => s.enabled);
+
+  if (staffingModel.totalHeadcount <= 0 || enabledShifts.length === 0) {
     return 0;
   }
-  const shiftsToFillDay = staffingModel.operatingHoursPerDay / staffingModel.shiftLengthHours;
-  const staffPerShift = Math.round(staffingModel.totalHeadcount / shiftsToFillDay);
+
+  // Normalize proportions
+  const totalProportion = enabledShifts.reduce((sum, s) => sum + s.proportion, 0);
+
+  // Calculate staff available per day based on days open
+  // If open 7 days with 5-day work week, each person works 5/7 of days on average
+  const standardWorkWeek = 5; // Typical employee works 5 days/week
+  const daysOpenPerWeek = Math.max(1, staffingModel.daysOpenPerWeek);
+  const staffAvailablePerDay = staffingModel.totalHeadcount * (standardWorkWeek / daysOpenPerWeek);
+
+  // Calculate breakdown by shift type
+  const shiftBreakdown = enabledShifts.map(shift => {
+    const normalizedProportion = totalProportion > 0 ? shift.proportion / totalProportion : 1 / enabledShifts.length;
+    const staffOnThisShift = Math.round(staffAvailablePerDay * normalizedProportion);
+    const shiftsNeeded = staffingModel.operatingHoursPerDay / shift.hours;
+    return { staff: staffOnThisShift, shifts: shiftsNeeded };
+  });
+
+  // Staff per shift is weighted average
+  const totalStaff = shiftBreakdown.reduce((sum, b) => sum + b.staff, 0);
+  const staffPerShift = totalStaff > 0
+    ? Math.round(shiftBreakdown.reduce((sum, b) => sum + (b.staff / b.shifts), 0))
+    : 0;
+
   return Math.round(staffPerShift * (1 - shrinkagePercent / 100));
 }
 
