@@ -101,6 +101,10 @@ npm run build
 
 Production files will be in `dist/` directory. Deploy to any static hosting service (Netlify, Vercel, GitHub Pages, S3, etc.).
 
+## ⚠️ Offline / PWA
+
+The Vite PWA/service-worker integration is temporarily disabled while we work through runtime issues; the app continues to ship as a standard SPA and can be redeployed without any active cache layer. We can reintroduce `vite-plugin-pwa` once the bundling problems are resolved.
+
 ---
 
 ## 📖 Usage Guide

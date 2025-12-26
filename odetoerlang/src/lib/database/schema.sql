@@ -1,5 +1,5 @@
 -- OdeToErlang Database Schema
--- 22 Tables for WFM Ready Reckoner (21 + schema_version)
+-- 31 Tables for WFM Ready Reckoner (30 + schema_version)
 -- All values customisable, time-bound where appropriate
 
 -- ============================================================================
@@ -389,3 +389,172 @@ CREATE TABLE IF NOT EXISTS RecruitmentRequests (
 CREATE INDEX IF NOT EXISTS idx_recruitment_role ON RecruitmentRequests(role_id);
 CREATE INDEX IF NOT EXISTS idx_recruitment_campaign ON RecruitmentRequests(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_recruitment_status ON RecruitmentRequests(status);
+
+-- ============================================================================
+-- SCHEDULING & OPTIMIZATION (9 tables)
+-- ============================================================================
+
+-- 22. SCHEDULEPLANS - Planning horizons
+CREATE TABLE IF NOT EXISTS SchedulePlans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_name TEXT NOT NULL,
+  campaign_id INTEGER NOT NULL,
+  scenario_id INTEGER,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  interval_minutes INTEGER DEFAULT 30,
+  max_weekly_hours INTEGER DEFAULT 40,
+  min_rest_hours INTEGER DEFAULT 11,
+  allow_skill_switch BOOLEAN DEFAULT 1,
+  break_window_start_min INTEGER DEFAULT 60,
+  break_window_end_min INTEGER DEFAULT 480,
+  lunch_window_start_min INTEGER DEFAULT 180,
+  lunch_window_end_min INTEGER DEFAULT 360,
+  status TEXT DEFAULT 'Draft', -- 'Draft', 'Active', 'Archived'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_by TEXT,
+  FOREIGN KEY (campaign_id) REFERENCES Campaigns(id),
+  FOREIGN KEY (scenario_id) REFERENCES Scenarios(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduleplans_campaign ON SchedulePlans(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleplans_scenario ON SchedulePlans(scenario_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleplans_dates ON SchedulePlans(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_scheduleplans_status ON SchedulePlans(status);
+
+-- 23. COVERAGEREQUIREMENTS - Interval-level demand by skill
+CREATE TABLE IF NOT EXISTS CoverageRequirements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schedule_plan_id INTEGER NOT NULL,
+  requirement_date DATE NOT NULL,
+  interval_start TIME NOT NULL,
+  interval_end TIME NOT NULL,
+  skill_id INTEGER NOT NULL,
+  required_agents INTEGER NOT NULL,
+  source_forecast_id INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (schedule_plan_id) REFERENCES SchedulePlans(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES Skills(id),
+  FOREIGN KEY (source_forecast_id) REFERENCES Forecasts(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coverage_plan ON CoverageRequirements(schedule_plan_id);
+CREATE INDEX IF NOT EXISTS idx_coverage_date ON CoverageRequirements(requirement_date);
+CREATE INDEX IF NOT EXISTS idx_coverage_skill ON CoverageRequirements(skill_id);
+
+-- 24. SHIFTTEMPLATES - Standard shift definitions
+CREATE TABLE IF NOT EXISTS ShiftTemplates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  template_name TEXT NOT NULL,
+  paid_minutes INTEGER NOT NULL DEFAULT 480,
+  unpaid_minutes INTEGER NOT NULL DEFAULT 60,
+  break_count INTEGER NOT NULL DEFAULT 2,
+  break_minutes INTEGER NOT NULL DEFAULT 15,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_shifttemplates_name ON ShiftTemplates(template_name);
+
+-- 25. OPTIMIZATIONMETHODS - Scheduling engines and versions
+CREATE TABLE IF NOT EXISTS OptimizationMethods (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  method_key TEXT UNIQUE NOT NULL,
+  method_name TEXT NOT NULL,
+  version TEXT,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_optimizationmethods_key ON OptimizationMethods(method_key);
+
+-- 26. SCHEDULERUNS - Optimization runs (A/B compare)
+CREATE TABLE IF NOT EXISTS ScheduleRuns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schedule_plan_id INTEGER NOT NULL,
+  method_id INTEGER NOT NULL,
+  run_group_id TEXT,
+  label TEXT, -- 'A', 'B'
+  status TEXT DEFAULT 'Pending',
+  started_at DATETIME,
+  completed_at DATETIME,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_by TEXT,
+  FOREIGN KEY (schedule_plan_id) REFERENCES SchedulePlans(id) ON DELETE CASCADE,
+  FOREIGN KEY (method_id) REFERENCES OptimizationMethods(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduleruns_plan ON ScheduleRuns(schedule_plan_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleruns_method ON ScheduleRuns(method_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleruns_group ON ScheduleRuns(run_group_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleruns_status ON ScheduleRuns(status);
+
+-- 27. SHIFTS - Assigned shifts
+CREATE TABLE IF NOT EXISTS Shifts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schedule_run_id INTEGER NOT NULL,
+  staff_id INTEGER NOT NULL,
+  shift_date DATE NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  template_id INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (schedule_run_id) REFERENCES ScheduleRuns(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES Staff(id),
+  FOREIGN KEY (template_id) REFERENCES ShiftTemplates(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_shifts_run ON Shifts(schedule_run_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_staff ON Shifts(staff_id);
+CREATE INDEX IF NOT EXISTS idx_shifts_date ON Shifts(shift_date);
+
+-- 28. SHIFTSEGMENTS - Work/break/lunch segments with skills
+CREATE TABLE IF NOT EXISTS ShiftSegments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shift_id INTEGER NOT NULL,
+  segment_start TIME NOT NULL,
+  segment_end TIME NOT NULL,
+  segment_type TEXT NOT NULL, -- 'work', 'break', 'lunch'
+  skill_id INTEGER,
+  is_paid BOOLEAN DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shift_id) REFERENCES Shifts(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_id) REFERENCES Skills(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_shiftsegments_shift ON ShiftSegments(shift_id);
+CREATE INDEX IF NOT EXISTS idx_shiftsegments_skill ON ShiftSegments(skill_id);
+CREATE INDEX IF NOT EXISTS idx_shiftsegments_type ON ShiftSegments(segment_type);
+
+-- 29. SCHEDULEMETRICS - Run-level KPIs
+CREATE TABLE IF NOT EXISTS ScheduleMetrics (
+  schedule_run_id INTEGER PRIMARY KEY,
+  coverage_percent REAL DEFAULT 0,
+  gap_minutes INTEGER DEFAULT 0,
+  overstaff_minutes INTEGER DEFAULT 0,
+  overtime_minutes INTEGER DEFAULT 0,
+  violations_count INTEGER DEFAULT 0,
+  cost_estimate REAL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (schedule_run_id) REFERENCES ScheduleRuns(id) ON DELETE CASCADE
+);
+
+-- 30. SCHEDULEVIOLATIONS - Rule violations
+CREATE TABLE IF NOT EXISTS ScheduleViolations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schedule_run_id INTEGER NOT NULL,
+  staff_id INTEGER,
+  violation_date DATE NOT NULL,
+  violation_type TEXT NOT NULL, -- 'Rest', 'WeeklyHours', 'Break', 'Lunch', 'Coverage'
+  details TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (schedule_run_id) REFERENCES ScheduleRuns(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES Staff(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduleviolations_run ON ScheduleViolations(schedule_run_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleviolations_staff ON ScheduleViolations(staff_id);
+CREATE INDEX IF NOT EXISTS idx_scheduleviolations_date ON ScheduleViolations(violation_date);
+CREATE INDEX IF NOT EXISTS idx_scheduleviolations_type ON ScheduleViolations(violation_type);

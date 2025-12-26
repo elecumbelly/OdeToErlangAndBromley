@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
+import { useCalculatorStore } from '../store/calculatorStore';
 
 interface Channel {
   id: string;
@@ -14,6 +15,7 @@ interface Channel {
 }
 
 export default function MultiChannelPanel() {
+  const { inputs, setInput } = useCalculatorStore();
   const [channels, setChannels] = useState<Channel[]>([
     {
       id: '1',
@@ -50,10 +52,10 @@ export default function MultiChannelPanel() {
     }
   ]);
 
-  const [shrinkage, setShrinkage] = useState(25);
-  const [maxOccupancy, setMaxOccupancy] = useState(90);
-  const [intervalMinutes, setIntervalMinutes] = useState(30);
   const [blendingPercent, setBlendingPercent] = useState(60);
+  const intervalMinutes = inputs.intervalMinutes;
+  const shrinkage = inputs.shrinkagePercent;
+  const maxOccupancy = inputs.maxOccupancy;
 
   const addChannel = () => {
     const newChannel: Channel = {
@@ -61,9 +63,9 @@ export default function MultiChannelPanel() {
       name: 'New Channel',
       type: 'custom',
       volume: 0,
-      aht: 180,
-      targetSL: 80,
-      threshold: 20,
+      aht: inputs.aht,
+      targetSL: inputs.targetSLPercent,
+      threshold: inputs.thresholdSeconds,
       concurrent: 1,
       icon: '📱'
     };
@@ -121,7 +123,7 @@ export default function MultiChannelPanel() {
             <input
               type="number"
               value={intervalMinutes}
-              onChange={(e) => setIntervalMinutes(Number(e.target.value))}
+              onChange={(e) => setInput('intervalMinutes', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -132,7 +134,7 @@ export default function MultiChannelPanel() {
             <input
               type="number"
               value={shrinkage}
-              onChange={(e) => setShrinkage(Number(e.target.value))}
+              onChange={(e) => setInput('shrinkagePercent', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -143,7 +145,7 @@ export default function MultiChannelPanel() {
             <input
               type="number"
               value={maxOccupancy}
-              onChange={(e) => setMaxOccupancy(Number(e.target.value))}
+              onChange={(e) => setInput('maxOccupancy', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>

@@ -36,7 +36,8 @@ describe('calculatorStore - Initial State', () => {
       inputs: createDefaultInputs(),
       results: null,
       validation: { valid: true, errors: [] },
-      staffingModel: DEFAULT_STAFFING_MODEL
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      useAssumptions: true
     });
   });
 
@@ -76,7 +77,8 @@ describe('calculatorStore - Input Mutations', () => {
       inputs: createDefaultInputs(),
       results: null,
       validation: { valid: true, errors: [] },
-      staffingModel: DEFAULT_STAFFING_MODEL
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      useAssumptions: true
     });
   });
 
@@ -108,6 +110,11 @@ describe('calculatorStore - Input Mutations', () => {
   test('setInput updates shrinkage', () => {
     useCalculatorStore.getState().setInput('shrinkagePercent', 30);
     expect(useCalculatorStore.getState().inputs.shrinkagePercent).toBe(30);
+  });
+
+  test('setUseAssumptions updates flag', () => {
+    useCalculatorStore.getState().setUseAssumptions(false);
+    expect(useCalculatorStore.getState().useAssumptions).toBe(false);
   });
 
   test('setInput updates averagePatience', () => {
@@ -146,7 +153,8 @@ describe('calculatorStore - Staffing Model', () => {
       inputs: createDefaultInputs(),
       results: null,
       validation: { valid: true, errors: [] },
-      staffingModel: DEFAULT_STAFFING_MODEL
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      useAssumptions: true
     });
   });
 
@@ -182,7 +190,8 @@ describe('calculatorStore - Calculate Method', () => {
       inputs: createDefaultInputs(),
       results: null,
       validation: { valid: true, errors: [] },
-      staffingModel: DEFAULT_STAFFING_MODEL
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      useAssumptions: true
     });
   });
 
@@ -269,7 +278,8 @@ describe('calculatorStore - Validation', () => {
       inputs: createDefaultInputs(),
       results: null,
       validation: { valid: true, errors: [] },
-      staffingModel: DEFAULT_STAFFING_MODEL
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      useAssumptions: true
     });
   });
 
@@ -369,7 +379,8 @@ describe('calculatorStore - Traffic Intensity Calculation', () => {
       inputs: createDefaultInputs(),
       results: null,
       validation: { valid: true, errors: [] },
-      staffingModel: DEFAULT_STAFFING_MODEL
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      useAssumptions: true
     });
   });
 

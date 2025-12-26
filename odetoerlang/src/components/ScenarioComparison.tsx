@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
 import { useCalculatorStore } from '../store/calculatorStore';
 import type { StaffingMetrics } from '../lib/calculations/erlangC';
@@ -12,7 +12,7 @@ interface Scenario {
 }
 
 export default function ScenarioComparison() {
-  const { inputs: currentInputs } = useCalculatorStore();
+  const { inputs: currentInputs, setInput } = useCalculatorStore();
 
   const [scenarios, setScenarios] = useState<Scenario[]>(() => [
     {
@@ -41,6 +41,20 @@ export default function ScenarioComparison() {
     }
   ]);
 
+  useEffect(() => {
+    setScenarios((prev) => {
+      if (prev.length === 0) return prev;
+      const [baseline, ...rest] = prev;
+      const nextInputs = { ...currentInputs };
+      const keys = Object.keys(nextInputs) as Array<keyof CalculationInputs>;
+      const hasChanges = keys.some((key) => baseline.inputs[key] !== nextInputs[key]);
+
+      if (!hasChanges) return prev;
+
+      return [{ ...baseline, inputs: nextInputs, results: null }, ...rest];
+    });
+  }, [currentInputs]);
+
   const calculateAll = () => {
     const updated = scenarios.map(scenario => ({
       ...scenario,
@@ -61,18 +75,7 @@ export default function ScenarioComparison() {
     const newScenario: Scenario = {
       id: Date.now().toString(),
       name: `Scenario ${scenarios.length + 1}`,
-      inputs: {
-        volume: 100,
-        aht: 240,
-        intervalMinutes: 30,
-        targetSLPercent: 80,
-        thresholdSeconds: 20,
-        shrinkagePercent: 25,
-        maxOccupancy: 90,
-        model: 'C',
-        averagePatience: 120,
-        concurrency: 1
-      },
+      inputs: { ...currentInputs },
       results: null
     };
     setScenarios([...scenarios, newScenario]);
@@ -87,11 +90,16 @@ export default function ScenarioComparison() {
   };
 
   const updateInput = (id: string, field: keyof CalculationInputs, value: number) => {
+    const baselineId = scenarios[0]?.id;
     setScenarios(scenarios.map(s =>
       s.id === id
         ? { ...s, inputs: { ...s.inputs, [field]: value }, results: null }
         : s
     ));
+
+    if (id === baselineId) {
+      setInput(field, value as CalculationInputs[typeof field]);
+    }
   };
 
   // Calculate baseline (first scenario) for comparisons

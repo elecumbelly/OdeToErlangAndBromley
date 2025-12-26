@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CalculationInputs, CalculationResults } from '../types';
 import { CalculationService } from '../lib/services/CalculationService';
 import type { ValidationResult } from '../lib/validation/inputValidation';
@@ -44,6 +45,7 @@ interface CalculatorState {
   results: CalculationResults | null;
   staffingModel: StaffingModel;
   validation: ValidationResult;
+  useAssumptions: boolean;
   activeProductivityModifier?: number;
   achievableMetrics?: AchievableMetrics | null; // What you can achieve with your staff
   abandonmentMetrics?: {
@@ -56,6 +58,7 @@ interface CalculatorState {
   setInput: <K extends keyof CalculationInputs>(key: K, value: CalculationInputs[K]) => void;
   setDate: (date: string) => void; // Add setDate action
   setStaffingModel: <K extends keyof StaffingModel>(key: K, value: StaffingModel[K]) => void;
+  setUseAssumptions: (value: boolean) => void;
   calculate: () => void;
   reset: () => void;
 }
@@ -102,96 +105,114 @@ export function calculateProductiveAgents(
   return { staffPerShift, productiveAgents, shiftsToFillDay };
 }
 
-export const useCalculatorStore = create<CalculatorState>((set, get) => ({
-  inputs: DEFAULT_INPUTS,
-  date: new Date().toISOString().split('T')[0], // Default to today
-  results: null,
-  staffingModel: DEFAULT_STAFFING_MODEL,
-  validation: { valid: true, errors: [] },
-  achievableMetrics: null,
-  abandonmentMetrics: null,
+export const useCalculatorStore = create<CalculatorState>()(
+  persist(
+    (set, get) => ({
+      inputs: DEFAULT_INPUTS,
+      date: new Date().toISOString().split('T')[0], // Default to today
+      results: null,
+      staffingModel: DEFAULT_STAFFING_MODEL,
+      validation: { valid: true, errors: [] },
+      useAssumptions: true,
+      achievableMetrics: null,
+      abandonmentMetrics: null,
 
-  setInput: (key, value) => {
-    set((state) => ({
-      inputs: { ...state.inputs, [key]: value }
-    }));
-    // Auto-calculate on input change
-    get().calculate();
-  },
+      setInput: (key, value) => {
+        set((state) => ({
+          inputs: { ...state.inputs, [key]: value }
+        }));
+        // Auto-calculate on input change
+        get().calculate();
+      },
 
-  setDate: (date) => {
-    set({ date });
-    get().calculate();
-  },
+      setDate: (date) => {
+        set({ date });
+        get().calculate();
+      },
 
-  setStaffingModel: (key, value) => {
-    set((state) => ({
-      staffingModel: { ...state.staffingModel, [key]: value }
-    }));
-    // Auto-calculate when staffing model changes
-    get().calculate();
-  },
+      setStaffingModel: (key, value) => {
+        set((state) => ({
+          staffingModel: { ...state.staffingModel, [key]: value }
+        }));
+        // Auto-calculate when staffing model changes
+        get().calculate();
+      },
 
-  calculate: debounce(() => {
-    const { inputs, staffingModel, date } = get();
-    const { calendarEvents } = useDatabaseStore.getState();
+      setUseAssumptions: (value) => {
+        set({ useAssumptions: value });
+      },
 
-    // Calculate productivity modifier from calendar events for the selected date
-    let productivityModifier = 1.0;
-    
-    if (calendarEvents.length > 0) {
-      // Filter events that overlap with the selected date
-      // Simple logic: if event starts or ends on this date, or encompasses it.
-      // Assuming event times are in ISO format.
-      // We'll just check if the event *starts* on this date for simplicity for now, 
-      // or ideally, if the date falls within the range.
-      
-      const targetDateStart = new Date(date + 'T00:00:00');
-      const targetDateEnd = new Date(date + 'T23:59:59');
+      calculate: debounce(() => {
+        const { inputs, staffingModel, date } = get();
+        const { calendarEvents } = useDatabaseStore.getState();
 
-      const dailyEvents = calendarEvents.filter(event => {
-        const eventStart = new Date(event.start_datetime);
-        const eventEnd = new Date(event.end_datetime);
-        return eventStart <= targetDateEnd && eventEnd >= targetDateStart;
-      });
-
-      if (dailyEvents.length > 0) {
-        // Calculate weighted average or simple min?
-        // If there's a 0% productivity event (Holiday), modifier should be 0?
-        // Or does it apply to specific staff?
-        // "Productivity modifier" in CalendarEvents table usually means "staff available during this event are X% productive".
-        // But does the event apply to ALL staff? The `applies_to_filter` field exists but is currently null/JSON.
-        // Assumption: Events apply to ALL staff for the Calculator tab (global planner).
+        // Calculate productivity modifier from calendar events for the selected date
+        let productivityModifier = 1.0;
         
-        // If multiple events, how do they combine?
-        // Simple approach: Take the minimum productivity (pessimistic).
-        // E.g. Holiday (0%) overrides Training (50%).
-        productivityModifier = dailyEvents.reduce((min, event) => {
-          return Math.min(min, event.productivity_modifier);
-        }, 1.0);
+        if (calendarEvents.length > 0) {
+          // Filter events that overlap with the selected date
+          // Simple logic: if event starts or ends on this date, or encompasses it.
+          // Assuming event times are in ISO format.
+          // We'll just check if the event *starts* on this date for simplicity for now, 
+          // or ideally, if the date falls within the range.
+          
+          const targetDateStart = new Date(date + 'T00:00:00');
+          const targetDateEnd = new Date(date + 'T23:59:59');
+
+          const dailyEvents = calendarEvents.filter(event => {
+            const eventStart = new Date(event.start_datetime);
+            const eventEnd = new Date(event.end_datetime);
+            return eventStart <= targetDateEnd && eventEnd >= targetDateStart;
+          });
+
+          if (dailyEvents.length > 0) {
+            // Calculate weighted average or simple min?
+            // If there's a 0% productivity event (Holiday), modifier should be 0?
+            // Or does it apply to specific staff?
+            // "Productivity modifier" in CalendarEvents table usually means "staff available during this event are X% productive".
+            // But does the event apply to ALL staff? The `applies_to_filter` field exists but is currently null/JSON.
+            // Assumption: Events apply to ALL staff for the Calculator tab (global planner).
+            
+            // If multiple events, how do they combine?
+            // Simple approach: Take the minimum productivity (pessimistic).
+            // E.g. Holiday (0%) overrides Training (50%).
+            productivityModifier = dailyEvents.reduce((min, event) => {
+              return Math.min(min, event.productivity_modifier);
+            }, 1.0);
+          }
+        }
+
+        const serviceResult = CalculationService.calculate(inputs, staffingModel, productivityModifier);
+
+        set({
+          results: serviceResult.results,
+          achievableMetrics: serviceResult.achievableMetrics,
+          abandonmentMetrics: serviceResult.abandonmentMetrics,
+          validation: serviceResult.validation,
+          activeProductivityModifier: productivityModifier,
+        });
+      }, DEBOUNCE_DELAY),
+
+      reset: () => {
+        set({ 
+          inputs: DEFAULT_INPUTS, 
+          date: new Date().toISOString().split('T')[0], 
+          results: null, 
+          abandonmentMetrics: null, 
+          activeProductivityModifier: 1.0,
+          validation: { valid: true, errors: [] } 
+        });
+        setTimeout(() => get().calculate(), 0);
       }
+    }),
+    {
+      name: 'odetoerlang_math_model',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        inputs: state.inputs,
+        date: state.date,
+        useAssumptions: state.useAssumptions,
+      }),
     }
-
-    const serviceResult = CalculationService.calculate(inputs, staffingModel, productivityModifier);
-
-    set({
-      results: serviceResult.results,
-      achievableMetrics: serviceResult.achievableMetrics,
-      abandonmentMetrics: serviceResult.abandonmentMetrics,
-      validation: serviceResult.validation,
-      activeProductivityModifier: productivityModifier,
-    });
-  }, DEBOUNCE_DELAY),
-
-  reset: () => {
-    set({ 
-      inputs: DEFAULT_INPUTS, 
-      date: new Date().toISOString().split('T')[0], 
-      results: null, 
-      abandonmentMetrics: null, 
-      activeProductivityModifier: 1.0,
-      validation: { valid: true, errors: [] } 
-    });
-    setTimeout(() => get().calculate(), 0);
-  }
-}));
+  )
+);

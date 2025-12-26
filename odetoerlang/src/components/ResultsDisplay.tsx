@@ -12,6 +12,64 @@ const ResultsDisplay = memo(() => {
   const [stickyHiddenForScroll, setStickyHiddenForScroll] = useState(false);
   const lastScrollY = useRef(0);
 
+  const sensitivityData = useMemo(() => {
+    const data: Array<{ agents: number; sl: number }> = [];
+    if (!results) return data;
+    const start = Math.max(1, results.requiredAgents - 5);
+    const end = results.requiredAgents + 5;
+    for (let agents = start; agents <= end; agents++) {
+      const achievable = calculateAchievableMetrics({
+        model: inputs.model,
+        fixedAgents: agents,
+        workload: {
+          volume: inputs.volume,
+          aht: inputs.aht,
+          intervalMinutes: inputs.intervalMinutes,
+        },
+        constraints: {
+          thresholdSeconds: inputs.thresholdSeconds,
+          maxOccupancy: inputs.maxOccupancy,
+        },
+        behavior: {
+          shrinkagePercent: inputs.shrinkagePercent,
+          averagePatience: inputs.averagePatience,
+          concurrency: inputs.concurrency,
+        },
+      });
+      if (achievable?.serviceLevel !== undefined) {
+        data.push({ agents, sl: parseFloat(achievable.serviceLevel.toFixed(1)) });
+      }
+    }
+    return data;
+  }, [results, inputs]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('ode_sticky_kpi_hidden');
+    if (stored === 'true') {
+      setShowStickyBar(false);
+    }
+
+    const handler = () => {
+      const start = performance.now();
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollY.current;
+      if (Math.abs(delta) > 10) {
+        if (delta > 0) {
+          setStickyHiddenForScroll(true);
+        } else {
+          setStickyHiddenForScroll(false);
+        }
+        lastScrollY.current = currentY;
+      }
+      const duration = performance.now() - start;
+      if (duration > 10) {
+        console.debug('[perf] sticky scroll handler', duration.toFixed(2), 'ms');
+      }
+    };
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
   if (!results) {
     return (
       <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
@@ -66,37 +124,6 @@ const ResultsDisplay = memo(() => {
     { label: 'Occ', value: `${formatNumber(results.occupancy, 1)}%`, color: getOccupancyColor(results.occupancy) },
   ];
 
-  const sensitivityData = useMemo(() => {
-    const data: Array<{ agents: number; sl: number }> = [];
-    if (!results) return data;
-    const start = Math.max(1, results.requiredAgents - 5);
-    const end = results.requiredAgents + 5;
-    for (let agents = start; agents <= end; agents++) {
-      const achievable = calculateAchievableMetrics({
-        model: inputs.model,
-        fixedAgents: agents,
-        workload: {
-          volume: inputs.volume,
-          aht: inputs.aht,
-          intervalMinutes: inputs.intervalMinutes,
-        },
-        constraints: {
-          thresholdSeconds: inputs.thresholdSeconds,
-          maxOccupancy: inputs.maxOccupancy,
-        },
-        behavior: {
-          shrinkagePercent: inputs.shrinkagePercent,
-          averagePatience: inputs.averagePatience,
-          concurrency: inputs.concurrency,
-        },
-      });
-      if (achievable?.serviceLevel !== undefined) {
-        data.push({ agents, sl: parseFloat(achievable.serviceLevel.toFixed(1)) });
-      }
-    }
-    return data;
-  }, [results, inputs]);
-
   const copyResultsForExcel = async () => {
     const headers = [
       'Model',
@@ -144,33 +171,6 @@ const ResultsDisplay = memo(() => {
       addToast('Copied results (fallback) for Excel', 'success');
     }
   };
-
-  useEffect(() => {
-    const stored = localStorage.getItem('ode_sticky_kpi_hidden');
-    if (stored === 'true') {
-      setShowStickyBar(false);
-    }
-
-    const handler = () => {
-      const start = performance.now();
-      const currentY = window.scrollY;
-      const delta = currentY - lastScrollY.current;
-      if (Math.abs(delta) > 10) {
-        if (delta > 0) {
-          setStickyHiddenForScroll(true);
-        } else {
-          setStickyHiddenForScroll(false);
-        }
-        lastScrollY.current = currentY;
-      }
-      const duration = performance.now() - start;
-      if (duration > 10) {
-        console.debug('[perf] sticky scroll handler', duration.toFixed(2), 'ms');
-      }
-    };
-    window.addEventListener('scroll', handler, { passive: true });
-    return () => window.removeEventListener('scroll', handler);
-  }, []);
 
   const toggleSticky = () => {
     const next = !showStickyBar;

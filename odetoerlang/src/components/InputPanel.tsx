@@ -8,13 +8,17 @@ import { getCampaignById, type Campaign } from '../lib/database/dataAccess';
 import { validateCalculationInputs, getFieldError } from '../lib/validation/inputValidation';
 
 const InputPanel: React.FC = () => {
-  const { inputs, setInput, reset, date, setDate } = useCalculatorStore();
-  const { selectedCampaignId, campaigns } = useDatabaseStore();
+  const { inputs, setInput, reset, date, setDate, useAssumptions, setUseAssumptions } = useCalculatorStore();
+  const { selectedCampaignId, campaigns, assumptions } = useDatabaseStore();
 
   const validation = useMemo(() => validateCalculationInputs(inputs), [inputs]);
   const getError = (field: keyof CalculationInputs) => getFieldError(validation, field);
 
   useEffect(() => {
+    if (!useAssumptions) {
+      return;
+    }
+
     async function loadResolvedInputs() {
       // Define a comprehensive default campaign object to ensure all fields are present
       const defaultCampaign: Campaign = {
@@ -53,7 +57,7 @@ const InputPanel: React.FC = () => {
     }
 
     loadResolvedInputs();
-  }, [selectedCampaignId, date, campaigns, setInput]);
+  }, [selectedCampaignId, date, campaigns, assumptions, setInput, useAssumptions]);
 
   const updateInput = (key: keyof CalculationInputs, rawValue: string) => {
     const value = parseFloat(rawValue);
@@ -109,7 +113,20 @@ const InputPanel: React.FC = () => {
             onChange={(e) => setDate(e.target.value)}
             className={getInputClass()}
           />
-          <p className={hintClass}>View assumptions for this date</p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-2xs text-text-secondary">
+              <input
+                type="checkbox"
+                checked={useAssumptions}
+                onChange={(e) => setUseAssumptions(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-border-subtle bg-bg-surface text-cyan focus:ring-cyan/30 focus:ring-2"
+              />
+              Sync with assumptions
+            </label>
+            <span className="text-2xs text-text-muted">
+              {useAssumptions ? 'Using campaign defaults for this date' : 'Manual values are preserved'}
+            </span>
+          </div>
         </div>
 
         {/* Volume */}

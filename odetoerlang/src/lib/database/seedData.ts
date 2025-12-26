@@ -2,7 +2,7 @@ import { getDatabase, saveDatabase } from './initDatabase';
 
 /**
  * Populate database with synthetic test data
- * Creates realistic examples for all 21 tables
+ * Creates realistic examples for core tables
  */
 export async function seedDatabase() {
   const db = getDatabase();
@@ -286,6 +286,23 @@ export async function seedDatabase() {
         ('Desk', 'Workstations', 1, 450, 0.00, '2024-01-01', NULL),
         ('Desk', 'Workstations', 2, 280, 0.00, '2024-01-01', NULL),
         ('Desk', 'Workstations', 3, 900, 0.00, '2024-01-01', NULL);
+    `);
+
+    // ========================================================================
+    // 16. SCHEDULING DEFAULTS
+    // ========================================================================
+    db.run(`
+      INSERT INTO ShiftTemplates (template_name, paid_minutes, unpaid_minutes, break_count, break_minutes)
+      VALUES
+        ('Standard 9h (8 paid + 1 lunch)', 480, 60, 2, 15);
+    `);
+
+    db.run(`
+      INSERT INTO OptimizationMethods (method_key, method_name, version, description)
+      VALUES
+        ('greedy', 'Greedy Fill', '1.0', 'Baseline gap-first fill'),
+        ('local_search', 'Local Search', '1.0', 'Iterative swap-based improvement'),
+        ('solver', 'Solver', '0.1', 'Placeholder for ILP/CP-SAT solver');
     `);
 
     db.run('COMMIT');
