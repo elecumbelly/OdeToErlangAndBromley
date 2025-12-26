@@ -41,9 +41,9 @@ npm run build
 npm run preview
 ```
 
-## ⚠️ Offline / PWA
+## ⚡ Offline / PWA
 
-The service worker (vite-plugin-pwa) is disabled for now because of the runtime/service-worker generation issue; the app still serves as a standard SPA. Once the build-time issues are resolved, re-enable the plugin in `vite.config.ts`.
+PWA support is enabled via `vite-plugin-pwa`. The service worker caches assets for offline use and updates immediately when new versions are deployed (`skipWaiting` + `clientsClaim`).
 
 ## Test
 
@@ -103,7 +103,7 @@ src/
 - **Code splitting** - Lazy-loaded tabs reduce initial bundle size
 - **Non-blocking DB init** - UI renders immediately while database loads
 
-## Recent Changes (v0.1.0)
+## Recent Changes (v0.2.1)
 
 - Added onboarding banner + guided tour (Import → Calculator → Export)
 - Paste-from-Excel quick ingest with sample data; mobile sticky KPI bar with occupancy cap badge
