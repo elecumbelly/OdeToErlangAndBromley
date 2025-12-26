@@ -7,6 +7,7 @@ import ScenarioManager from './components/ScenarioManager';
 import type { InitStage } from './components/InitializationProgress';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ThemeToggle from './components/ui/ThemeToggle';
+import MathModelSettings from './components/MathModelSettings';
 
 // Lazy-loaded components for code splitting - reduces initial bundle size
 const ChartsPanel = lazy(() => import('./components/ChartsPanel'));
@@ -24,6 +25,7 @@ const CalendarView = lazy(() => import('./components/Calendar/CalendarView'));
 const HistoricalAnalysis = lazy(() => import('./components/HistoricalAnalysis'));
 const WorkforceTab = lazy(() => import('./components/Workforce/WorkforceTab'));
 const BPOTab = lazy(() => import('./components/BPO/BPOTab'));
+const SchedulingTab = lazy(() => import('./components/SchedulingTab'));
 
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useCalculatorStore } from './store/calculatorStore';
@@ -46,7 +48,7 @@ import { useDatabaseStore } from './store/databaseStore';
 import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
-type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
+type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
 
 function DbLoadingState({ stage, error }: { stage: InitStage; error: string | null }) {
   if (stage === 'error') {
@@ -209,6 +211,7 @@ function App() {
     { id: 'assumptions', name: 'Assumptions', shortName: 'ASSUM' },
     { id: 'historical', name: 'Historical', shortName: 'HIST' },
     { id: 'calendar', name: 'Calendar', shortName: 'CAL' },
+    { id: 'scheduling', name: 'Scheduling', shortName: 'SCHED' },
     { id: 'workforce', name: 'Workforce', shortName: 'STAFF' },
     { id: 'bpo', name: 'BPO', shortName: 'BPO' },
     { id: 'simulation', name: 'Simulate', shortName: 'SIM' },
@@ -304,6 +307,7 @@ function App() {
                   ERLANG B / C / A
                 </div>
               </div>
+              <MathModelSettings />
               <ThemeToggle />
             </div>
           </div>
@@ -440,7 +444,7 @@ function App() {
           {/* Lazy-loaded tabs */}
           <ErrorBoundary>
             <Suspense fallback={<TabLoadingFallback />}>
-              {!dbReady && ['historical', 'calendar', 'workforce', 'bpo', 'assumptions', 'import'].includes(activeTab) ? (
+              {!dbReady && ['historical', 'calendar', 'scheduling', 'workforce', 'bpo', 'assumptions', 'import'].includes(activeTab) ? (
                 <DbLoadingState stage={initStage} error={dbError} />
               ) : (
                 <>
@@ -452,6 +456,7 @@ function App() {
                   {activeTab === 'assumptions' && <AssumptionsPanel />}
                   {activeTab === 'historical' && <HistoricalAnalysis />}
                   {activeTab === 'calendar' && <CalendarView />}
+                  {activeTab === 'scheduling' && <SchedulingTab />}
                   {activeTab === 'workforce' && <WorkforceTab />}
                   {activeTab === 'bpo' && <BPOTab />}
                   {activeTab === 'simulation' && <SimulationTab />}

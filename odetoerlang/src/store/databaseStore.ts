@@ -18,12 +18,24 @@ import {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
+  getSchedulePlans,
+  createSchedulePlan,
+  updateSchedulePlan,
+  deleteSchedulePlan,
+  getScheduleRuns,
+  createScheduleRun,
+  getShiftTemplates,
+  getOptimizationMethods,
   getTableCounts,
   type Campaign,
   type Scenario,
   type Client,
   type Assumption,
   type CalendarEvent,
+  type SchedulePlan,
+  type ScheduleRun,
+  type ShiftTemplate,
+  type OptimizationMethod,
 } from '../lib/database/dataAccess';
 
 interface DatabaseState {
@@ -34,10 +46,15 @@ interface DatabaseState {
   assumptions: Assumption[]; // All assumptions
   campaignAssumptions: Assumption[]; // Assumptions filtered by selected campaign
   calendarEvents: CalendarEvent[];
+  schedulePlans: SchedulePlan[];
+  scheduleRuns: ScheduleRun[];
+  shiftTemplates: ShiftTemplate[];
+  optimizationMethods: OptimizationMethod[];
 
   // Selection state
   selectedCampaignId: number | null;
   selectedScenarioId: number | null;
+  selectedSchedulePlanId: number | null;
 
   // Loading state
   isLoading: boolean;
@@ -50,11 +67,16 @@ interface DatabaseState {
   fetchAssumptions: () => void; // Fetch all assumptions
   refreshCampaignAssumptions: () => void; // Fetch assumptions for current campaign
   fetchCalendarEvents: (start: string, end: string) => void;
+  refreshSchedulePlans: () => void;
+  refreshScheduleRuns: (planId?: number | null) => void;
+  refreshShiftTemplates: () => void;
+  refreshOptimizationMethods: () => void;
   refreshAll: () => void;
 
   // Actions - Selection
   selectCampaign: (id: number | null) => void;
   selectScenario: (id: number | null) => void;
+  selectSchedulePlan: (id: number | null) => void;
 
   // Actions - Campaigns
   addCampaign: (campaign: Omit<Campaign, 'id' | 'created_at'>) => number;
@@ -73,6 +95,12 @@ interface DatabaseState {
   addCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'created_at'>) => number;
   editCalendarEvent: (id: number, updates: Partial<CalendarEvent>) => void;
   removeCalendarEvent: (id: number) => void;
+
+  // Actions - Scheduling
+  addSchedulePlan: (plan: Omit<SchedulePlan, 'id' | 'created_at' | 'updated_at'>) => number;
+  editSchedulePlan: (id: number, updates: Partial<SchedulePlan>) => void;
+  removeSchedulePlan: (id: number) => void;
+  addScheduleRun: (run: Omit<ScheduleRun, 'id' | 'created_at'>) => number;
 
   // Actions - Assumptions
   saveAssumption: (
@@ -110,8 +138,13 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
   assumptions: [], // Initial state for all assumptions
   campaignAssumptions: [], // Initial state for campaign-specific assumptions
   calendarEvents: [],
+  schedulePlans: [],
+  scheduleRuns: [],
+  shiftTemplates: [],
+  optimizationMethods: [],
   selectedCampaignId: null,
   selectedScenarioId: null,
+  selectedSchedulePlanId: null,
   isLoading: false,
   error: null,
 
@@ -178,6 +211,52 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
     }
   },
 
+  refreshSchedulePlans: () => {
+    const { selectedCampaignId } = get();
+    try {
+      const plans = getSchedulePlans(selectedCampaignId);
+      set({ schedulePlans: plans, error: null });
+    } catch (err) {
+      console.error('Failed to load schedule plans:', err);
+      set({ error: 'Failed to load schedule plans.' });
+    }
+  },
+
+  refreshScheduleRuns: (planId) => {
+    const targetPlanId = planId ?? get().selectedSchedulePlanId;
+    if (!targetPlanId) {
+      set({ scheduleRuns: [] });
+      return;
+    }
+    try {
+      const runs = getScheduleRuns(targetPlanId);
+      set({ scheduleRuns: runs, error: null });
+    } catch (err) {
+      console.error('Failed to load schedule runs:', err);
+      set({ error: 'Failed to load schedule runs.' });
+    }
+  },
+
+  refreshShiftTemplates: () => {
+    try {
+      const templates = getShiftTemplates();
+      set({ shiftTemplates: templates, error: null });
+    } catch (err) {
+      console.error('Failed to load shift templates:', err);
+      set({ error: 'Failed to load shift templates.' });
+    }
+  },
+
+  refreshOptimizationMethods: () => {
+    try {
+      const methods = getOptimizationMethods();
+      set({ optimizationMethods: methods, error: null });
+    } catch (err) {
+      console.error('Failed to load optimization methods:', err);
+      set({ error: 'Failed to load optimization methods.' });
+    }
+  },
+
   refreshAll: () => {
     set({ isLoading: true });
     get().refreshCampaigns();
@@ -196,6 +275,11 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
 
   selectScenario: (id) => {
     set({ selectedScenarioId: id });
+  },
+
+  selectSchedulePlan: (id) => {
+    set({ selectedSchedulePlanId: id });
+    get().refreshScheduleRuns(id);
   },
 
   // Campaigns
@@ -308,6 +392,54 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
     } catch (err) {
       console.error('Failed to delete event:', err);
       set({ error: 'Failed to delete event.' });
+    }
+  },
+
+  // Scheduling
+  addSchedulePlan: (plan) => {
+    try {
+      const id = createSchedulePlan(plan);
+      get().refreshSchedulePlans();
+      return id;
+    } catch (err) {
+      console.error('Failed to create schedule plan:', err);
+      set({ error: 'Failed to create schedule plan.' });
+      return -1;
+    }
+  },
+
+  editSchedulePlan: (id, updates) => {
+    try {
+      updateSchedulePlan(id, updates);
+      get().refreshSchedulePlans();
+    } catch (err) {
+      console.error('Failed to update schedule plan:', err);
+      set({ error: 'Failed to update schedule plan.' });
+    }
+  },
+
+  removeSchedulePlan: (id) => {
+    try {
+      deleteSchedulePlan(id);
+      if (get().selectedSchedulePlanId === id) {
+        set({ selectedSchedulePlanId: null, scheduleRuns: [] });
+      }
+      get().refreshSchedulePlans();
+    } catch (err) {
+      console.error('Failed to delete schedule plan:', err);
+      set({ error: 'Failed to delete schedule plan.' });
+    }
+  },
+
+  addScheduleRun: (run) => {
+    try {
+      const id = createScheduleRun(run);
+      get().refreshScheduleRuns(run.schedule_plan_id);
+      return id;
+    } catch (err) {
+      console.error('Failed to create schedule run:', err);
+      set({ error: 'Failed to create schedule run.' });
+      return -1;
     }
   },
 

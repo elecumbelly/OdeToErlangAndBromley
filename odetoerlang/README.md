@@ -41,6 +41,10 @@ npm run build
 npm run preview
 ```
 
+## ⚠️ Offline / PWA
+
+The service worker (vite-plugin-pwa) is disabled for now because of the runtime/service-worker generation issue; the app still serves as a standard SPA. Once the build-time issues are resolved, re-enable the plugin in `vite.config.ts`.
+
 ## Test
 
 ```bash

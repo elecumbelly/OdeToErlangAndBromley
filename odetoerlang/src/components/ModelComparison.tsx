@@ -1,18 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { calculateStaffingMetrics, calculateTrafficIntensity, calculateFTE, calculateOccupancy } from '../lib/calculations/erlangC';
 import { calculateErlangAMetrics } from '../lib/calculations/erlangA';
 import { calculateErlangB, calculateRequiredLinesB } from '../lib/calculations/erlangB';
-
-interface ComparisonInputs {
-  volume: number;
-  aht: number;
-  intervalMinutes: number;
-  targetSLPercent: number;
-  thresholdSeconds: number;
-  shrinkagePercent: number;
-  maxOccupancy: number;
-  averagePatience: number;
-}
+import { useCalculatorStore } from '../store/calculatorStore';
+import type { CalculationInputs } from '../types';
 
 interface ModelResults {
   modelName: string;
@@ -26,16 +17,7 @@ interface ModelResults {
 }
 
 export default function ModelComparison() {
-  const [inputs, setInputs] = useState<ComparisonInputs>({
-    volume: 100,
-    aht: 240,
-    intervalMinutes: 30,
-    targetSLPercent: 80,
-    thresholdSeconds: 20,
-    shrinkagePercent: 25,
-    maxOccupancy: 90,
-    averagePatience: 120
-  });
+  const { inputs, setInput } = useCalculatorStore();
 
   const results = useMemo(() => {
     const intervalSeconds = inputs.intervalMinutes * 60;
@@ -111,8 +93,8 @@ export default function ModelComparison() {
     return comparisonResults;
   }, [inputs]);
 
-  const handleInputChange = (key: keyof ComparisonInputs, value: number) => {
-    setInputs(prev => ({ ...prev, [key]: value }));
+  const handleInputChange = (key: keyof CalculationInputs, value: number) => {
+    setInput(key, value);
   };
 
   const formatNumber = (num: number | undefined, decimals: number = 2): string => {
