@@ -2,7 +2,6 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
 import StaffingModelPanel from './components/StaffingModelPanel';
-import CampaignSelector from './components/CampaignSelector';
 import type { InitStage } from './components/InitializationProgress';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ThemeToggle from './components/ui/ThemeToggle';
