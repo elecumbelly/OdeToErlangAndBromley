@@ -9,8 +9,6 @@ import MathModelSettings from './components/MathModelSettings';
 
 // Lazy-loaded components for code splitting - reduces initial bundle size
 const ChartsPanel = lazy(() => import('./components/ChartsPanel'));
-const CSVImport = lazy(() => import('./components/CSVImport'));
-const ACDImport = lazy(() => import('./components/ACDImport'));
 const SmartCSVImport = lazy(() => import('./components/SmartCSVImport'));
 const ExportPanel = lazy(() => import('./components/ExportPanel'));
 const MultiChannelPanel = lazy(() => import('./components/MultiChannelPanel'));
@@ -219,27 +217,6 @@ function App() {
   ];
 
   const setInput = useCalculatorStore((state) => state.setInput);
-
-  const handleDataImported = (data: {
-    volumes?: Array<{ volume?: number }>;
-    aht?: Array<{ aht?: number; channel?: string }>;
-    shrinkage?: Array<{ percentage?: number }>;
-  }) => {
-    if (data.volumes && data.volumes.length > 0) {
-      const totalVolume = data.volumes.reduce((sum: number, row) => sum + (row.volume || 0), 0);
-      const avgVolume = Math.round(totalVolume / data.volumes.length);
-      setInput('volume', avgVolume > 0 ? avgVolume : 100);
-    }
-    if (data.aht && data.aht.length > 0) {
-      const voiceAht = data.aht.find((row) => row.channel?.toLowerCase() === 'voice');
-      const ahtValue = voiceAht?.aht || data.aht[0]?.aht || 240;
-      setInput('aht', Math.round(ahtValue));
-    }
-    if (data.shrinkage && data.shrinkage.length > 0) {
-      const totalShrinkage = data.shrinkage.reduce((sum: number, row) => sum + (row.percentage || 0), 0);
-      setInput('shrinkagePercent', Math.min(totalShrinkage, 99));
-    }
-  };
 
   const showDbLoadingBanner = initStage !== 'ready' && initStage !== 'error';
   const showDbErrorBanner = initStage === 'error';
@@ -452,13 +429,6 @@ function App() {
                   {activeTab === 'import' && (
                     <div className="space-y-6">
                       <SmartCSVImport />
-                      <div className="border-t border-border-subtle pt-6">
-                        <h3 className="text-sm font-semibold text-text-secondary mb-4 uppercase tracking-wide">Legacy Importers</h3>
-                        <div className="space-y-6 opacity-60">
-                          <ACDImport />
-                          <CSVImport onDataImported={handleDataImported} />
-                        </div>
-                      </div>
                     </div>
                   )}
                   {activeTab === 'export' && <ExportPanel />}
