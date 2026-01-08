@@ -18,8 +18,7 @@ import {
 } from '../lib/database/dataAccess';
 import {
   analyzeHistoricalData,
-  type HistoricalInsights,
-  type TrendAnalysis
+  type HistoricalInsights
 } from '../lib/forecasting/historicalAnalysis';
 import {
   forecastWithMovingAverage,
@@ -29,150 +28,56 @@ import {
   type ForecastResult
 } from '../lib/forecasting/advancedForecasting';
 import { useDatabaseStore } from '../store/databaseStore';
+import { MetricCard } from './ui/MetricCard';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  Legend
+} from 'recharts';
 
 // ============================================================================
-// SUBCOMPONENTS
+// HELPERS
 // ============================================================================
 
-function TrendBadge({ trend }: { trend: TrendAnalysis }) {
-  const colors = {
-    increasing: 'text-green bg-green/10 border-green/30',
-    decreasing: 'text-red bg-red/10 border-red/30',
-    stable: 'text-text-secondary bg-bg-elevated border-border-subtle'
-  };
+const CHART_THEME = {
+  bg: 'transparent',
+  grid: 'rgba(255,255,255,0.1)',
+  text: '#94a3b8',
+  tooltipBg: '#0f172a',
+  tooltipBorder: '#1e293b',
+  colors: {
+    cyan: '#06b6d4',
+    purple: '#a855f7',
+    green: '#22c55e',
+    amber: '#f59e0b',
+    red: '#ef4444',
+  }
+};
 
-  const arrows = {
-    increasing: '\u2191',
-    decreasing: '\u2193',
-    stable: '\u2194'
-  };
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${colors[trend.direction]}`}>
-      <span>{arrows[trend.direction]}</span>
-      <span>{trend.direction.charAt(0).toUpperCase() + trend.direction.slice(1)}</span>
-      <span>({trend.percentChange > 0 ? '+' : ''}{trend.percentChange.toFixed(1)}%)</span>
-    </span>
-  );
-}
-
-function StatCard({ label, value, subValue }: { label: string; value: string; subValue?: string }) {
-  return (
-    <div className="bg-bg-elevated border border-border-subtle rounded-lg p-3">
-      <div className="text-xs text-text-muted uppercase tracking-wide mb-1">{label}</div>
-      <div className="text-lg font-semibold text-text-primary">{value}</div>
-      {subValue && <div className="text-xs text-text-secondary mt-0.5">{subValue}</div>}
-    </div>
-  );
-}
-
-function DayOfWeekChart({ patterns }: { patterns: HistoricalInsights['dayOfWeekPatterns'] }) {
-  const maxVolume = Math.max(...patterns.map(p => p.avgVolume));
-
-  return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium text-text-primary">Day of Week Patterns</h4>
-      <div className="grid grid-cols-7 gap-1">
-        {patterns.map(p => (
-          <div key={p.dayOfWeek} className="text-center">
-            <div className="text-2xs text-text-muted mb-1">{p.dayName.slice(0, 3)}</div>
-            <div
-              className="bg-cyan/20 border border-cyan/30 rounded-sm mx-auto w-full"
-              style={{ height: `${(p.avgVolume / maxVolume) * 60 + 10}px` }}
-              title={`${Math.round(p.avgVolume).toLocaleString()} avg volume`}
-            />
-            <div className="text-2xs text-text-secondary mt-1">
-              {p.avgVolume > 1000 ? `${(p.avgVolume / 1000).toFixed(1)}k` : Math.round(p.avgVolume)}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MonthlyChart({ patterns }: { patterns: HistoricalInsights['monthlyPatterns'] }) {
-  const validPatterns = patterns.filter(p => p.sampleSize > 0);
-  if (validPatterns.length === 0) {
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
     return (
-      <div className="text-sm text-text-muted">
-        Not enough data for monthly analysis
+      <div className="bg-bg-elevated border border-border-subtle rounded-lg p-3 shadow-xl">
+        <p className="text-sm font-semibold text-text-primary mb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-xs" style={{ color: entry.color }}>
+            {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+          </p>
+        ))}
       </div>
     );
   }
-
-  const maxVolume = Math.max(...validPatterns.map(p => p.avgVolume));
-
-  return (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium text-text-primary">Monthly Patterns</h4>
-      <div className="flex gap-1 overflow-x-auto pb-2">
-        {patterns.map(p => (
-          <div key={p.month} className="text-center flex-shrink-0 w-12">
-            <div className="text-2xs text-text-muted mb-1">{p.monthName.slice(0, 3)}</div>
-            {p.sampleSize > 0 ? (
-              <>
-                <div
-                  className="bg-purple/20 border border-purple/30 rounded-sm mx-auto"
-                  style={{
-                    height: `${(p.avgVolume / maxVolume) * 50 + 10}px`,
-                    width: '24px'
-                  }}
-                  title={`${Math.round(p.avgVolume).toLocaleString()} avg volume (${p.sampleSize} days)`}
-                />
-                <div className="text-2xs text-text-secondary mt-1">
-                  {p.avgVolume > 1000 ? `${(p.avgVolume / 1000).toFixed(1)}k` : Math.round(p.avgVolume)}
-                </div>
-              </>
-            ) : (
-              <div className="h-[60px] flex items-center justify-center text-2xs text-text-muted">
-                --
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ForecastDisplay({ forecast }: { forecast: ForecastResult }) {
-  return (
-    <div className="bg-bg-elevated border border-border-subtle rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-medium text-text-primary">{forecast.method}</h4>
-        {forecast.accuracy && (
-          <div className="text-xs text-text-muted">
-            MAPE: {forecast.accuracy.mape.toFixed(1)}%
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        {forecast.forecasts.slice(0, 7).map(point => (
-          <div key={point.date} className="flex items-center gap-3 text-sm">
-            <span className="text-text-secondary w-24">{point.date}</span>
-            <div className="flex-1 flex items-center gap-2">
-              <div className="bg-cyan/20 rounded h-4" style={{ width: `${Math.min(100, point.value / 10)}%` }} />
-              <span className="text-text-primary font-medium">{point.value.toLocaleString()}</span>
-            </div>
-            {point.lower !== undefined && point.upper !== undefined && (
-              <span className="text-xs text-text-muted">
-                [{point.lower.toLocaleString()} - {point.upper.toLocaleString()}]
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {forecast.forecasts.length > 7 && (
-        <div className="text-xs text-text-muted mt-2">
-          +{forecast.forecasts.length - 7} more days...
-        </div>
-      )}
-    </div>
-  );
-}
+  return null;
+};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -185,6 +90,8 @@ export default function HistoricalAnalysis() {
 
   const [selectedCampaign, setSelectedCampaign] = useState<number | null>(null);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
+  const [dbDateRange, setDbDateRange] = useState<{ start: string; end: string } | null>(null);
+  const [rangeFilter, setRangeFilter] = useState<number>(30); // Days to look back, 0 = All
   const [historicalData, setHistoricalData] = useState<HistoricalData[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'analysis' | 'forecast'>('analysis');
@@ -197,28 +104,43 @@ export default function HistoricalAnalysis() {
 
   // Check for data availability when campaign changes
   useEffect(() => {
-    if (selectedCampaign === null && campaigns.length > 0) {
-      return;
-    }
+    if (selectedCampaign === null) return;
 
     const range = getHistoricalDateRange(selectedCampaign);
     if (range.minDate && range.maxDate) {
-      setDateRange({ start: range.minDate, end: range.maxDate });
+      setDbDateRange({ start: range.minDate, end: range.maxDate });
+      
+      // Auto-load data based on filter
+      loadData(selectedCampaign, range.minDate, range.maxDate, rangeFilter);
     } else {
-      setDateRange(null);
+      setDbDateRange(null);
+      setHistoricalData([]);
     }
-  }, [selectedCampaign, campaigns]);
+  }, [selectedCampaign, rangeFilter]);
 
   // Load historical data
-  const loadData = () => {
-    if (!dateRange) return;
-
+  const loadData = (campaignId: number, minDate: string, maxDate: string, filterDays: number) => {
     setLoading(true);
     try {
-      const data = getHistoricalData(selectedCampaign, dateRange.start, dateRange.end);
+      let start = minDate;
+      const end = maxDate;
+
+      if (filterDays > 0) {
+        const endDate = new Date(maxDate);
+        const startDate = new Date(endDate);
+        startDate.setDate(endDate.getDate() - filterDays);
+        const isoStart = startDate.toISOString().split('T')[0];
+        // Ensure we don't go before available data
+        start = isoStart > minDate ? isoStart : minDate;
+      }
+
+      setDateRange({ start, end });
+      const data = getHistoricalData(campaignId, start, end);
       setHistoricalData(data);
+      
       if (data.length === 0) {
-        addToast('No historical data found for selected range', 'info');
+        // Only toast if it's a manual action or unexpected empty state
+        // addToast('No data found for this range', 'info'); 
       }
     } catch (error) {
       console.error('Failed to load historical data:', error);
@@ -240,96 +162,88 @@ export default function HistoricalAnalysis() {
 
     const values = insights.dailyAggregates.map(d => d.totalVolume);
     const dates = insights.dailyAggregates.map(d => d.date);
-
     const recommended = autoSelectMethod(values);
-
     const results: ForecastResult[] = [];
 
-    // Add recommended method first
-    switch (recommended) {
-      case 'wma':
-        results.push(forecastWithMovingAverage(values, dates, forecastDays, 7, true));
-        break;
-      case 'sma':
-        results.push(forecastWithMovingAverage(values, dates, forecastDays, 7, false));
-        break;
-      case 'des':
-        results.push(forecastWithExponentialSmoothing(values, dates, forecastDays, 7, 'double'));
-        break;
-      case 'tes':
-        results.push(forecastWithExponentialSmoothing(values, dates, forecastDays, 7, 'triple'));
-        break;
-      case 'regression':
-        results.push(forecastWithRegression(values, dates, forecastDays));
-        break;
-      default:
-        results.push(forecastWithMovingAverage(values, dates, forecastDays, 7, true));
+    // Add methods based on suitability
+    results.push(forecastWithMovingAverage(values, dates, forecastDays, 7, true));
+    if (recommended !== 'wma') {
+      if (recommended === 'regression') results.unshift(forecastWithRegression(values, dates, forecastDays));
+      else results.push(forecastWithRegression(values, dates, forecastDays));
     }
-
-    // Add comparison methods
-    if (recommended !== 'regression') {
-      results.push(forecastWithRegression(values, dates, forecastDays));
-    }
-    if (recommended !== 'des') {
+    
+    // Add Exponential Smoothing if enough data
+    if (values.length > 14) {
       results.push(forecastWithExponentialSmoothing(values, dates, forecastDays, 7, 'double'));
     }
 
     return results;
   }, [insights, forecastDays]);
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-text-primary">Historical Analysis</h2>
-          <p className="text-sm text-text-secondary mt-1">
-            Analyze imported data and generate volume forecasts
-          </p>
-        </div>
+  const handleCampaignChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value ? Number(e.target.value) : null;
+    setSelectedCampaign(val);
+  };
 
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedCampaign ?? ''}
-            onChange={e => setSelectedCampaign(e.target.value ? Number(e.target.value) : null)}
-            className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary"
-          >
-            <option value="">All Campaigns</option>
-            {campaigns.map(c => (
-              <option key={c.id} value={c.id}>{c.campaign_name}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={loadData}
-            disabled={!dateRange || loading}
-            className="px-4 py-2 bg-cyan text-bg-base rounded-lg text-sm font-medium hover:bg-cyan/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Loading...' : 'Load Data'}
-          </button>
-        </div>
+  if (campaigns.length === 0) {
+    return (
+      <div className="p-8 text-center text-text-muted bg-bg-surface border border-border-muted rounded-xl">
+        No campaigns available. Please create a campaign first.
       </div>
+    );
+  }
 
-      {/* Date Range Info */}
-      {dateRange && (
-        <div className="text-sm text-text-secondary">
-          Data available: {dateRange.start} to {dateRange.end}
-        </div>
-      )}
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header & Controls */}
+      <div className="relative overflow-hidden rounded-xl border border-border-subtle/30 bg-gradient-to-b from-bg-surface to-bg-base p-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan/[0.02] to-transparent pointer-events-none" />
+        
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <h2 className="text-xl font-bold text-text-primary tracking-tight">Historical Analysis</h2>
+            <p className="text-sm text-text-secondary mt-1">
+              {dbDateRange 
+                ? `Analyzing ${historicalData.length} records from ${dbDateRange.start} to ${dbDateRange.end}`
+                : 'Select a campaign to begin analysis'}
+            </p>
+          </div>
 
-      {!dateRange && (
-        <div className="bg-bg-surface border border-border-muted rounded-lg p-8 text-center">
-          <div className="text-text-muted mb-2">No historical data imported yet</div>
-          <div className="text-sm text-text-secondary">
-            Use the Import tab to upload historical data CSV files
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Campaign</label>
+              <select
+                value={selectedCampaign ?? ''}
+                onChange={handleCampaignChange}
+                className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-cyan/20 focus:border-cyan outline-none min-w-[200px]"
+              >
+                <option value="">Select Campaign...</option>
+                {campaigns.map(c => (
+                  <option key={c.id} value={c.id}>{c.campaign_name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Range</label>
+              <select
+                value={rangeFilter}
+                onChange={e => setRangeFilter(Number(e.target.value))}
+                disabled={!selectedCampaign}
+                className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-cyan/20 focus:border-cyan outline-none"
+              >
+                <option value={7}>Last 7 Days</option>
+                <option value={30}>Last 30 Days</option>
+                <option value={90}>Last 90 Days</option>
+                <option value={0}>All Time</option>
+              </select>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Tabs */}
-      {insights && (
-        <>
-          <div className="flex gap-2 border-b border-border-muted">
+        {/* Tab Navigation */}
+        {insights && (
+          <div className="flex gap-2 mt-6 border-b border-border-muted/30">
             <button
               onClick={() => setActiveTab('analysis')}
               className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -338,7 +252,7 @@ export default function HistoricalAnalysis() {
                   : 'border-transparent text-text-secondary hover:text-text-primary'
               }`}
             >
-              Analysis
+              Trends & Patterns
             </button>
             <button
               onClick={() => setActiveTab('forecast')}
@@ -348,140 +262,208 @@ export default function HistoricalAnalysis() {
                   : 'border-transparent text-text-secondary hover:text-text-primary'
               }`}
             >
-              Forecast
+              Volume Forecasting
             </button>
           </div>
+        )}
+      </div>
 
-          {activeTab === 'analysis' && (
-            <div className="space-y-6">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard
-                  label="Total Records"
-                  value={insights.totalRecords.toLocaleString()}
-                  subValue={`${insights.dailyAggregates.length} days`}
-                />
-                <StatCard
-                  label="Avg Daily Volume"
-                  value={Math.round(insights.volumeStats.mean).toLocaleString()}
-                  subValue={`Median: ${Math.round(insights.volumeStats.median).toLocaleString()}`}
-                />
-                <StatCard
-                  label="Avg AHT"
-                  value={`${Math.round(insights.ahtStats.mean)}s`}
-                  subValue={`${(insights.ahtStats.mean / 60).toFixed(1)} min`}
-                />
-                <StatCard
-                  label="Avg SLA"
-                  value={`${(insights.slaStats.mean * 100).toFixed(1)}%`}
-                  subValue={`P90: ${(insights.slaStats.p90 * 100).toFixed(1)}%`}
-                />
-              </div>
+      {loading && (
+        <div className="p-12 text-center text-text-muted animate-pulse">
+          Loading analysis data...
+        </div>
+      )}
 
-              {/* Trends */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-bg-surface border border-border-muted rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-text-primary">Volume Trend</h4>
-                    <TrendBadge trend={insights.volumeTrend} />
-                  </div>
-                  <div className="text-sm text-text-secondary">
-                    R-squared: {(insights.volumeTrend.rSquared * 100).toFixed(1)}% fit
-                  </div>
-                </div>
+      {!selectedCampaign && !loading && (
+        <div className="p-12 text-center border-2 border-dashed border-border-muted rounded-xl bg-bg-surface/30">
+          <p className="text-text-secondary font-medium">No campaign selected</p>
+          <p className="text-sm text-text-muted mt-2">Choose a campaign above to view historical insights</p>
+        </div>
+      )}
 
-                <div className="bg-bg-surface border border-border-muted rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-text-primary">AHT Trend</h4>
-                    <TrendBadge trend={insights.ahtTrend} />
-                  </div>
-                  <div className="text-sm text-text-secondary">
-                    R-squared: {(insights.ahtTrend.rSquared * 100).toFixed(1)}% fit
-                  </div>
-                </div>
-              </div>
+      {selectedCampaign && !loading && historicalData.length === 0 && (
+        <div className="p-12 text-center border-2 border-dashed border-border-muted rounded-xl bg-bg-surface/30">
+          <p className="text-text-secondary font-medium">No data found</p>
+          <p className="text-sm text-text-muted mt-2">Try adjusting the date range or import new data</p>
+        </div>
+      )}
 
-              {/* Patterns */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-bg-surface border border-border-muted rounded-lg p-4">
-                  <DayOfWeekChart patterns={insights.dayOfWeekPatterns} />
-                </div>
+      {/* DASHBOARD CONTENT */}
+      {insights && !loading && activeTab === 'analysis' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Top Level Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              label="Total Volume"
+              value={insights.totalRecords}
+              unit="calls"
+              decimals={0}
+              status="info"
+              glow
+            />
+            <MetricCard
+              label="Avg Daily Volume"
+              value={insights.volumeStats.mean}
+              decimals={0}
+              trend={insights.volumeTrend.direction === 'increasing' ? 'up' : insights.volumeTrend.direction === 'decreasing' ? 'down' : 'neutral'}
+              description={`Trending ${insights.volumeTrend.direction}`}
+            />
+            <MetricCard
+              label="Avg AHT"
+              value={insights.ahtStats.mean}
+              unit="sec"
+              decimals={0}
+              status="neutral"
+            />
+            <MetricCard
+              label="Avg Service Level"
+              value={insights.slaStats.mean * 100}
+              unit="%"
+              decimals={1}
+              status={insights.slaStats.mean >= 0.8 ? 'success' : 'warning'}
+            />
+          </div>
 
-                <div className="bg-bg-surface border border-border-muted rounded-lg p-4">
-                  <MonthlyChart patterns={insights.monthlyPatterns} />
-                </div>
-              </div>
+          {/* Volume Trend Chart */}
+          <div className="bg-bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-bold text-text-primary mb-4">Volume History</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={insights.dailyAggregates}>
+                  <defs>
+                    <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={CHART_THEME.colors.cyan} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={CHART_THEME.colors.cyan} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke={CHART_THEME.text} 
+                    fontSize={11} 
+                    tickFormatter={(val) => val.slice(5)} // Show MM-DD
+                  />
+                  <YAxis stroke={CHART_THEME.text} fontSize={11} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="totalVolume" 
+                    name="Volume"
+                    stroke={CHART_THEME.colors.cyan} 
+                    fillOpacity={1} 
+                    fill="url(#colorVolume)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-              {/* Statistical Summary */}
-              <div className="bg-bg-surface border border-border-muted rounded-lg p-4">
-                <h4 className="text-sm font-medium text-text-primary mb-3">Volume Distribution</h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                  <div>
-                    <div className="text-text-muted">Min</div>
-                    <div className="font-medium">{Math.round(insights.volumeStats.min).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-text-muted">P25</div>
-                    <div className="font-medium">{Math.round(insights.volumeStats.p25).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-text-muted">P50 (Median)</div>
-                    <div className="font-medium">{Math.round(insights.volumeStats.median).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-text-muted">P75</div>
-                    <div className="font-medium">{Math.round(insights.volumeStats.p75).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-text-muted">Max</div>
-                    <div className="font-medium">{Math.round(insights.volumeStats.max).toLocaleString()}</div>
-                  </div>
-                </div>
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Day of Week Pattern */}
+            <div className="bg-bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-bold text-text-primary mb-4">Weekly Volume Pattern</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={insights.dayOfWeekPatterns}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
+                    <XAxis dataKey="dayName" stroke={CHART_THEME.text} fontSize={11} tickFormatter={(val) => val.slice(0, 3)} />
+                    <YAxis stroke={CHART_THEME.text} fontSize={11} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="avgVolume" name="Avg Volume" fill={CHART_THEME.colors.purple} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          )}
 
-          {activeTab === 'forecast' && forecasts && (
-            <div className="space-y-6">
-              {/* Forecast Settings */}
-              <div className="flex items-center gap-4">
-                <label className="text-sm text-text-secondary">Forecast Horizon:</label>
-                <select
-                  value={forecastDays}
-                  onChange={e => setForecastDays(Number(e.target.value))}
-                  className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary"
-                >
-                  <option value={7}>7 days</option>
-                  <option value={14}>14 days</option>
-                  <option value={30}>30 days</option>
-                  <option value={60}>60 days</option>
-                  <option value={90}>90 days</option>
-                </select>
-              </div>
-
-              {/* Forecasts */}
-              <div className="space-y-4">
-                {forecasts.map((forecast, i) => (
-                  <ForecastDisplay key={i} forecast={forecast} />
-                ))}
-              </div>
-
-              {/* Legend */}
-              <div className="bg-bg-surface border border-border-muted rounded-lg p-4">
-                <h4 className="text-sm font-medium text-text-primary mb-2">Forecast Methods</h4>
-                <ul className="text-sm text-text-secondary space-y-1">
-                  <li><strong>Moving Average</strong> - Smooths recent data, good for stable patterns</li>
-                  <li><strong>Exponential Smoothing</strong> - Weights recent data more, adapts to changes</li>
-                  <li><strong>Linear Regression</strong> - Projects trend line, best for clear trends</li>
-                  <li><strong>Holt-Winters</strong> - Captures trend + seasonality</li>
-                </ul>
-                <p className="text-xs text-text-muted mt-3">
-                  MAPE = Mean Absolute Percentage Error. Lower is better.
-                </p>
+            {/* AHT Trend */}
+            <div className="bg-bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-bold text-text-primary mb-4">AHT Distribution (Daily)</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={insights.dailyAggregates}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
+                    <XAxis dataKey="date" stroke={CHART_THEME.text} fontSize={11} tickFormatter={(val) => val.slice(5)} />
+                    <YAxis stroke={CHART_THEME.text} fontSize={11} domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line type="monotone" dataKey="avgAht" name="AHT (s)" stroke={CHART_THEME.colors.amber} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          )}
-        </>
+          </div>
+        </div>
+      )}
+
+      {/* FORECAST CONTENT */}
+      {insights && !loading && activeTab === 'forecast' && forecasts && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-surface border border-border-subtle rounded-xl p-4">
+            <h3 className="text-base font-bold text-text-primary">Forecast Comparison</h3>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-text-secondary">Horizon:</label>
+              <select
+                value={forecastDays}
+                onChange={e => setForecastDays(Number(e.target.value))}
+                className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-text-primary outline-none focus:ring-1 focus:ring-cyan"
+              >
+                <option value={14}>14 Days</option>
+                <option value={30}>30 Days</option>
+                <option value={60}>60 Days</option>
+              </select>
+            </div>
+          </div>
+
+          {forecasts.map((forecast, index) => (
+            <div key={index} className="bg-bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="font-bold text-text-primary">{forecast.method}</h4>
+                  <p className="text-xs text-text-muted mt-1">
+                    MAPE: <span className={forecast.accuracy.mape < 10 ? 'text-green' : 'text-amber'}>{forecast.accuracy.mape.toFixed(1)}%</span>
+                  </p>
+                </div>
+                {index === 0 && (
+                  <span className="text-xs font-bold text-cyan bg-cyan/10 border border-cyan/30 rounded px-2 py-1 uppercase tracking-wide">
+                    Recommended
+                  </span>
+                )}
+              </div>
+              
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={forecast.forecasts}>
+                    <defs>
+                      <linearGradient id={`colorForecast${index}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
+                    <XAxis dataKey="date" stroke={CHART_THEME.text} fontSize={11} tickFormatter={(val) => val.slice(5)} />
+                    <YAxis stroke={CHART_THEME.text} fontSize={11} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      name="Forecast Volume" 
+                      stroke={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} 
+                      fill={`url(#colorForecast${index})`} 
+                    />
+                    {forecast.forecasts[0].lower !== undefined && (
+                      <Area 
+                        type="monotone" 
+                        dataKey="lower" 
+                        stackId="1" 
+                        stroke="none" 
+                        fill="transparent" 
+                      />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
