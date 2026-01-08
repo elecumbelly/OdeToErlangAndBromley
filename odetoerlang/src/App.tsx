@@ -352,30 +352,6 @@ function App() {
 
       {/* Main Content */}
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section - Calculator Tab Only */}
-        {activeTab === 'calculator' && (
-          <div className="space-y-4 mb-6">
-            <div className="p-5 bg-gradient-to-r from-bg-surface to-bg-elevated border border-border-subtle/50 rounded-xl">
-              <div className="flex items-start space-x-4">
-                <div className="hidden sm:flex w-12 h-12 bg-cyan/10 border border-cyan/20 rounded-xl flex-shrink-0 items-center justify-center">
-                  <svg className="w-6 h-6 text-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-bold text-text-primary mb-2">
-                    Erlang Calculator
-                  </h2>
-                  <p className="text-sm text-text-secondary leading-relaxed">
-                    Calculate staffing requirements using <span className="text-cyan font-medium">Erlang B</span>, <span className="text-green font-medium">C</span>, and <span className="text-magenta font-medium">A</span> models.
-                    Multi-channel support, CSV import/export, interactive charts.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Tab Content */}
         <div className="animate-fade-in" role="tabpanel" id={`panel-${activeTab}`}>
           {activeTab === 'calculator' && (
