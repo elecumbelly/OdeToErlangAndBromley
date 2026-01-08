@@ -31,7 +31,7 @@ export default function EducationalMode() {
         <div className="space-y-3 text-sm text-gray-700">
           <p>
             <strong>Erlang C</strong> is a mathematical formula developed by A.K. Erlang in 1917 to calculate
-            waiting times in telephone queuing systems. It remains the foundation of contact center workforce management.
+            waiting times in telephone queuing systems. It remains the foundation of contact centre workforce management.
           </p>
           <p>
             <strong>Key Assumption:</strong> Customers have infinite patience and never abandon the queue.
@@ -214,7 +214,7 @@ export default function EducationalMode() {
             <div className="font-semibold text-red-900 mb-2">Limitations of Erlang C:</div>
             <ul className="list-disc list-inside text-xs space-y-1">
               <li>Assumes infinite patience - customers never abandon</li>
-              <li>Overestimates service level by 5-15% in typical contact centers</li>
+              <li>Overestimates service level by 5-15% in typical contact centres</li>
               <li>Assumes constant arrival rate (not realistic for intraday patterns)</li>
               <li>Assumes all agents have identical skill levels</li>
             </ul>
@@ -274,7 +274,7 @@ export default function EducationalMode() {
             <strong>Online Resources:</strong>
             <ul className="list-disc list-inside ml-2 space-y-1 mt-1">
               <li>Wikipedia: Erlang (unit) - Mathematical foundations</li>
-              <li>Contact Center Pipeline - Industry best practices</li>
+              <li>Contact Centre Pipeline - Industry best practices</li>
             </ul>
           </div>
         </div>

@@ -287,7 +287,7 @@ function App() {
                   OdeToErlangAndBromley
                 </h1>
                 <p className="text-2xs text-text-muted uppercase tracking-widest">
-                  Contact Center Capacity Planning
+                  Contact Centre Capacity Planning
                 </p>
               </div>
             </div>
@@ -526,7 +526,7 @@ function App() {
             <div>
               <h4 className="font-semibold text-text-primary mb-2 uppercase tracking-wide text-2xs">About</h4>
               <p className="text-text-muted leading-relaxed">
-                Comprehensive contact center capacity planning calculator.
+                Comprehensive contact centre capacity planning calculator.
                 Named in tribute to A.K. Erlang and the mathematical foundations
                 of queuing theory.
               </p>
