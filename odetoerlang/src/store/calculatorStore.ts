@@ -82,7 +82,9 @@ const DEFAULT_INPUTS: CalculationInputs = {
   maxOccupancy: 90,
   model: 'C', // Start with simplest model
   averagePatience: 120, // 2 minutes default patience (for Erlang A/X)
-  concurrency: 1 // Default concurrency
+  concurrency: 1, // Default concurrency
+  solveFor: 'agents',
+  currentHeadcount: 0
 };
 
 const DEFAULT_SHIFT_TYPES: ShiftType[] = [

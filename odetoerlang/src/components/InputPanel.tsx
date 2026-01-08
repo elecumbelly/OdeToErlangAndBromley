@@ -249,25 +249,71 @@ const InputPanel: React.FC = () => {
             </div>
           )}
 
-          {/* Service Level Target */}
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border-muted/30">
-            <div>
-              <label htmlFor="targetSLPercent" className={labelClass}>
-                SL Target %
-              </label>
-              <input
-                id="targetSLPercent"
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={inputs.targetSLPercent}
-                onChange={(e) => updateInput('targetSLPercent', e.target.value)}
-                className={getInputClass(getError('targetSLPercent'))}
-                placeholder="80"
-              />
-              {getError('targetSLPercent') && <p className={errorClass}>{getError('targetSLPercent')}</p>}
+          {/* Solve For Mode Selection */}
+          <div className="pt-4 border-t border-border-muted/30">
+            <label className={labelClass}>Calculate Requirement Based On</label>
+            <div className="flex bg-bg-elevated rounded-lg p-1 mt-2 border border-border-subtle">
+              <button
+                onClick={() => setInput('solveFor', 'agents')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  inputs.solveFor === 'agents' || !inputs.solveFor
+                    ? 'bg-bg-surface text-cyan shadow-sm border border-border-subtle/50'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Target Service Level
+              </button>
+              <button
+                onClick={() => setInput('solveFor', 'sl')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                  inputs.solveFor === 'sl'
+                    ? 'bg-bg-surface text-magenta shadow-sm border border-border-subtle/50'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Fixed Headcount
+              </button>
             </div>
+          </div>
+
+          {/* Conditional Inputs based on Solve For */}
+          <div className="grid grid-cols-2 gap-4">
+            {inputs.solveFor === 'sl' ? (
+              <div className="animate-fade-in">
+                <label htmlFor="currentHeadcount" className={labelClass}>
+                  Max FTE (Headcount)
+                </label>
+                <input
+                  id="currentHeadcount"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={inputs.currentHeadcount || ''}
+                  onChange={(e) => updateInput('currentHeadcount', e.target.value)}
+                  className={getInputClass(getError('volume'))} // Re-using generic error style
+                  placeholder="50"
+                />
+                <p className={hintClass}>Current total staff</p>
+              </div>
+            ) : (
+              <div className="animate-fade-in">
+                <label htmlFor="targetSLPercent" className={labelClass}>
+                  SL Target %
+                </label>
+                <input
+                  id="targetSLPercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={inputs.targetSLPercent}
+                  onChange={(e) => updateInput('targetSLPercent', e.target.value)}
+                  className={getInputClass(getError('targetSLPercent'))}
+                  placeholder="80"
+                />
+                {getError('targetSLPercent') && <p className={errorClass}>{getError('targetSLPercent')}</p>}
+              </div>
+            )}
 
             <div>
               <label htmlFor="thresholdSeconds" className={labelClass}>
@@ -287,13 +333,19 @@ const InputPanel: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-cyan/5 border border-cyan/20 rounded-lg">
-            <p className="text-base text-cyan">
-              <span className="font-bold text-lg">{inputs.targetSLPercent}/{inputs.thresholdSeconds}</span>
-              <span className="text-text-secondary ml-3">
-                = {inputs.targetSLPercent}% answered within {inputs.thresholdSeconds}s
-              </span>
-            </p>
+          <div className="p-4 bg-bg-elevated/30 border border-border-muted/50 rounded-lg">
+            {inputs.solveFor === 'sl' ? (
+              <p className="text-sm text-text-secondary">
+                <span className="text-magenta font-semibold">Constraint Mode:</span> Calculating best possible Service Level with <span className="font-bold">{inputs.currentHeadcount || 0}</span> agents.
+              </p>
+            ) : (
+              <p className="text-sm text-cyan">
+                <span className="font-bold text-lg">{inputs.targetSLPercent}/{inputs.thresholdSeconds}</span>
+                <span className="text-text-secondary ml-3">
+                  = {inputs.targetSLPercent}% answered within {inputs.thresholdSeconds}s
+                </span>
+              </p>
+            )}
           </div>
 
           {/* Shrinkage */}
