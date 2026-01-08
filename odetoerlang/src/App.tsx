@@ -198,24 +198,24 @@ function App() {
     localStorage.setItem('ode_tour_seen', 'true');
   };
 
-  const tabs: { id: Tab; name: string; shortName?: string }[] = [
-    { id: 'dashboard', name: 'Command', shortName: 'CMD' },
-    { id: 'calculator', name: 'Calculator', shortName: 'CALC' },
-    { id: 'charts', name: 'Analytics', shortName: 'CHARTS' },
-    { id: 'multichannel', name: 'Multi-Channel', shortName: 'MULTI' },
-    { id: 'scenarios', name: 'What-If', shortName: 'SCENAR' },
-    { id: 'modelcomp', name: 'Compare', shortName: 'COMP' },
-    { id: 'capacity', name: 'Capacity', shortName: 'CAP' },
-    { id: 'assumptions', name: 'Assumptions', shortName: 'ASSUM' },
-    { id: 'historical', name: 'Historical', shortName: 'HIST' },
-    { id: 'calendar', name: 'Calendar', shortName: 'CAL' },
-    { id: 'scheduling', name: 'Scheduling', shortName: 'SCHED' },
-    { id: 'workforce', name: 'Workforce', shortName: 'STAFF' },
-    { id: 'bpo', name: 'BPO', shortName: 'BPO' },
-    { id: 'simulation', name: 'Simulate', shortName: 'SIM' },
-    { id: 'import', name: 'Import', shortName: 'IN' },
-    { id: 'export', name: 'Export', shortName: 'OUT' },
-    { id: 'learn', name: 'Learn', shortName: 'EDU' }
+  const tabs: { id: Tab; name: string; icon: string; shortName?: string }[] = [
+    { id: 'dashboard', name: 'Command', icon: '📊', shortName: 'CMD' },
+    { id: 'calculator', name: 'Calculator', icon: '🧮', shortName: 'CALC' },
+    { id: 'charts', name: 'Analytics', icon: '📈', shortName: 'CHARTS' },
+    { id: 'multichannel', name: 'Multi-Channel', icon: '💬', shortName: 'MULTI' },
+    { id: 'scenarios', name: 'What-If', icon: '⚖️', shortName: 'SCENAR' },
+    { id: 'modelcomp', name: 'Compare', icon: '🔄', shortName: 'COMP' },
+    { id: 'capacity', name: 'Capacity', icon: '🔋', shortName: 'CAP' },
+    { id: 'assumptions', name: 'Assumptions', icon: '📋', shortName: 'ASSUM' },
+    { id: 'historical', name: 'Historical', icon: '📜', shortName: 'HIST' },
+    { id: 'calendar', name: 'Calendar', icon: '📅', shortName: 'CAL' },
+    { id: 'scheduling', name: 'Scheduling', icon: '⏰', shortName: 'SCHED' },
+    { id: 'workforce', name: 'Workforce', icon: '👥', shortName: 'STAFF' },
+    { id: 'bpo', name: 'BPO', icon: '🏢', shortName: 'BPO' },
+    { id: 'simulation', name: 'Simulate', icon: '🎲', shortName: 'SIM' },
+    { id: 'import', name: 'Import', icon: '📥', shortName: 'IN' },
+    { id: 'export', name: 'Export', icon: '📤', shortName: 'OUT' },
+    { id: 'learn', name: 'Learn', icon: '🎓', shortName: 'EDU' }
   ];
 
   const setInput = useCalculatorStore((state) => state.setInput);
@@ -252,18 +252,18 @@ function App() {
 
       {/* Header */}
       <header className="bg-bg-surface border-b border-border-subtle">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               {/* Logo Mark */}
-              <div className="w-10 h-10 bg-bg-elevated border border-cyan/30 rounded-lg flex items-center justify-center shadow-glow-cyan">
-                <span className="text-cyan font-bold text-lg">E</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-bg-elevated border border-cyan/30 rounded-lg flex items-center justify-center shadow-glow-cyan">
+                <span className="text-cyan font-bold text-base sm:text-lg">E</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-text-primary tracking-tight">
+                <h1 className="text-sm sm:text-xl font-bold text-text-primary tracking-tight">
                   OdeToErlangAndBromley
                 </h1>
-                <p className="text-2xs text-text-muted uppercase tracking-widest">
+                <p className="hidden sm:block text-2xs text-text-muted uppercase tracking-widest">
                   Contact Centre Capacity Planning
                 </p>
               </div>
@@ -304,12 +304,14 @@ function App() {
                 aria-controls={`panel-${tab.id}`}
                 className={`
                   px-4 py-2 text-xs font-medium whitespace-nowrap transition-all duration-fast rounded-md
+                  flex items-center gap-2
                   ${activeTab === tab.id
                     ? 'bg-cyan/10 text-cyan border border-cyan/30 shadow-glow-cyan'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent'
                   }
                 `}
               >
+                <span>{tab.icon}</span>
                 <span className="hidden sm:inline">{tab.name}</span>
                 <span className="sm:hidden">{tab.shortName || tab.name}</span>
               </button>

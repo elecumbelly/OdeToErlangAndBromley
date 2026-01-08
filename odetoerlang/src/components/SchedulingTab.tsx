@@ -413,7 +413,45 @@ export default function SchedulingTab() {
               </StatusBadge>
             </div>
             {schedulePlans.length === 0 ? (
-              <p className="text-xs text-text-muted">Create a plan to begin scheduling.</p>
+              <div className="p-6 text-center border-2 border-dashed border-border-muted rounded-xl bg-bg-surface/30">
+                <div className="w-12 h-12 rounded-full bg-bg-elevated flex items-center justify-center mx-auto mb-3 text-text-secondary">
+                  📅
+                </div>
+                <p className="text-text-primary font-medium text-sm">No schedule plans</p>
+                <p className="text-text-muted text-xs mt-1 mb-4">Create a plan or start with a demo setup.</p>
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  className="w-full"
+                  onClick={() => {
+                    // Logic to create a demo plan
+                    const today = new Date();
+                    const nextWeek = new Date();
+                    nextWeek.setDate(today.getDate() + 7);
+                    
+                    const id = addSchedulePlan({
+                      plan_name: 'Demo Weekly Plan',
+                      campaign_id: selectedCampaignId || 1,
+                      scenario_id: selectedScenarioId || null,
+                      start_date: dateToInput(today),
+                      end_date: dateToInput(nextWeek),
+                      interval_minutes: 30,
+                      max_weekly_hours: 40,
+                      min_rest_hours: 11,
+                      allow_skill_switch: true,
+                      break_window_start_min: 60,
+                      break_window_end_min: 480,
+                      lunch_window_start_min: 180,
+                      lunch_window_end_min: 360,
+                      status: 'Draft',
+                      created_by: 'system',
+                    });
+                    if (id > 0) selectSchedulePlan(id);
+                  }}
+                >
+                  Create Demo Plan
+                </Button>
+              </div>
             ) : (
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {schedulePlans.map((plan) => (

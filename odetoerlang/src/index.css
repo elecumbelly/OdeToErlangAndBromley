@@ -394,3 +394,51 @@ th {
   color: var(--color-text-secondary);
   margin-left: 4px;
 }
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  html, body {
+    background: white !important;
+    color: black !important;
+    font-size: 10pt;
+  }
+
+  header, nav, footer, button, .no-print {
+    display: none !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .card, .rounded-xl, .bg-bg-surface, .bg-bg-elevated {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .text-text-primary, .text-text-secondary, .text-cyan, .text-magenta, .text-green {
+    color: black !important;
+  }
+
+  .recharts-responsive-container {
+    width: 100% !important;
+    height: 300px !important;
+  }
+
+  h1, h2, h3 {
+    color: black !important;
+    margin-top: 20px !important;
+  }
+
+  /* Force white background for metrics but keep layout */
+  .bg-gradient-to-b, .bg-gradient-to-r {
+    background: white !important;
+  }
+}
