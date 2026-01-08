@@ -22,6 +22,7 @@ const HistoricalAnalysis = lazy(() => import('./components/HistoricalAnalysis'))
 const WorkforceTab = lazy(() => import('./components/Workforce/WorkforceTab'));
 const BPOTab = lazy(() => import('./components/BPO/BPOTab'));
 const SchedulingTab = lazy(() => import('./components/SchedulingTab'));
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useCalculatorStore } from './store/calculatorStore';
@@ -44,7 +45,7 @@ import { useDatabaseStore } from './store/databaseStore';
 import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
-type Tab = 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
+type Tab = 'dashboard' | 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
 
 function DbLoadingState({ stage, error }: { stage: InitStage; error: string | null }) {
   if (stage === 'error') {
@@ -93,7 +94,7 @@ function DbLoadingState({ stage, error }: { stage: InitStage; error: string | nu
 function App() {
   const calculate = useCalculatorStore((state) => state.calculate);
   const refreshAll = useDatabaseStore((state) => state.refreshAll);
-  const [activeTab, setActiveTab] = useState<Tab>('calculator');
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [initStage, setInitStage] = useState<InitStage>('idle');
   const [dbError, setDbError] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
@@ -198,6 +199,7 @@ function App() {
   };
 
   const tabs: { id: Tab; name: string; shortName?: string }[] = [
+    { id: 'dashboard', name: 'Command', shortName: 'CMD' },
     { id: 'calculator', name: 'Calculator', shortName: 'CALC' },
     { id: 'charts', name: 'Analytics', shortName: 'CHARTS' },
     { id: 'multichannel', name: 'Multi-Channel', shortName: 'MULTI' },
@@ -414,6 +416,7 @@ function App() {
                 <DbLoadingState stage={initStage} error={dbError} />
               ) : (
                 <>
+                  {activeTab === 'dashboard' && <Dashboard />}
                   {activeTab === 'charts' && <ChartsPanel />}
                   {activeTab === 'multichannel' && <MultiChannelPanel />}
                   {activeTab === 'scenarios' && <ScenarioComparison />}
