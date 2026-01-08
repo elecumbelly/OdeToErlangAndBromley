@@ -34,6 +34,13 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 bg-bg-elevated border border-border-subtle hover:border-cyan/50 text-text-primary rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+          >
+            <span>📥</span>
+            <span>Download Report</span>
+          </button>
           <select 
             value={selectedCampaignId ?? ''}
             onChange={(e) => selectCampaign(e.target.value ? Number(e.target.value) : null)}
