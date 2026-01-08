@@ -101,4 +101,13 @@ Open **http://localhost:5173** in your browser.
 
 **MIT License** - Copyright 2025 SteS
 
-*"In tribute to A.K. Erlang (1878-1929), whose mathematical genius transformed telecommunications and continues to optimize contact centres a century later."*
+---
+
+## 🙏 Acknowledgments & Tributes
+
+This platform is named in tribute to two pioneers who transformed the contact centre industry:
+
+*   **A.K. Erlang (1878-1929):** The Danish mathematician whose genius founded queuing theory and the formulas that still drive capacity planning today.
+*   **Lester Bromley:** The creator of the original **"Erlang for Excel"** Visual Basic plugin. His work democratized these complex calculations, providing the engine that has powered nearly every call centre spreadsheet in the world at some point in its history.
+
+*"In tribute to the pioneers who made precision possible in a world of uncertainty."*

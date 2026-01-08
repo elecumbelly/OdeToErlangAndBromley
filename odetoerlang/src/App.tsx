@@ -491,9 +491,9 @@ function App() {
             <div>
               <h4 className="font-semibold text-text-primary mb-2 uppercase tracking-wide text-2xs">About</h4>
               <p className="text-text-muted leading-relaxed">
-                Comprehensive contact centre capacity planning calculator.
-                Named in tribute to A.K. Erlang and the mathematical foundations
-                of queuing theory.
+                Comprehensive contact centre capacity planning platform.
+                Named in tribute to A.K. Erlang and Lester Bromley (creator of Erlang for Excel),
+                pioneers whose work remains the foundation of our industry.
               </p>
             </div>
             <div>

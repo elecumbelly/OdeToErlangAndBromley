@@ -274,6 +274,7 @@ export default function EducationalMode() {
             <strong>Online Resources:</strong>
             <ul className="list-disc list-inside ml-2 space-y-1 mt-1">
               <li>Wikipedia: Erlang (unit) - Mathematical foundations</li>
+              <li>Lester Bromley's Erlang for Excel - The plugin that defined WFM spreadsheets</li>
               <li>Contact Centre Pipeline - Industry best practices</li>
             </ul>
           </div>
