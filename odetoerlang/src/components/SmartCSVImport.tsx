@@ -49,7 +49,7 @@ const DEFAULT_MAPPINGS: ColumnMapping[] = [
 
 export default function SmartCSVImport() {
   const setInput = useCalculatorStore((state) => state.setInput);
-  const { selectedCampaignId, refreshAll } = useDatabaseStore();
+  const { selectedCampaignId, refreshAll, addCampaign, addClient, selectCampaign } = useDatabaseStore();
   const { parseCSV, isLoading: isWorkerLoading, error: workerError } = useCSVWorker();
   const { addToast } = useToast();
   
@@ -237,11 +237,42 @@ export default function SmartCSVImport() {
       return;
     }
 
-    if (selectedCampaignId === null) {
-      const msg = 'Please select a campaign before importing historical data.';
-      setError(msg);
-      addToast(msg, 'warning');
-      return;
+    let targetCampaignId = selectedCampaignId;
+
+    // Auto-create campaign if none selected
+    if (targetCampaignId === null) {
+      try {
+        addToast('Auto-creating default campaign...', 'info');
+        // Ensure a default client exists
+        let clientId = 1; // Default fallback
+        const newClientId = addClient('Default Client');
+        if (newClientId > 0) clientId = newClientId;
+
+        const newCampaignId = addCampaign({
+          campaign_name: 'Imported Campaign 1',
+          client_id: clientId,
+          channel_type: 'Voice',
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: null,
+          sla_target_percent: 80,
+          sla_threshold_seconds: 20,
+          concurrency_allowed: 1,
+          active: true,
+        });
+
+        if (newCampaignId > 0) {
+          targetCampaignId = newCampaignId;
+          selectCampaign(newCampaignId);
+          addToast('Created and selected "Imported Campaign 1"', 'success');
+        } else {
+          throw new Error('Failed to create default campaign');
+        }
+      } catch (err) {
+        const msg = 'Could not auto-create campaign. Please select one manually.';
+        setError(msg);
+        addToast(msg, 'error');
+        return;
+      }
     }
 
     const unmappedRequired = mappings.filter(m => m.required && !m.mappedTo);
@@ -262,7 +293,7 @@ export default function SmartCSVImport() {
         .map((row, index) => {
           const rowData: Partial<HistoricalData> = {
             import_batch_id: importBatchId,
-            campaign_id: selectedCampaignId,
+            campaign_id: targetCampaignId as number, // Safe assertion now
             date: new Date().toISOString().split('T')[0],
           };
 
