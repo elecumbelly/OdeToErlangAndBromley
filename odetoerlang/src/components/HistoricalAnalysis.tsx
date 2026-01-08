@@ -28,6 +28,7 @@ import {
   type ForecastResult
 } from '../lib/forecasting/advancedForecasting';
 import { useDatabaseStore } from '../store/databaseStore';
+import { useCalculatorStore } from '../store/calculatorStore';
 import { MetricCard } from './ui/MetricCard';
 import {
   BarChart,
@@ -86,6 +87,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function HistoricalAnalysis() {
   const { addToast } = useToast();
   const { campaigns, selectedCampaignId, selectCampaign, refreshCampaigns } = useDatabaseStore();
+  const setInput = useCalculatorStore(state => state.setInput);
 
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [dbDateRange, setDbDateRange] = useState<{ start: string; end: string } | null>(null);
@@ -119,6 +121,21 @@ export default function HistoricalAnalysis() {
       setHistoricalData([]);
     }
   }, [selectedCampaignId, rangeFilter]);
+
+  const handleApplyForecast = (forecast: ForecastResult) => {
+    // Calculate average forecasted volume
+    const totalVol = forecast.forecasts.reduce((sum, f) => sum + f.value, 0);
+    const avgVol = Math.round(totalVol / forecast.forecasts.length);
+
+    setInput('volume', avgVol);
+    
+    // Also apply average AHT from history if available
+    if (insights) {
+      setInput('aht', Math.round(insights.ahtStats.mean));
+    }
+
+    addToast(`Applied Forecast: ${avgVol} calls, ${insights ? Math.round(insights.ahtStats.mean) : 'current'}s AHT`, 'success');
+  };
 
   // Load historical data
   const loadData = (campaignId: number, minDate: string, maxDate: string, filterDays: number) => {
@@ -420,10 +437,16 @@ export default function HistoricalAnalysis() {
                   </p>
                 </div>
                 {index === 0 && (
-                  <span className="text-xs font-bold text-cyan bg-cyan/10 border border-cyan/30 rounded px-2 py-1 uppercase tracking-wide">
+                  <span className="text-xs font-bold text-cyan bg-cyan/10 border border-cyan/30 rounded px-2 py-1 uppercase tracking-wide mr-2">
                     Recommended
                   </span>
                 )}
+                <button
+                  onClick={() => handleApplyForecast(forecast)}
+                  className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-hover text-text-secondary hover:text-cyan border border-border-subtle hover:border-cyan/30 rounded-lg text-xs font-medium transition-all"
+                >
+                  Apply to Calculator
+                </button>
               </div>
               
               <div className="h-64">
