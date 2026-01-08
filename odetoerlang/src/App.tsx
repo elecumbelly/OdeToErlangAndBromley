@@ -198,25 +198,41 @@ function App() {
     localStorage.setItem('ode_tour_seen', 'true');
   };
 
-  const tabs: { id: Tab; name: string; icon: string; shortName?: string }[] = [
-    { id: 'dashboard', name: 'Command', icon: '📊', shortName: 'CMD' },
-    { id: 'calculator', name: 'Calculator', icon: '🧮', shortName: 'CALC' },
-    { id: 'charts', name: 'Analytics', icon: '📈', shortName: 'CHARTS' },
+  const groups = [
+    { id: 'command', name: 'Command', icon: '📊', tabs: ['dashboard'] },
+    { id: 'calculator_hub', name: 'Calculator', icon: '🧮', tabs: ['calculator', 'modelcomp', 'capacity', 'multichannel'] },
+    { id: 'analytics_hub', name: 'Analytics', icon: '📈', tabs: ['historical', 'scenarios', 'charts'] },
+    { id: 'planning_hub', name: 'Planning', icon: '👥', tabs: ['workforce', 'scheduling', 'calendar', 'bpo'] },
+    { id: 'data_hub', name: 'Data', icon: '📥', tabs: ['import', 'export', 'assumptions'] },
+    { id: 'lab_hub', name: 'Lab', icon: '🧪', tabs: ['simulation', 'learn'] },
+  ];
+
+  const allTabs: { id: Tab; name: string; icon: string; shortName?: string }[] = [
+    { id: 'dashboard', name: 'Overview', icon: '🏠', shortName: 'OVER' },
+    { id: 'calculator', name: 'Standard', icon: '🧮', shortName: 'STD' },
+    { id: 'charts', name: 'Visuals', icon: '📈', shortName: 'CHART' },
     { id: 'multichannel', name: 'Multi-Channel', icon: '💬', shortName: 'MULTI' },
     { id: 'scenarios', name: 'What-If', icon: '⚖️', shortName: 'SCENAR' },
-    { id: 'modelcomp', name: 'Compare', icon: '🔄', shortName: 'COMP' },
-    { id: 'capacity', name: 'Capacity', icon: '🔋', shortName: 'CAP' },
+    { id: 'modelcomp', name: 'Compare Models', icon: '🔄', shortName: 'COMP' },
+    { id: 'capacity', name: 'Reverse Calc', icon: '🔋', shortName: 'CAP' },
     { id: 'assumptions', name: 'Assumptions', icon: '📋', shortName: 'ASSUM' },
     { id: 'historical', name: 'Historical', icon: '📜', shortName: 'HIST' },
     { id: 'calendar', name: 'Calendar', icon: '📅', shortName: 'CAL' },
     { id: 'scheduling', name: 'Scheduling', icon: '⏰', shortName: 'SCHED' },
     { id: 'workforce', name: 'Workforce', icon: '👥', shortName: 'STAFF' },
     { id: 'bpo', name: 'BPO', icon: '🏢', shortName: 'BPO' },
-    { id: 'simulation', name: 'Simulate', icon: '🎲', shortName: 'SIM' },
+    { id: 'simulation', name: 'Simulation', icon: '🎲', shortName: 'SIM' },
     { id: 'import', name: 'Import', icon: '📥', shortName: 'IN' },
     { id: 'export', name: 'Export', icon: '📤', shortName: 'OUT' },
-    { id: 'learn', name: 'Learn', icon: '🎓', shortName: 'EDU' }
+    { id: 'learn', name: 'Educational', icon: '🎓', shortName: 'EDU' }
   ];
+
+  // Helper to find which group a tab belongs to
+  const getGroupIdForTab = (tabId: Tab) => groups.find(g => g.tabs.includes(tabId))?.id || 'command';
+
+  const activeGroup = getGroupIdForTab(activeTab);
+  const currentGroup = groups.find(g => g.id === activeGroup);
+  const visibleSubTabs = allTabs.filter(t => currentGroup?.tabs.includes(t.id));
 
   const setInput = useCalculatorStore((state) => state.setInput);
 
@@ -291,34 +307,58 @@ function App() {
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <nav className="bg-bg-base border-b border-border-muted sticky top-0 z-10" role="navigation" aria-label="Main navigation">
+      {/* Hub Navigation */}
+      <nav className="bg-bg-surface border-b border-border-subtle sticky top-0 z-20" role="navigation" aria-label="Hub navigation">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-1 overflow-x-auto py-2 scrollbar-thin" role="tablist">
-            {tabs.map((tab) => (
+          <div className="flex space-x-1 overflow-x-auto py-2 scrollbar-none" role="tablist">
+            {groups.map((group) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={`panel-${tab.id}`}
+                key={group.id}
+                onClick={() => setActiveTab(group.tabs[0] as Tab)}
                 className={`
-                  px-4 py-2 text-xs font-medium whitespace-nowrap transition-all duration-fast rounded-md
-                  flex items-center gap-2
-                  ${activeTab === tab.id
-                    ? 'bg-cyan/10 text-cyan border border-cyan/30 shadow-glow-cyan'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-transparent'
+                  px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-fast rounded-lg
+                  flex items-center gap-2 uppercase tracking-widest
+                  ${activeGroup === group.id
+                    ? 'bg-cyan text-bg-base shadow-glow-cyan'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
                   }
                 `}
               >
-                <span>{tab.icon}</span>
-                <span className="hidden sm:inline">{tab.name}</span>
-                <span className="sm:hidden">{tab.shortName || tab.name}</span>
+                <span>{group.icon}</span>
+                <span>{group.name}</span>
               </button>
             ))}
           </div>
         </div>
       </nav>
+
+      {/* Sub-Tab Navigation (Only if group has > 1 tab) */}
+      {visibleSubTabs.length > 1 && (
+        <nav className="bg-bg-base border-b border-border-muted sticky top-[49px] z-10" role="navigation" aria-label="Sub-tab navigation">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex space-x-4 overflow-x-auto py-2 scrollbar-none" role="tablist">
+              {visibleSubTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  className={`
+                    flex items-center gap-2 py-1 px-1 text-xs font-medium border-b-2 transition-all
+                    ${activeTab === tab.id
+                      ? 'border-cyan text-cyan'
+                      : 'border-transparent text-text-muted hover:text-text-secondary hover:border-border-subtle'
+                    }
+                  `}
+                >
+                  <span className="text-[14px]">{tab.icon}</span>
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </nav>
+      )}
 
       {/* Main Content */}
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
