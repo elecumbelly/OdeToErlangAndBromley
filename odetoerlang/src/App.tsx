@@ -97,7 +97,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [initStage, setInitStage] = useState<InitStage>('idle');
   const [dbError, setDbError] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(true);
   const [showTour, setShowTour] = useState<boolean>(false);
   const [tourStep, setTourStep] = useState<number>(0);
 
@@ -134,20 +133,11 @@ function App() {
 
   // Onboarding banner persistence
   useEffect(() => {
-    const stored = localStorage.getItem('ode_onboarding_dismissed');
-    if (stored === 'true') {
-      setShowOnboarding(false);
-    }
     const tourSeen = localStorage.getItem('ode_tour_seen');
     if (tourSeen === 'true') {
       setShowTour(false);
     }
   }, []);
-
-  const dismissOnboarding = () => {
-    setShowOnboarding(false);
-    localStorage.setItem('ode_onboarding_dismissed', 'true');
-  };
 
   const startTour = () => {
     setShowTour(true);
@@ -383,55 +373,6 @@ function App() {
                 </div>
               </div>
             </div>
-
-            {showOnboarding && (
-              <div className="p-4 bg-bg-surface border border-cyan/20 rounded-lg shadow-glow-cyan/40">
-                <div className="flex items-start justify-between gap-3 flex-col sm:flex-row">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-10 h-10 bg-cyan/10 border border-cyan/30 rounded-lg flex items-center justify-center">
-                      <span className="text-cyan font-bold text-lg">1-2-3</span>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-text-primary">Get started in 60 seconds</h3>
-                      <ol className="text-2xs text-text-secondary space-y-1 mt-1 list-decimal list-inside">
-                        <li>Paste or load example data → <button className="text-cyan hover:text-cyan-dim underline" onClick={() => setActiveTab('import')}>Import tab</button></li>
-                        <li>Adjust volume/AHT and occupancy cap</li>
-                        <li>Review “With Your Agents” and copy results to Excel</li>
-                      </ol>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setActiveTab('import')}
-                      className="px-3 py-2 bg-cyan text-bg-base rounded text-2xs font-semibold uppercase tracking-widest hover:bg-cyan/90 transition-colors"
-                    >
-                      Open Import
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('learn')}
-                      className="px-3 py-2 bg-bg-elevated border border-border-muted rounded text-2xs font-semibold uppercase tracking-widest hover:bg-bg-hover transition-colors"
-                    >
-                      Learn Mode
-                    </button>
-                    <button
-                      onClick={() => {
-                        startTour();
-                        setActiveTab('import');
-                      }}
-                      className="px-3 py-2 bg-bg-elevated border border-cyan/30 rounded text-2xs font-semibold uppercase tracking-widest hover:bg-cyan/10 transition-colors"
-                    >
-                      Start Tour
-                    </button>
-                    <button
-                      onClick={dismissOnboarding}
-                      className="text-2xs text-text-muted hover:text-text-secondary"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
