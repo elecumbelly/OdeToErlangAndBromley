@@ -3,7 +3,6 @@ import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
 import StaffingModelPanel from './components/StaffingModelPanel';
 import CampaignSelector from './components/CampaignSelector';
-import ScenarioManager from './components/ScenarioManager';
 import type { InitStage } from './components/InitializationProgress';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ThemeToggle from './components/ui/ThemeToggle';
@@ -423,7 +422,6 @@ function App() {
               {/* Left Sidebar - Data Management */}
               <div className="lg:col-span-1 space-y-4">
                 <CampaignSelector />
-                <ScenarioManager />
               </div>
               {/* Main Calculator Area */}
               <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
