@@ -221,7 +221,7 @@ const InputPanel: React.FC = () => {
                 )}
                 {inputs.model === 'A' && (
                   <>
-                    <span className="text-green font-semibold">Erlang A:</span> Queue with abandonment. Requires patience setting. Most realistic for contact centers.
+                    <span className="text-green font-semibold">Erlang A:</span> Queue with abandonment. Requires patience setting. Most realistic for contact centres.
                   </>
                 )}
               </p>

@@ -56,7 +56,7 @@ const StaffingModelPanel: React.FC = () => {
             Staffing Model
           </h2>
           <p className="text-sm text-text-muted mt-1">
-            Your contact center capacity
+            Your contact centre capacity
           </p>
         </div>
 

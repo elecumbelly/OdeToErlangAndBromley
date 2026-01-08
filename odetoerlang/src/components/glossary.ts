@@ -44,7 +44,7 @@ export const glossary = {
   },
   erlangA: {
     content: "Improved formula accounting for customer abandonment/impatience",
-    example: "More accurate than Erlang C for real-world contact centers",
+    example: "More accurate than Erlang C for real-world contact centres",
     typical: "Requires patience parameter (avg wait tolerance)",
     formula: "Includes abandonment parameter θ = patience/AHT"
   },

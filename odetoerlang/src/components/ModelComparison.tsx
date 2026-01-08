@@ -357,7 +357,7 @@ export default function ModelComparison() {
               Predicts {formatNumber((results.find(r => r.modelName === 'Erlang A')?.abandonmentRate || 0) * 100, 1)}% abandonment rate.
             </li>
             <li className="mt-3 pt-3 border-t border-blue-300">
-              <strong>Recommendation:</strong> Use <span className="font-bold">Erlang A</span> for contact center staffing
+              <strong>Recommendation:</strong> Use <span className="font-bold">Erlang A</span> for contact centre staffing
               (accounts for real customer behavior). Use <span className="font-bold">Erlang B</span> for trunk/line planning.
             </li>
           </ul>
