@@ -115,6 +115,41 @@ export default function StaffManager() {
     }
   };
 
+  const handleLoadDemo = () => {
+    try {
+      const demoNames = [
+        ['James', 'Holden'], ['Naomi', 'Nagata'], ['Amos', 'Burton'], ['Alex', 'Kamal'],
+        ['Chrisjen', 'Avasarala'], ['Bobbie', 'Draper'], ['Camina', 'Drummer'], ['Fred', 'Johnson'],
+        ['Clarissa', 'Mao'], ['Marco', 'Inaros'], ['Filip', 'Inaros'], ['Prax', 'Meng'],
+        ['Anna', 'Volovodov'], ['Elvi', 'Okoye'], ['Fayez', 'Sarkis'], ['Josephus', 'Miller'],
+        ['Julie', 'Mao'], ['Anderson', 'Dawes'], ['Solomon', 'Epstein'], ['Winston', 'Duarte']
+      ];
+
+      const defaultRoleId = roles.length > 0 ? roles[0].id : 1;
+
+      demoNames.forEach(([first, last], index) => {
+        createStaff({
+          employee_id: `DEMO-${100 + index}`,
+          first_name: first,
+          last_name: last,
+          primary_role_id: defaultRoleId,
+          employment_type: 'Full-time',
+          manager_id: null,
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: null,
+          site_id: null,
+          attrition_probability: Math.random() * 0.3
+        });
+      });
+
+      addToast('Loaded 20 demo staff members', 'success');
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to load demo data', 'error');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -171,8 +206,24 @@ export default function StaffManager() {
               ))}
               {staffList.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-text-muted text-sm">
-                    No staff found.
+                  <td colSpan={6} className="px-4 py-12 text-center text-text-muted text-sm">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-bg-elevated flex items-center justify-center mb-2">
+                        <svg className="w-6 h-6 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-text-primary font-medium">No staff members found</p>
+                      <p className="text-text-secondary text-xs max-w-xs mx-auto">
+                        Get started quickly by loading a demo team or add staff manually.
+                      </p>
+                      <button
+                        onClick={handleLoadDemo}
+                        className="mt-2 px-4 py-2 bg-cyan/10 hover:bg-cyan/20 text-cyan border border-cyan/30 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors"
+                      >
+                        Load Demo Team (20 People)
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )}
