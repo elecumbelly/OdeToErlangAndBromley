@@ -50,10 +50,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
 }
 
 const variantStyles: Record<ToastVariant, string> = {
-  success: 'bg-success-600 text-white',
-  error: 'bg-error-600 text-white',
-  warning: 'bg-warning-500 text-white',
-  info: 'bg-neutral-800 text-white',
+  success: 'bg-green text-bg-base border border-green/30 shadow-glow-green',
+  error: 'bg-red text-bg-base border border-red/30 shadow-glow-red',
+  warning: 'bg-amber text-bg-base border border-amber/30 shadow-glow-amber',
+  info: 'bg-bg-elevated text-text-primary border border-border-subtle shadow-md',
 };
 
 const icons: Record<ToastVariant, string> = {
