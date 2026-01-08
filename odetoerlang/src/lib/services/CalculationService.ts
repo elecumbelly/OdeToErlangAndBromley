@@ -152,9 +152,19 @@ export class CalculationService {
       } : null;
     }
 
-    // --- If staffing model is set, also calculate what's achievable with your staff ---
-    const productiveAgents = calculateProductiveAgentsFromModel(staffingModel, inputs.shrinkagePercent);
-    const hasStaffingConstraint = staffingModel.useAsConstraint && productiveAgents > 0 && inputs.volume > 0;
+    // --- If staffing model is set OR solveFor='sl', also calculate what's achievable with your staff ---
+    // If solveFor='sl', use the simple currentHeadcount input.
+    // Otherwise, fall back to the detailed staffing model.
+    let productiveAgents = 0;
+    
+    if (inputs.solveFor === 'sl' && (inputs.currentHeadcount || 0) > 0) {
+      productiveAgents = Math.round((inputs.currentHeadcount || 0) * (1 - inputs.shrinkagePercent / 100));
+    } else {
+      productiveAgents = calculateProductiveAgentsFromModel(staffingModel, inputs.shrinkagePercent);
+    }
+
+    const hasStaffingConstraint = (productiveAgents > 0 && inputs.volume > 0) && 
+                                  (inputs.solveFor === 'sl' || staffingModel.useAsConstraint);
 
     if (hasStaffingConstraint) {
       const effectiveAgents = productiveAgents;

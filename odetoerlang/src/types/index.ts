@@ -15,6 +15,8 @@ export interface CalculationInputs {
   model: ErlangVariant | string;
   averagePatience: number;
   concurrency: number;
+  solveFor?: 'agents' | 'sl';
+  currentHeadcount?: number;
 }
 
 export interface CalculationResults {
