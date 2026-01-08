@@ -85,10 +85,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function HistoricalAnalysis() {
   const { addToast } = useToast();
-  const campaigns = useDatabaseStore(state => state.campaigns);
-  const refreshCampaigns = useDatabaseStore(state => state.refreshCampaigns);
+  const { campaigns, selectedCampaignId, selectCampaign, refreshCampaigns } = useDatabaseStore();
 
-  const [selectedCampaign, setSelectedCampaign] = useState<number | null>(null);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [dbDateRange, setDbDateRange] = useState<{ start: string; end: string } | null>(null);
   const [rangeFilter, setRangeFilter] = useState<number>(30); // Days to look back, 0 = All
@@ -104,19 +102,23 @@ export default function HistoricalAnalysis() {
 
   // Check for data availability when campaign changes
   useEffect(() => {
-    if (selectedCampaign === null) return;
+    if (selectedCampaignId === null) {
+      setDbDateRange(null);
+      setHistoricalData([]);
+      return;
+    }
 
-    const range = getHistoricalDateRange(selectedCampaign);
+    const range = getHistoricalDateRange(selectedCampaignId);
     if (range.minDate && range.maxDate) {
       setDbDateRange({ start: range.minDate, end: range.maxDate });
       
       // Auto-load data based on filter
-      loadData(selectedCampaign, range.minDate, range.maxDate, rangeFilter);
+      loadData(selectedCampaignId, range.minDate, range.maxDate, rangeFilter);
     } else {
       setDbDateRange(null);
       setHistoricalData([]);
     }
-  }, [selectedCampaign, rangeFilter]);
+  }, [selectedCampaignId, rangeFilter]);
 
   // Load historical data
   const loadData = (campaignId: number, minDate: string, maxDate: string, filterDays: number) => {
@@ -137,11 +139,6 @@ export default function HistoricalAnalysis() {
       setDateRange({ start, end });
       const data = getHistoricalData(campaignId, start, end);
       setHistoricalData(data);
-      
-      if (data.length === 0) {
-        // Only toast if it's a manual action or unexpected empty state
-        // addToast('No data found for this range', 'info'); 
-      }
     } catch (error) {
       console.error('Failed to load historical data:', error);
       addToast('Failed to load historical data', 'error');
@@ -182,7 +179,7 @@ export default function HistoricalAnalysis() {
 
   const handleCampaignChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value ? Number(e.target.value) : null;
-    setSelectedCampaign(val);
+    selectCampaign(val);
   };
 
   if (campaigns.length === 0) {
@@ -211,9 +208,9 @@ export default function HistoricalAnalysis() {
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Campaign</label>
+              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Active Campaign</label>
               <select
-                value={selectedCampaign ?? ''}
+                value={selectedCampaignId ?? ''}
                 onChange={handleCampaignChange}
                 className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-cyan/20 focus:border-cyan outline-none min-w-[200px]"
               >
@@ -225,11 +222,11 @@ export default function HistoricalAnalysis() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Range</label>
+              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Analysis Range</label>
               <select
                 value={rangeFilter}
                 onChange={e => setRangeFilter(Number(e.target.value))}
-                disabled={!selectedCampaign}
+                disabled={!selectedCampaignId}
                 className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-cyan/20 focus:border-cyan outline-none"
               >
                 <option value={7}>Last 7 Days</option>
