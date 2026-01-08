@@ -83,6 +83,23 @@ Where:
 
 ---
 
+## Inverse Calculation Logic ("Solve For" Mode)
+
+Standard capacity planning solves for `c` (Agents) given a target `SL`. OdeToErlang supports **Inverse Calculation** where `c` is fixed and we solve for the achieved `SL`.
+
+### 1. Requirements Mode (Forward)
+The engine uses **Binary Search** to find the minimum integer `c` such that `SL(c, A, t, AHT) >= TargetSL`. 
+- **Complexity:** `O(log N)` where N is the maximum possible agent count (capped at 10,000).
+- **Efficiency:** Much faster than linear iterative loops for large contact centres.
+
+### 2. Constraint Mode (Inverse)
+When "Fixed Headcount" is selected:
+1.  **Productive FTE:** Calculate `c_effective = Headcount * (1 - Shrinkage)`.
+2.  **Achieved Metrics:** The engine directly evaluates the Erlang A/B/C formula using `c_effective`.
+3.  **Real-world Impact:** This reveals the performance "cliff" during demand spikes, as Service Level decreases non-linearly when volume increases against a fixed staff count.
+
+---
+
 ## Validation
 
 All formulas are unit-tested against:
