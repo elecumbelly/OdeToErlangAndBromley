@@ -173,20 +173,20 @@ export default function SimulationTab() {
   const waitingQueue = engineRef.current?.getWaitingQueue() || [];
 
   return (
-    <div>
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="mb-8 p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl shadow-lg">
-        <div className="flex items-start space-x-4">
-          <div className="bg-white bg-opacity-20 p-3 rounded-lg">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="p-6 bg-gradient-to-r from-bg-surface to-bg-elevated border border-border-subtle rounded-xl shadow-sm relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple/[0.05] to-transparent pointer-events-none" />
+        <div className="flex items-start space-x-4 relative z-10">
+          <div className="bg-bg-elevated border border-purple/30 p-3 rounded-lg shadow-glow-purple">
+            <svg className="w-8 h-8 text-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-2">Queue Simulation (M/M/c)</h2>
-            <p className="text-sm opacity-95">
-              Discrete-event simulation of a multi-server queueing system with Poisson arrivals and exponential service times.
-              Adjust parameters, control playback speed, and watch the queue evolve in real-time.
+            <h2 className="text-2xl font-bold text-text-primary mb-2 tracking-tight">Real-Time Queue Simulation</h2>
+            <p className="text-sm text-text-secondary max-w-2xl leading-relaxed">
+              Discrete-event simulation of a multi-server (M/M/c) system. Validate your Erlang calculations by watching the queue dynamics unfold in real-time. Adjust arrival rates and service speed on the fly.
             </p>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function SimulationTab() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Controls */}
-        <div>
+        <div className="lg:col-span-1">
           <ControlsPanel
             config={config}
             onConfigChange={handleConfigChange}
@@ -210,7 +210,7 @@ export default function SimulationTab() {
         </div>
 
         {/* Middle Column: Visualization */}
-        <div>
+        <div className="lg:col-span-1">
           <QueueVisual
             servers={servers}
             waitingQueue={waitingQueue}
@@ -219,18 +219,19 @@ export default function SimulationTab() {
         </div>
 
         {/* Right Column: Statistics */}
-        <div>
+        <div className="lg:col-span-1">
           <StatsPanel snapshot={snapshot} />
         </div>
       </div>
 
       {/* Contact Records Section */}
-      <div className="mt-8">
+      <div className="mt-2">
         {recordStats.recordsDropped > 0 && (
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-800">
-              <strong>Record Cap Active:</strong> Showing most recent {recordStats.currentRecords.toLocaleString()} of {(recordStats.currentRecords + recordStats.recordsDropped).toLocaleString()} total contacts.
-              ({recordStats.recordsDropped.toLocaleString()} older records dropped to conserve memory)
+          <div className="mb-4 p-3 bg-amber/10 border border-amber/30 rounded-lg flex gap-3 items-center">
+            <span className="text-amber text-lg">⚠️</span>
+            <p className="text-sm text-amber">
+              <strong>Record Limit Reached:</strong> Displaying {recordStats.currentRecords.toLocaleString()} most recent contacts.
+              ({recordStats.recordsDropped.toLocaleString()} older records dropped to maintain performance)
             </p>
           </div>
         )}
@@ -241,25 +242,24 @@ export default function SimulationTab() {
       </div>
 
       {/* Help Section */}
-      <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">How It Works</h3>
-        <div className="space-y-2 text-sm text-gray-700">
+      <div className="p-6 bg-bg-surface border-l-4 border-blue rounded-r-lg border-y border-r border-border-subtle">
+        <h3 className="text-lg font-semibold text-text-primary mb-3">Simulation Mechanics</h3>
+        <div className="space-y-3 text-sm text-text-secondary">
           <p>
-            <strong>M/M/c Queue:</strong> This simulation models a queueing system with:
+            This engine uses a <strong>M/M/c</strong> queueing model:
           </p>
-          <ul className="list-disc list-inside space-y-1 ml-4">
-            <li><strong>M</strong> (Markovian arrivals): Customers arrive following a Poisson process with rate λ</li>
-            <li><strong>M</strong> (Markovian service): Service times are exponentially distributed with rate μ per server</li>
-            <li><strong>c</strong>: Number of identical servers working in parallel</li>
+          <ul className="list-disc list-inside space-y-1 ml-4 text-text-muted">
+            <li><strong>Arrivals:</strong> Poisson process (random arrivals averaging λ calls/hour)</li>
+            <li><strong>Service:</strong> Exponential distribution (random duration averaging μ minutes)</li>
+            <li><strong>Servers:</strong> {config.servers} parallel agents</li>
           </ul>
-          <p className="mt-3">
-            <strong>Traffic Intensity (ρ):</strong> Defined as λ / (c × μ). When ρ ≥ 1, the queue is unstable and will grow without bound.
-            For stable operation, keep ρ &lt; 1 (e.g., 0.7-0.9 for good service levels).
-          </p>
-          <p className="mt-3">
-            <strong>Speed Control:</strong> The slider adjusts how fast simulation time progresses relative to real time.
-            At 1x speed, one simulation time unit = one real second. At 10x, time advances 10× faster.
-          </p>
+          <div className="mt-4 p-3 bg-bg-elevated rounded border border-border-muted">
+            <p className="font-semibold text-text-primary text-xs uppercase tracking-wide mb-1">Stability Check</p>
+            <p>
+              Traffic Intensity (ρ) = λ / (c × μ). If this exceeds 1.0, the queue will grow infinitely.
+              Target 0.7 - 0.85 for optimal balance.
+            </p>
+          </div>
         </div>
       </div>
     </div>
