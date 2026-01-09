@@ -1,25 +1,15 @@
-import { useMemo } from 'react';
 import { useCalculatorStore } from '../../store/calculatorStore';
 import { useDatabaseStore } from '../../store/databaseStore';
 import { MetricCard } from '../ui/MetricCard';
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 export default function Dashboard() {
   const { campaigns, selectedCampaignId, selectCampaign } = useDatabaseStore();
   const { inputs, results } = useCalculatorStore();
 
-  // Mock data for the "Health Trend" - in real app, fetch from HistoricalData
-  const trendData = [
-    { day: 'Mon', sl: 82 },
-    { day: 'Tue', sl: 78 },
-    { day: 'Wed', sl: 85 },
-    { day: 'Thu', sl: 88 },
-    { day: 'Fri', sl: 75 },
-    { day: 'Sat', sl: 90 },
-    { day: 'Sun', sl: 92 },
-  ];
-
   const currentCampaign = campaigns.find(c => c.id === selectedCampaignId);
+
+  // Helper to trigger tab change would require context, but for now we just show status
+  // In a real app, we'd pass a navigation handler
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -54,7 +44,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Primary KPI Grid */}
+      {/* Primary KPI Grid - Real Data Only */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard
           label="Staffing"
@@ -84,57 +74,30 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main Chart Area */}
-        <div className="lg:col-span-2 bg-bg-surface border border-border-subtle rounded-xl p-4 shadow-sm min-h-[300px]">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-text-primary">7-Day SL Trend</h3>
-            <span className="text-xs text-text-muted bg-bg-elevated px-2 py-1 rounded">Last Week</span>
+      {/* Quick Actions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-bg-surface border border-border-subtle rounded-xl p-5 hover:border-cyan/30 transition-colors group">
+          <div className="w-10 h-10 bg-cyan/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-cyan/20 transition-colors">
+            <span className="text-xl">🧮</span>
           </div>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="colorSl" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="day" stroke="#525252" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#525252" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                  itemStyle={{ color: '#22d3ee' }}
-                />
-                <Area type="monotone" dataKey="sl" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorSl)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <h3 className="font-bold text-text-primary">Calculator</h3>
+          <p className="text-xs text-text-muted mt-1">Run Erlang C/A models and optimize staffing.</p>
         </div>
 
-        {/* Action / Alerts Feed */}
-        <div className="bg-bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex flex-col">
-          <h3 className="text-sm font-bold text-text-primary mb-3">Alerts</h3>
-          <div className="space-y-2 flex-1 overflow-y-auto max-h-[300px]">
-            <div className="p-3 bg-bg-elevated border-l-2 border-red rounded-r-md flex gap-3 items-start">
-              <div>
-                <p className="text-xs font-semibold text-text-primary">Understaffed</p>
-                <p className="text-[10px] text-text-secondary">Mon Morning: -15% capacity</p>
-              </div>
-            </div>
-            <div className="p-3 bg-bg-elevated border-l-2 border-amber rounded-r-md flex gap-3 items-start">
-              <div>
-                <p className="text-xs font-semibold text-text-primary">High Occupancy</p>
-                <p className="text-[10px] text-text-secondary">Risk of burnout (>92%)</p>
-              </div>
-            </div>
-            <div className="p-3 bg-bg-elevated border-l-2 border-cyan rounded-r-md flex gap-3 items-start">
-              <div>
-                <p className="text-xs font-semibold text-text-primary">Schedule Gap</p>
-                <p className="text-[10px] text-text-secondary">3 shifts unassigned</p>
-              </div>
-            </div>
+        <div className="bg-bg-surface border border-border-subtle rounded-xl p-5 hover:border-purple/30 transition-colors group">
+          <div className="w-10 h-10 bg-purple/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-purple/20 transition-colors">
+            <span className="text-xl">📜</span>
           </div>
+          <h3 className="font-bold text-text-primary">Historical Analysis</h3>
+          <p className="text-xs text-text-muted mt-1">View trends and generate volume forecasts.</p>
+        </div>
+
+        <div className="bg-bg-surface border border-border-subtle rounded-xl p-5 hover:border-green/30 transition-colors group">
+          <div className="w-10 h-10 bg-green/10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-green/20 transition-colors">
+            <span className="text-xl">⏰</span>
+          </div>
+          <h3 className="font-bold text-text-primary">Scheduling</h3>
+          <p className="text-xs text-text-muted mt-1">Build rosters and manage staff availability.</p>
         </div>
       </div>
     </div>
