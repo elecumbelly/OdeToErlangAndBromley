@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
+import { NumberInput } from '../ui/NumberInput';
 import type { CalendarEvent } from '../../lib/database/dataAccess';
 import { useDatabaseStore } from '../../store/databaseStore';
 
@@ -76,12 +77,11 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
             </FormField>
             
             <FormField label="Productivity %" id="productivity">
-              <input 
-                type="number" 
-                id="productivity" 
-                min="0" max="100" 
-                value={productivity} 
-                onChange={e => setProductivity(parseFloat(e.target.value))} 
+              <NumberInput
+                id="productivity"
+                min="0" max="100"
+                value={productivity}
+                onChange={e => setProductivity(parseFloat(e.target.value))}
                 className={inputClass}
               />
             </FormField>

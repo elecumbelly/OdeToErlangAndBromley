@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
 import { useCalculatorStore } from '../store/calculatorStore';
+import { NumberInput } from './ui/NumberInput';
 
 interface Channel {
   id: string;
@@ -120,8 +121,7 @@ export default function MultiChannelPanel() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Interval (min)
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={intervalMinutes}
               onChange={(e) => setInput('intervalMinutes', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -131,8 +131,7 @@ export default function MultiChannelPanel() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Shrinkage (%)
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={shrinkage}
               onChange={(e) => setInput('shrinkagePercent', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -142,8 +141,7 @@ export default function MultiChannelPanel() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Max Occupancy (%)
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={maxOccupancy}
               onChange={(e) => setInput('maxOccupancy', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -153,8 +151,7 @@ export default function MultiChannelPanel() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Blending (%)
             </label>
-            <input
-              type="number"
+            <NumberInput
               value={blendingPercent}
               onChange={(e) => setBlendingPercent(Number(e.target.value))}
               min="0"
@@ -202,8 +199,7 @@ export default function MultiChannelPanel() {
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Volume</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={channel.volume}
                     onChange={(e) => updateChannel(channel.id, { volume: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
@@ -211,8 +207,7 @@ export default function MultiChannelPanel() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">AHT (sec)</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={channel.aht}
                     onChange={(e) => updateChannel(channel.id, { aht: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
@@ -220,8 +215,7 @@ export default function MultiChannelPanel() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Target SL (%)</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={channel.targetSL}
                     onChange={(e) => updateChannel(channel.id, { targetSL: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
@@ -229,8 +223,7 @@ export default function MultiChannelPanel() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Threshold (sec)</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={channel.threshold}
                     onChange={(e) => updateChannel(channel.id, { threshold: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
@@ -240,8 +233,7 @@ export default function MultiChannelPanel() {
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Concurrent Contacts (chat/email)
                   </label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={channel.concurrent}
                     onChange={(e) => updateChannel(channel.id, { concurrent: Number(e.target.value) })}
                     min="1"

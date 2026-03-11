@@ -23,7 +23,7 @@ export function monteCarloAbandonment(config: MonteCarloConfig): { abandonRate: 
   let abandoned = 0;
   let total = 0;
   let inService = 0;
-  let queue: { arrival: number; patience: number }[] = [];
+  const queue: { arrival: number; patience: number }[] = [];
 
   for (let t = 0; t < intervalSeconds; t++) {
     // arrivals ~ Poisson; approximate with deterministic + jitter

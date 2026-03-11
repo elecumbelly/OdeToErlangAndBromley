@@ -64,7 +64,7 @@ export default function ACDImport() {
   // Parse percentage string to decimal
   const parsePercentage = (pctStr: string): number => {
     if (!pctStr || pctStr.trim() === '') return 0;
-    const cleaned = pctStr.replace('%', '').trim();
+    const cleaned = pctStr.replace(/%/g, '').trim();
     const num = parseFloat(cleaned);
     return isNaN(num) ? 0 : num;
   };

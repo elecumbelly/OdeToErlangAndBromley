@@ -4,6 +4,7 @@ import { calculateErlangAMetrics } from '../lib/calculations/erlangA';
 import { calculateErlangB, calculateRequiredLinesB } from '../lib/calculations/erlangB';
 import { useCalculatorStore } from '../store/calculatorStore';
 import type { CalculationInputs } from '../types';
+import { NumberInput } from './ui/NumberInput';
 
 interface ModelResults {
   modelName: string;
@@ -129,8 +130,7 @@ export default function ModelComparison() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div>
             <label className={labelClass}>Volume</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.volume}
               onChange={(e) => handleInputChange('volume', parseFloat(e.target.value) || 0)}
               className={inputClass}
@@ -138,8 +138,7 @@ export default function ModelComparison() {
           </div>
           <div>
             <label className={labelClass}>AHT (sec)</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.aht}
               onChange={(e) => handleInputChange('aht', parseFloat(e.target.value) || 0)}
               className={inputClass}
@@ -147,8 +146,7 @@ export default function ModelComparison() {
           </div>
           <div>
             <label className={labelClass}>SL Target %</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.targetSLPercent}
               onChange={(e) => handleInputChange('targetSLPercent', parseFloat(e.target.value) || 0)}
               className={inputClass}
@@ -156,8 +154,7 @@ export default function ModelComparison() {
           </div>
           <div>
             <label className={labelClass}>Threshold (sec)</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.thresholdSeconds}
               onChange={(e) => handleInputChange('thresholdSeconds', parseFloat(e.target.value) || 0)}
               className={inputClass}
@@ -165,8 +162,7 @@ export default function ModelComparison() {
           </div>
           <div>
             <label className={labelClass}>Shrinkage %</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.shrinkagePercent}
               onChange={(e) => handleInputChange('shrinkagePercent', parseFloat(e.target.value) || 0)}
               className={inputClass}
@@ -174,8 +170,7 @@ export default function ModelComparison() {
           </div>
           <div>
             <label className={labelClass}>Max Occupancy %</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.maxOccupancy}
               onChange={(e) => handleInputChange('maxOccupancy', parseFloat(e.target.value) || 0)}
               className={inputClass}
@@ -183,8 +178,7 @@ export default function ModelComparison() {
           </div>
           <div>
             <label className={labelClass}>Patience (sec)</label>
-            <input
-              type="number"
+            <NumberInput
               value={inputs.averagePatience}
               onChange={(e) => handleInputChange('averagePatience', parseFloat(e.target.value) || 0)}
               className={inputClass}
