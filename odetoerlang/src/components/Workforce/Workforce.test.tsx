@@ -108,7 +108,7 @@ describe('StaffManager - Smoke Tests', () => {
 
   test('shows empty state when no staff', () => {
     render(<StaffManager />);
-    expect(screen.getByText(/No staff found/i)).toBeInTheDocument();
+    expect(screen.getByText(/No staff members found/i)).toBeInTheDocument();
   });
 
   test('displays table headers', () => {

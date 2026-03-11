@@ -6,6 +6,7 @@ import { resolveAssumptionsForDate } from '../lib/forecasting/assumptionResolver
 import { mergeCalculationInputs } from '../lib/forecasting/inputMerger';
 import { getCampaignById, type Campaign } from '../lib/database/dataAccess';
 import { validateCalculationInputs, getFieldError } from '../lib/validation/inputValidation';
+import { NumberInput } from './ui/NumberInput';
 
 const InputPanel: React.FC = () => {
   const { inputs, setInput, reset, date, setDate, useAssumptions, setUseAssumptions } = useCalculatorStore();
@@ -142,9 +143,8 @@ const InputPanel: React.FC = () => {
               Call Volume
               <span className="text-text-muted ml-2 lowercase font-normal">/interval</span>
             </label>
-            <input
+            <NumberInput
               id="volume"
-              type="number"
               min="0"
               step="1"
               value={inputs.volume}
@@ -161,9 +161,8 @@ const InputPanel: React.FC = () => {
               AHT
               <span className="text-text-muted ml-2 lowercase font-normal">seconds</span>
             </label>
-            <input
+            <NumberInput
               id="aht"
-              type="number"
               min="0"
               step="1"
               value={inputs.aht}
@@ -235,9 +234,8 @@ const InputPanel: React.FC = () => {
                 Patience
                 <span className="text-text-muted ml-2 lowercase font-normal">seconds</span>
               </label>
-              <input
+              <NumberInput
                 id="averagePatience"
-                type="number"
                 min="0"
                 step="1"
                 value={inputs.averagePatience}
@@ -283,9 +281,8 @@ const InputPanel: React.FC = () => {
                 <label htmlFor="currentHeadcount" className={labelClass}>
                   Max FTE (Headcount)
                 </label>
-                <input
+                <NumberInput
                   id="currentHeadcount"
-                  type="number"
                   min="0"
                   step="1"
                   value={inputs.currentHeadcount || ''}
@@ -300,9 +297,8 @@ const InputPanel: React.FC = () => {
                 <label htmlFor="targetSLPercent" className={labelClass}>
                   SL Target %
                 </label>
-                <input
+                <NumberInput
                   id="targetSLPercent"
-                  type="number"
                   min="0"
                   max="100"
                   step="1"
@@ -319,9 +315,8 @@ const InputPanel: React.FC = () => {
               <label htmlFor="thresholdSeconds" className={labelClass}>
                 Threshold
               </label>
-              <input
+              <NumberInput
                 id="thresholdSeconds"
-                type="number"
                 min="0"
                 step="1"
                 value={inputs.thresholdSeconds}
@@ -353,9 +348,8 @@ const InputPanel: React.FC = () => {
             <label htmlFor="shrinkagePercent" className={labelClass}>
               Shrinkage %
             </label>
-            <input
+            <NumberInput
               id="shrinkagePercent"
-              type="number"
               min="0"
               max="100"
               step="0.1"
@@ -372,9 +366,8 @@ const InputPanel: React.FC = () => {
             <label htmlFor="maxOccupancy" className={labelClass}>
               Max Occupancy %
             </label>
-            <input
+            <NumberInput
               id="maxOccupancy"
-              type="number"
               min="0"
               max="100"
               step="1"
@@ -391,9 +384,8 @@ const InputPanel: React.FC = () => {
             <label htmlFor="concurrency" className={labelClass}>
               Concurrency
             </label>
-            <input
+            <NumberInput
               id="concurrency"
-              type="number"
               min="1"
               step="1"
               value={inputs.concurrency}

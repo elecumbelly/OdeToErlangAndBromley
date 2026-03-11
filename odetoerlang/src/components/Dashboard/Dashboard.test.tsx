@@ -1,6 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import type { PropsWithChildren } from 'react';
 import Dashboard from './Dashboard';
 
 /**
@@ -12,7 +13,7 @@ vi.mock('recharts', async () => {
   const actual = await vi.importActual('recharts');
   return {
     ...actual,
-    ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+    ResponsiveContainer: ({ children }: PropsWithChildren) => <div>{children}</div>,
   };
 });
 
@@ -70,7 +71,8 @@ describe('Dashboard Component', () => {
     render(<Dashboard />);
     const select = screen.getByRole('combobox');
     expect(select).toBeInTheDocument();
-    expect(screen.getByText('Global View')).toBeInTheDocument();
+    expect(screen.getByText('Global Overview')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'All Campaigns' })).toBeInTheDocument();
     expect(screen.getByText('Test Campaign')).toBeInTheDocument();
   });
 
@@ -81,10 +83,10 @@ describe('Dashboard Component', () => {
     expect(mockSelectCampaign).toHaveBeenCalledWith(1);
   });
 
-  test('renders chart and alerts sections', () => {
+  test('renders quick action cards', () => {
     render(<Dashboard />);
-    expect(screen.getByText('Service Level Trend (Last 7 Days)')).toBeInTheDocument();
-    expect(screen.getByText('Action Required')).toBeInTheDocument();
-    expect(screen.getByText('Understaffed: Monday Morning')).toBeInTheDocument();
+    expect(screen.getByText('Calculator')).toBeInTheDocument();
+    expect(screen.getByText('Historical Analysis')).toBeInTheDocument();
+    expect(screen.getByText('Scheduling')).toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
+import { NumberInput } from '../ui/NumberInput';
 import { PaginationControls } from '../ui/PaginationControls';
 import { 
   getStaff, getRoles, createStaff, updateStaff, deleteStaff, 
@@ -308,9 +309,8 @@ export default function StaffManager() {
                 />
               </FormField>
               <FormField label="Attrition Probability" id="attritionProb">
-                <input
+                <NumberInput
                   id="attritionProb"
-                  type="number"
                   step="0.01"
                   min="0"
                   max="1"

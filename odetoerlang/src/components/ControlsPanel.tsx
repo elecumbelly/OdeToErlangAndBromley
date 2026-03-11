@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type ScenarioConfig } from '../simulation/types';
 import { PRESET_SCENARIOS, validateConfig, calculateUtilisation } from '../simulation/presets';
+import { NumberInput } from './ui/NumberInput';
 
 interface ControlsPanelProps {
   config: ScenarioConfig;
@@ -131,8 +132,7 @@ export default function ControlsPanel({
               <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
                 Arrivals / Min
               </label>
-              <input
-                type="number"
+              <NumberInput
                 min="1"
                 step="1"
                 value={Math.round(displayVolume)}
@@ -148,8 +148,7 @@ export default function ControlsPanel({
               <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
                 Avg Handle Time
               </label>
-              <input
-                type="number"
+              <NumberInput
                 min="1"
                 step="1"
                 value={Math.round(displayAHT)}
@@ -168,8 +167,7 @@ export default function ControlsPanel({
             <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
               Agents (Servers)
             </label>
-            <input
-              type="number"
+            <NumberInput
               step="1"
               min="1"
               value={localConfig.servers}
@@ -211,8 +209,7 @@ export default function ControlsPanel({
             <div className="mt-3 space-y-3 p-3 bg-bg-elevated/50 rounded-lg border border-border-muted text-xs">
               <div>
                 <label className="block text-text-muted mb-1">Sim Horizon (ticks)</label>
-                <input
-                  type="number"
+                <NumberInput
                   step="100"
                   value={localConfig.maxTime}
                   onChange={(e) => handleFieldChange('maxTime', parseFloat(e.target.value))}
@@ -221,8 +218,7 @@ export default function ControlsPanel({
               </div>
               <div>
                 <label className="block text-text-muted mb-1">Raw λ (Arr/Tick)</label>
-                <input
-                  type="number"
+                <NumberInput
                   step="0.01"
                   value={localConfig.arrivalRate}
                   onChange={(e) => handleFieldChange('arrivalRate', parseFloat(e.target.value))}

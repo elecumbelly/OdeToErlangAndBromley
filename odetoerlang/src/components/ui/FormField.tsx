@@ -1,11 +1,13 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../utils/cn';
+import { NumberInput } from './NumberInput';
 
-interface FormFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
+interface FormFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'children'> {
   label: string;
   error?: string;
   hint?: string;
   icon?: ReactNode;
+  children?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -16,8 +18,18 @@ const sizeStyles = {
 };
 
 export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
-  ({ label, error, hint, icon, size = 'md', className, id, ...props }, ref) => {
+  ({ label, error, hint, icon, size = 'md', className, id, children, ...props }, ref) => {
     const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
+    const inputClassName = cn(
+      'w-full rounded-md border bg-bg-surface text-text-primary transition-all duration-fast',
+      'focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan',
+      'placeholder:text-text-muted',
+      error
+        ? 'border-red focus:ring-red/30 focus:border-red'
+        : 'border-border-subtle hover:border-border-active',
+      Boolean(icon) && 'pl-10',
+      sizeStyles[size]
+    );
 
     return (
       <div className={cn('space-y-1.5', className)}>
@@ -29,28 +41,32 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         </label>
 
         <div className="relative">
-          {icon && (
+          {icon && !children && props.type !== 'number' && (
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
               {icon}
             </span>
           )}
-          <input
-            ref={ref}
-            id={inputId}
-            className={cn(
-              'w-full rounded-md border bg-bg-surface text-text-primary transition-all duration-fast',
-              'focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan',
-              'placeholder:text-text-muted',
-              error
-                ? 'border-red focus:ring-red/30 focus:border-red'
-                : 'border-border-subtle hover:border-border-active',
-              Boolean(icon) && 'pl-10',
-              sizeStyles[size]
-            )}
-            aria-invalid={!!error}
-            aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
-            {...props}
-          />
+          {children ? (
+            children
+          ) : props.type === 'number' ? (
+            <NumberInput
+              ref={ref}
+              id={inputId}
+              className={inputClassName}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+              {...props}
+            />
+          ) : (
+            <input
+              ref={ref}
+              id={inputId}
+              className={inputClassName}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+              {...props}
+            />
+          )}
         </div>
 
         {error && (

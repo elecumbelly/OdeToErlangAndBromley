@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { PaginationControls } from '../ui/PaginationControls';
+import { NumberInput } from '../ui/NumberInput';
 import { 
   getContracts, createContract, updateContract, deleteContract,
   getBillingRules, createBillingRule, updateBillingRule, deleteBillingRule,
@@ -375,7 +376,7 @@ export default function ContractManager({ clientId }: ContractManagerProps) {
                 <input type="text" id="currency" value={currency} onChange={e => setCurrency(e.target.value)} className={inputClass} />
               </FormField>
               <FormField label="Notice Period (days)" id="noticePeriod">
-                <input type="number" id="noticePeriod" value={noticePeriod} onChange={e => setNoticePeriod(Number(e.target.value))} className={inputClass} />
+                <NumberInput id="noticePeriod" value={noticePeriod} onChange={e => setNoticePeriod(Number(e.target.value))} className={inputClass} />
               </FormField>
             </div>
             <div className="flex items-center space-x-2">
@@ -421,16 +422,15 @@ export default function ContractManager({ clientId }: ContractManagerProps) {
               </select>
             </FormField>
             <FormField label="Rate" id="rate">
-              <input 
-                type="number" 
-                id="rate" 
-                value={rate} 
+              <NumberInput
+                id="rate"
+                value={rate}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
                   setRate(isNaN(val) ? 0 : val);
-                }} 
-                className={inputClass} 
-                required 
+                }}
+                className={inputClass}
+                required
               />
             </FormField>
             <FormField label="Campaign (Optional)" id="ruleCampaignId">
@@ -456,10 +456,10 @@ export default function ContractManager({ clientId }: ContractManagerProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Penalty per SL point" id="penalty">
-                <input type="number" id="penalty" value={penalty} onChange={e => setPenalty(Number(e.target.value))} className={inputClass} />
+                <NumberInput id="penalty" value={penalty} onChange={e => setPenalty(Number(e.target.value))} className={inputClass} />
               </FormField>
               <FormField label="Reward per SL point" id="reward">
-                <input type="number" id="reward" value={reward} onChange={e => setReward(Number(e.target.value))} className={inputClass} />
+                <NumberInput id="reward" value={reward} onChange={e => setReward(Number(e.target.value))} className={inputClass} />
               </FormField>
             </div>
             <DialogFooter>

@@ -3,8 +3,8 @@ import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
 import { useCalculatorStore } from '../store/calculatorStore';
 import type { StaffingMetrics } from '../lib/calculations/erlangC';
 import type { CalculationInputs } from '../types';
-import { MetricCard } from './ui/MetricCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { NumberInput } from './ui/NumberInput';
 
 interface Scenario {
   id: string;
@@ -189,8 +189,7 @@ export default function ScenarioComparison() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-2xs text-text-muted uppercase">Volume</label>
-                    <input
-                      type="number"
+                    <NumberInput
                       value={scenario.inputs.volume}
                       onChange={(e) => updateInput(scenario.id, 'volume', Number(e.target.value))}
                       className="w-full bg-bg-surface border border-border-subtle rounded px-2 py-1 text-sm text-text-primary focus:border-purple outline-none"
@@ -198,8 +197,7 @@ export default function ScenarioComparison() {
                   </div>
                   <div>
                     <label className="text-2xs text-text-muted uppercase">AHT (s)</label>
-                    <input
-                      type="number"
+                    <NumberInput
                       value={scenario.inputs.aht}
                       onChange={(e) => updateInput(scenario.id, 'aht', Number(e.target.value))}
                       className="w-full bg-bg-surface border border-border-subtle rounded px-2 py-1 text-sm text-text-primary focus:border-purple outline-none"
@@ -207,8 +205,7 @@ export default function ScenarioComparison() {
                   </div>
                   <div>
                     <label className="text-2xs text-text-muted uppercase">Target SL %</label>
-                    <input
-                      type="number"
+                    <NumberInput
                       value={scenario.inputs.targetSLPercent}
                       onChange={(e) => updateInput(scenario.id, 'targetSLPercent', Number(e.target.value))}
                       className="w-full bg-bg-surface border border-border-subtle rounded px-2 py-1 text-sm text-text-primary focus:border-purple outline-none"
@@ -216,8 +213,7 @@ export default function ScenarioComparison() {
                   </div>
                   <div>
                     <label className="text-2xs text-text-muted uppercase">Occ %</label>
-                    <input
-                      type="number"
+                    <NumberInput
                       value={scenario.inputs.maxOccupancy}
                       onChange={(e) => updateInput(scenario.id, 'maxOccupancy', Number(e.target.value))}
                       className="w-full bg-bg-surface border border-border-subtle rounded px-2 py-1 text-sm text-text-primary focus:border-purple outline-none"

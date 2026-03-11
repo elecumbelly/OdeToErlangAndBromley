@@ -17,8 +17,7 @@ import {
   type HistoricalData
 } from '../lib/database/dataAccess';
 import {
-  analyzeHistoricalData,
-  type HistoricalInsights
+  analyzeHistoricalData
 } from '../lib/forecasting/historicalAnalysis';
 import {
   forecastWithMovingAverage,
@@ -42,8 +41,9 @@ import {
   Area,
   LineChart,
   Line,
-  Legend
+  type TooltipProps
 } from 'recharts';
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
 // ============================================================================
 // HELPERS
@@ -64,12 +64,12 @@ const CHART_THEME = {
   }
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-bg-elevated border border-border-subtle rounded-lg p-3 shadow-xl">
         <p className="text-sm font-semibold text-text-primary mb-1">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index) => (
           <p key={index} className="text-xs" style={{ color: entry.color }}>
             {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
           </p>
@@ -89,7 +89,6 @@ export default function HistoricalAnalysis() {
   const { campaigns, selectedCampaignId, selectCampaign, refreshCampaigns } = useDatabaseStore();
   const setInput = useCalculatorStore(state => state.setInput);
 
-  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [dbDateRange, setDbDateRange] = useState<{ start: string; end: string } | null>(null);
   const [rangeFilter, setRangeFilter] = useState<number>(30); // Days to look back, 0 = All
   const [historicalData, setHistoricalData] = useState<HistoricalData[]>([]);
@@ -102,7 +101,6 @@ export default function HistoricalAnalysis() {
     refreshCampaigns();
   }, [refreshCampaigns]);
 
-  // Check for data availability when campaign changes
   useEffect(() => {
     if (selectedCampaignId === null) {
       setDbDateRange(null);
@@ -112,15 +110,34 @@ export default function HistoricalAnalysis() {
 
     const range = getHistoricalDateRange(selectedCampaignId);
     if (range.minDate && range.maxDate) {
+      setLoading(true);
       setDbDateRange({ start: range.minDate, end: range.maxDate });
-      
-      // Auto-load data based on filter
-      loadData(selectedCampaignId, range.minDate, range.maxDate, rangeFilter);
+
+      try {
+        let start = range.minDate;
+        const end = range.maxDate;
+
+        if (rangeFilter > 0) {
+          const endDate = new Date(range.maxDate);
+          const startDate = new Date(endDate);
+          startDate.setDate(endDate.getDate() - rangeFilter);
+          const isoStart = startDate.toISOString().split('T')[0];
+          start = isoStart > range.minDate ? isoStart : range.minDate;
+        }
+
+        const data = getHistoricalData(selectedCampaignId, start, end);
+        setHistoricalData(data);
+      } catch (error) {
+        console.error('Failed to load historical data:', error);
+        addToast('Failed to load historical data', 'error');
+      } finally {
+        setLoading(false);
+      }
     } else {
       setDbDateRange(null);
       setHistoricalData([]);
     }
-  }, [selectedCampaignId, rangeFilter]);
+  }, [addToast, rangeFilter, selectedCampaignId]);
 
   const handleApplyForecast = (forecast: ForecastResult) => {
     // Calculate average forecasted volume
@@ -135,33 +152,6 @@ export default function HistoricalAnalysis() {
     }
 
     addToast(`Applied Forecast: ${avgVol} calls, ${insights ? Math.round(insights.ahtStats.mean) : 'current'}s AHT`, 'success');
-  };
-
-  // Load historical data
-  const loadData = (campaignId: number, minDate: string, maxDate: string, filterDays: number) => {
-    setLoading(true);
-    try {
-      let start = minDate;
-      const end = maxDate;
-
-      if (filterDays > 0) {
-        const endDate = new Date(maxDate);
-        const startDate = new Date(endDate);
-        startDate.setDate(endDate.getDate() - filterDays);
-        const isoStart = startDate.toISOString().split('T')[0];
-        // Ensure we don't go before available data
-        start = isoStart > minDate ? isoStart : minDate;
-      }
-
-      setDateRange({ start, end });
-      const data = getHistoricalData(campaignId, start, end);
-      setHistoricalData(data);
-    } catch (error) {
-      console.error('Failed to load historical data:', error);
-      addToast('Failed to load historical data', 'error');
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Analyze data
@@ -288,14 +278,14 @@ export default function HistoricalAnalysis() {
         </div>
       )}
 
-      {!selectedCampaign && !loading && (
+      {selectedCampaignId === null && !loading && (
         <div className="p-12 text-center border-2 border-dashed border-border-muted rounded-xl bg-bg-surface/30">
           <p className="text-text-secondary font-medium">No campaign selected</p>
           <p className="text-sm text-text-muted mt-2">Choose a campaign above to view historical insights</p>
         </div>
       )}
 
-      {selectedCampaign && !loading && historicalData.length === 0 && (
+      {selectedCampaignId !== null && !loading && historicalData.length === 0 && (
         <div className="p-12 text-center border-2 border-dashed border-border-muted rounded-xl bg-bg-surface/30">
           <p className="text-text-secondary font-medium">No data found</p>
           <p className="text-sm text-text-muted mt-2">Try adjusting the date range or import new data</p>
@@ -427,62 +417,70 @@ export default function HistoricalAnalysis() {
             </div>
           </div>
 
-          {forecasts.map((forecast, index) => (
-            <div key={index} className="bg-bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="font-bold text-text-primary">{forecast.method}</h4>
-                  <p className="text-xs text-text-muted mt-1">
-                    MAPE: <span className={forecast.accuracy.mape < 10 ? 'text-green' : 'text-amber'}>{forecast.accuracy.mape.toFixed(1)}%</span>
-                  </p>
+          {forecasts.map((forecast, index) => {
+            const mape = forecast.accuracy?.mape;
+            return (
+              <div key={index} className="bg-bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="font-bold text-text-primary">{forecast.method}</h4>
+                    <p className="text-xs text-text-muted mt-1">
+                      MAPE:{' '}
+                      {mape !== undefined ? (
+                        <span className={mape < 10 ? 'text-green' : 'text-amber'}>{mape.toFixed(1)}%</span>
+                      ) : (
+                        <span className="text-text-muted">n/a</span>
+                      )}
+                    </p>
+                  </div>
+                  {index === 0 && (
+                    <span className="text-xs font-bold text-cyan bg-cyan/10 border border-cyan/30 rounded px-2 py-1 uppercase tracking-wide mr-2">
+                      Recommended
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleApplyForecast(forecast)}
+                    className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-hover text-text-secondary hover:text-cyan border border-border-subtle hover:border-cyan/30 rounded-lg text-xs font-medium transition-all"
+                  >
+                    Apply to Calculator
+                  </button>
                 </div>
-                {index === 0 && (
-                  <span className="text-xs font-bold text-cyan bg-cyan/10 border border-cyan/30 rounded px-2 py-1 uppercase tracking-wide mr-2">
-                    Recommended
-                  </span>
-                )}
-                <button
-                  onClick={() => handleApplyForecast(forecast)}
-                  className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-hover text-text-secondary hover:text-cyan border border-border-subtle hover:border-cyan/30 rounded-lg text-xs font-medium transition-all"
-                >
-                  Apply to Calculator
-                </button>
-              </div>
-              
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecast.forecasts}>
-                    <defs>
-                      <linearGradient id={`colorForecast${index}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
-                    <XAxis dataKey="date" stroke={CHART_THEME.text} fontSize={11} tickFormatter={(val) => val.slice(5)} />
-                    <YAxis stroke={CHART_THEME.text} fontSize={11} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="value" 
-                      name="Forecast Volume" 
-                      stroke={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} 
-                      fill={`url(#colorForecast${index})`} 
-                    />
-                    {forecast.forecasts[0].lower !== undefined && (
-                      <Area 
-                        type="monotone" 
-                        dataKey="lower" 
-                        stackId="1" 
-                        stroke="none" 
-                        fill="transparent" 
+
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={forecast.forecasts}>
+                      <defs>
+                        <linearGradient id={`colorForecast${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
+                      <XAxis dataKey="date" stroke={CHART_THEME.text} fontSize={11} tickFormatter={(val) => val.slice(5)} />
+                      <YAxis stroke={CHART_THEME.text} fontSize={11} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        name="Forecast Volume"
+                        stroke={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan}
+                        fill={`url(#colorForecast${index})`}
                       />
-                    )}
-                  </AreaChart>
-                </ResponsiveContainer>
+                      {forecast.forecasts[0].lower !== undefined && (
+                        <Area
+                          type="monotone"
+                          dataKey="lower"
+                          stackId="1"
+                          stroke="none"
+                          fill="transparent"
+                        />
+                      )}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

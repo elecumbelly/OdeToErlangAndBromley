@@ -188,7 +188,7 @@ export default function SmartCSVImport() {
     if (!value) return 0;
 
     const str = value.toString().trim();
-    const cleaned = str.replace('%', '').trim();
+    const cleaned = str.replace(/%/g, '').trim();
     const num = parseFloat(cleaned);
     return isNaN(num) ? 0 : num;
   };
@@ -267,7 +267,7 @@ export default function SmartCSVImport() {
         } else {
           throw new Error('Failed to create default campaign');
         }
-      } catch (err) {
+      } catch {
         const msg = 'Could not auto-create campaign. Please select one manually.';
         setError(msg);
         addToast(msg, 'error');

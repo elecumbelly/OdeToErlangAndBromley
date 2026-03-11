@@ -27,7 +27,6 @@ const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { useCalculatorStore } from './store/calculatorStore';
-import SimpleLanding from './components/SimpleLanding';
 
 // Loading fallback for lazy-loaded components
 function TabLoadingFallback() {
@@ -48,7 +47,6 @@ import { initDatabase } from './lib/database/initDatabase';
 import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
 type Tab = 'dashboard' | 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
-type Mode = 'simple' | 'advanced';
 type Mode = 'simple' | 'advanced';
 
 function DbLoadingState({ stage, error }: { stage: InitStage; error: string | null }) {
@@ -143,11 +141,6 @@ function App() {
       setShowTour(false);
     }
   }, []);
-
-  const startTour = () => {
-    setShowTour(true);
-    setTourStep(0);
-  };
 
   const tourSteps = [
     {

@@ -3,6 +3,7 @@ import { useCalculatorStore } from '../store/calculatorStore';
 import { calculateServiceLevel, calculateASA, calculateOccupancy, calculateTrafficIntensity } from '../lib/calculations/erlangC';
 import { calculateServiceLevelWithAbandonment, calculateASAWithAbandonment, calculateAbandonmentProbability } from '../lib/calculations/erlangA';
 import type { ErlangVariant } from '../types';
+import { NumberInput } from './ui/NumberInput';
 
 export default function ReverseCalculator() {
   const { inputs } = useCalculatorStore();
@@ -111,9 +112,8 @@ export default function ReverseCalculator() {
             <label htmlFor="availableAgents" className={labelClass + " text-blue-900"}>
               Available Agents (Productive)
             </label>
-            <input
+            <NumberInput
               id="availableAgents"
-              type="number"
               min="1"
               step="1"
               value={availableAgents}
@@ -130,9 +130,8 @@ export default function ReverseCalculator() {
             <label htmlFor="availableSeats" className={labelClass + " text-purple-900"}>
               Available Seats (Total Capacity)
             </label>
-            <input
+            <NumberInput
               id="availableSeats"
-              type="number"
               min="1"
               step="1"
               value={availableSeats}

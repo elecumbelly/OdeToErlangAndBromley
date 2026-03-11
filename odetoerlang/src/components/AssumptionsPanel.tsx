@@ -3,6 +3,7 @@ import { useDatabaseStore } from '../store/databaseStore';
 import { useToast } from './ui/Toast';
 import { Button } from './ui/Button';
 import { FormField } from './ui/FormField';
+import { NumberInput } from './ui/NumberInput';
 import {
   Dialog,
   DialogContent,
@@ -127,8 +128,7 @@ const AssumptionsPanel: React.FC = () => {
               </select>
             </FormField>
             <FormField label="Value" id="assumption-value">
-              <input
-                type="number"
+              <NumberInput
                 value={editingAssumption?.value || ''}
                 onChange={(e) => setEditingAssumption({ ...editingAssumption, value: parseFloat(e.target.value) })}
                 className="block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2"

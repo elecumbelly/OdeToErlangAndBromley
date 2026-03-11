@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
+import { NumberInput } from '../ui/NumberInput';
 import { PaginationControls } from '../ui/PaginationControls';
 import {
   getRecruitmentStages,
@@ -255,9 +256,8 @@ function PipelineManager() {
 
             <div className="grid grid-cols-3 gap-4">
               <FormField label="Order" id="stageOrder">
-                <input
+                <NumberInput
                   id="stageOrder"
-                  type="number"
                   min="1"
                   value={stageOrder}
                   onChange={(e) => setStageOrder(parseInt(e.target.value))}
@@ -266,9 +266,8 @@ function PipelineManager() {
                 />
               </FormField>
               <FormField label="Pass Rate" id="passRate">
-                <input
+                <NumberInput
                   id="passRate"
-                  type="number"
                   step="0.01"
                   min="0"
                   max="1"
@@ -279,9 +278,8 @@ function PipelineManager() {
                 />
               </FormField>
               <FormField label="Avg Days" id="avgDays">
-                <input
+                <NumberInput
                   id="avgDays"
-                  type="number"
                   min="0"
                   value={avgDays ?? ''}
                   onChange={(e) => setAvgDays(e.target.value ? parseInt(e.target.value) : null)}
@@ -548,9 +546,8 @@ function RequestsManager() {
 
             <div className="grid grid-cols-3 gap-4">
               <FormField label="Quantity" id="quantity">
-                <input
+                <NumberInput
                   id="quantity"
-                  type="number"
                   min="1"
                   value={quantity}
                   onChange={(e) => setQuantity(parseInt(e.target.value))}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCalculatorStore, calculateProductiveAgents } from '../store/calculatorStore';
+import { NumberInput } from './ui/NumberInput';
 
 const StaffingModelPanel: React.FC = () => {
   const { staffingModel, setStaffingModel, setShiftType, inputs } = useCalculatorStore();
@@ -66,9 +67,8 @@ const StaffingModelPanel: React.FC = () => {
             <label htmlFor="totalHeadcount" className={labelClass}>
               Total Headcount
             </label>
-            <input
+            <NumberInput
               id="totalHeadcount"
-              type="number"
               min="0"
               step="1"
               value={staffingModel.totalHeadcount || ''}
@@ -85,9 +85,8 @@ const StaffingModelPanel: React.FC = () => {
               <label htmlFor="operatingHours" className={labelClass}>
                 Hours/Day
               </label>
-              <input
+              <NumberInput
                 id="operatingHours"
-                type="number"
                 min="1"
                 max="24"
                 step="0.5"
@@ -102,9 +101,8 @@ const StaffingModelPanel: React.FC = () => {
               <label htmlFor="daysOpen" className={labelClass}>
                 Days/Week
               </label>
-              <input
+              <NumberInput
                 id="daysOpen"
-                type="number"
                 min="1"
                 max="7"
                 step="1"
@@ -141,8 +139,7 @@ const StaffingModelPanel: React.FC = () => {
                     {shift.hours}h shift
                   </span>
                   <div className="flex items-center gap-2 ml-auto">
-                    <input
-                      type="number"
+                    <NumberInput
                       min="0"
                       max="100"
                       value={shift.proportion}
