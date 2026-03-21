@@ -9,6 +9,8 @@
  * Use this for running forecasts that respect database assumptions.
  */
 
+import { toLocalDateString } from '../dateUtils';
+
 import { resolveAssumptionsForDate } from './assumptionResolver';
 import { mergeCalculationInputs } from './inputMerger';
 import {
@@ -144,11 +146,11 @@ export function generateDateRangeForecasts(
   model: ErlangVariant = 'C'
 ): ForecastResult[] {
   const results: ForecastResult[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
 
   for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(d);
     const result = runForecast({
       campaignId,
       scenarioId,

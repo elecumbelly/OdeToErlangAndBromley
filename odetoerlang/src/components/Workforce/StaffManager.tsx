@@ -9,6 +9,7 @@ import {
   type Staff, type Role 
 } from '../../lib/database/dataAccess';
 import { useToast } from '../ui/Toast';
+import { toLocalDateString } from '../../lib/dateUtils';
 
 export default function StaffManager() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +62,7 @@ export default function StaffManager() {
       setLastName('');
       setEmployeeId(`EMP-${Math.floor(Math.random() * 10000)}`);
       setRoleId(roles.length > 0 ? roles[0].id : null);
-      setStartDate(new Date().toISOString().split('T')[0]);
+      setStartDate(toLocalDateString());
       setAttritionProb(0.15);
     }
     setIsModalOpen(true);
@@ -136,7 +137,7 @@ export default function StaffManager() {
           primary_role_id: defaultRoleId,
           employment_type: 'Full-time',
           manager_id: null,
-          start_date: new Date().toISOString().split('T')[0],
+          start_date: toLocalDateString(),
           end_date: null,
           site_id: null,
           attrition_probability: Math.random() * 0.3

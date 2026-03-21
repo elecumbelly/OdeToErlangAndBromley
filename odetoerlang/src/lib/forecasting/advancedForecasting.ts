@@ -9,6 +9,8 @@
  * - Linear regression with trend
  */
 
+import { toLocalDateString } from '../dateUtils';
+
 import { linearRegression, calculateStats } from './historicalAnalysis';
 
 // ============================================================================
@@ -352,14 +354,14 @@ export function forecastWithMovingAverage(
   const margin = stats.stdDev * 1.96; // 95% confidence
 
   // Generate future dates
-  const lastDate = new Date(dates[dates.length - 1]);
+  const lastDate = new Date(`${dates[dates.length - 1]}T00:00:00`);
   const forecasts: ForecastPoint[] = [];
 
   for (let i = 1; i <= horizonDays; i++) {
     const futureDate = new Date(lastDate);
     futureDate.setDate(futureDate.getDate() + i);
     forecasts.push({
-      date: futureDate.toISOString().split('T')[0],
+      date: toLocalDateString(futureDate),
       value: Math.round(baseValue),
       lower: Math.round(Math.max(0, baseValue - margin)),
       upper: Math.round(baseValue + margin)
@@ -411,7 +413,7 @@ export function forecastWithExponentialSmoothing(
   const stats = calculateStats(values.slice(-14));
   const margin = stats.stdDev * 1.96;
 
-  const lastDate = new Date(dates[dates.length - 1]);
+  const lastDate = new Date(`${dates[dates.length - 1]}T00:00:00`);
   const forecasts: ForecastPoint[] = [];
 
   for (let i = 1; i <= horizonDays; i++) {
@@ -426,7 +428,7 @@ export function forecastWithExponentialSmoothing(
     }
 
     forecasts.push({
-      date: futureDate.toISOString().split('T')[0],
+      date: toLocalDateString(futureDate),
       value: Math.round(Math.max(0, forecast)),
       lower: Math.round(Math.max(0, forecast - margin * Math.sqrt(i))),
       upper: Math.round(forecast + margin * Math.sqrt(i))
@@ -469,7 +471,7 @@ export function forecastWithRegression(
   const stats = calculateStats(values.map((v, i) => v - fitted[i]));
   const margin = stats.stdDev * 1.96;
 
-  const lastDate = new Date(dates[dates.length - 1]);
+  const lastDate = new Date(`${dates[dates.length - 1]}T00:00:00`);
   const forecasts: ForecastPoint[] = [];
   const n = values.length;
 
@@ -479,7 +481,7 @@ export function forecastWithRegression(
     const forecast = slope * (n + i - 1) + intercept;
 
     forecasts.push({
-      date: futureDate.toISOString().split('T')[0],
+      date: toLocalDateString(futureDate),
       value: Math.round(Math.max(0, forecast)),
       lower: Math.round(Math.max(0, forecast - margin)),
       upper: Math.round(forecast + margin)

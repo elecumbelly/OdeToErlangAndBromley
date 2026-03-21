@@ -1,3 +1,4 @@
+import { toLocalDateString } from '../dateUtils';
 import {
   getScheduleRunById,
   getSchedulePlanById,
@@ -75,7 +76,7 @@ const getWeekKey = (dateStr: string) => {
   const day = date.getDay();
   const diff = (day + 6) % 7;
   date.setDate(date.getDate() - diff);
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
 };
 
 const buildRequirementBuckets = (requirements: CoverageRequirement[]) => {

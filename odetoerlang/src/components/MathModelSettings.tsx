@@ -192,6 +192,7 @@ export default function MathModelSettings() {
                   label="Concurrency"
                   type="number"
                   min="1"
+                  max="10"
                   step="1"
                   value={inputs.concurrency}
                   onChange={(e) => updateInput('concurrency', e.target.value)}

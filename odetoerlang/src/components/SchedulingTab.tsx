@@ -7,6 +7,7 @@ import { StatusBadge } from './ui/StatusBadge';
 import { generateCoverageRequirements } from '../lib/scheduling/coverageGenerator';
 import { runScheduleOptimization } from '../lib/scheduling/schedulerEngine';
 import { getCoverageRequirements, getScheduleMetricsByRunIds, type ScheduleMetric } from '../lib/database/dataAccess';
+import { toLocalDateString } from '../lib/dateUtils';
 
 type PlanFormState = {
   planName: string;
@@ -23,7 +24,7 @@ type PlanFormState = {
   status: string;
 };
 
-const dateToInput = (date: Date) => date.toISOString().split('T')[0];
+const dateToInput = (date: Date) => toLocalDateString(date);
 
 const createDefaultPlanState = (): PlanFormState => {
   const today = new Date();

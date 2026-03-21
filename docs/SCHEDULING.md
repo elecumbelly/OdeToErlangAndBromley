@@ -29,9 +29,9 @@ In the **Scheduling Tab**, you can run an **A/B Comparison** between different m
 
 | Method | Logic | Best For |
 |--------|-------|----------|
-| **Greedy Fill** | Fills intervals chronologically. Fast and predictable. | Simple, stable environments. |
-| **Local Search** | Generates a baseline then iteratively swaps staff to reduce "Gaps" and "Overstaffing". | Complex multi-skill environments. |
-| **Solver (Alpha)** | Mathematical optimization targeting the lowest overall cost. | Large-scale operations. |
+| **Greedy Fill** | Fills intervals chronologically. Logs but does not block constraint violations. Fast and predictable. | Quick baselines and testing. |
+| **Local Search** | Greedy fill that skips assignments violating rest/hours constraints. | Environments requiring labour-law compliance. |
+| **Solver (Alpha)** | Currently falls back to Local Search. ILP/CP-SAT solver planned but not yet implemented. | Same as Local Search for now. |
 
 ## 🍱 Shift Structure
 The engine doesn't just create "Start/End" times; it builds a full shift sequence:

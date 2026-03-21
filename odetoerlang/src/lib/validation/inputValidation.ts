@@ -83,6 +83,16 @@ export function validateCalculationInputs(inputs: CalculationInputs): Validation
     }
   }
 
+  // Concurrency validation
+  if (inputs.concurrency !== undefined) {
+    if (inputs.concurrency < VALIDATION.concurrency.min) {
+      errors.push({ field: 'concurrency', message: 'Concurrency must be at least 1' });
+    }
+    if (inputs.concurrency > VALIDATION.concurrency.max) {
+      errors.push({ field: 'concurrency', message: `Concurrency cannot exceed ${VALIDATION.concurrency.max}` });
+    }
+  }
+
   // Interval validation
   if (inputs.intervalMinutes <= 0) {
     errors.push({ field: 'intervalMinutes', message: 'Interval must be positive' });

@@ -11,6 +11,7 @@ import {
   type Contract, type BillingRule, type Client, type Campaign
 } from '../../lib/database/dataAccess';
 import { useToast } from '../ui/Toast';
+import { toLocalDateString } from '../../lib/dateUtils';
 
 interface ContractManagerProps {
   clientId: number | null;
@@ -89,7 +90,7 @@ export default function ContractManager({ clientId }: ContractManagerProps) {
     } else {
       setEditingContract(null);
       setContractNumber('');
-      setContractStartDate(new Date().toISOString().split('T')[0]);
+      setContractStartDate(toLocalDateString());
       setContractEndDate('');
       setCurrency('GBP');
       setAutoRenew(false);
@@ -166,7 +167,7 @@ export default function ContractManager({ clientId }: ContractManagerProps) {
       setRate(0);
       setPenalty(0);
       setReward(0);
-      setRuleValidFrom(new Date().toISOString().split('T')[0]);
+      setRuleValidFrom(toLocalDateString());
       setRuleValidTo('');
     }
     setIsRuleModalOpen(true);

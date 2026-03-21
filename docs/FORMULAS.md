@@ -51,14 +51,16 @@ Models abandonment.
 Service Level (Answered within `t`):
 
 ```math
-SL_{A} = 1 - P(wait > 0) \cdot \frac{c-A}{c-A + \tau^{-1}} \cdot e^{-\gamma t}
+SL_{A} = (1 - P_w) + P_w \cdot \frac{c-A}{c-A + \theta \cdot AHT} \cdot (1 - e^{-\gamma t})
 ```
 
-Where `γ` (effective service rate) is:
+Where `γ` (combined exit rate from queue) is:
 
 ```math
-\gamma = \frac{c - A + \tau^{-1}}{AHT}
+\gamma = \frac{c - A + \theta \cdot AHT}{AHT}
 ```
+
+where `P_w = P(wait > 0)` (Erlang C probability of waiting), and `θ = 1/patience` (abandonment rate per second).
 
 Abandonment Probability:
 

@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'vitest';
+import { toLocalDateString, parseDateDow } from '../dateUtils';
 import {
   calculateStats,
   linearRegression,
@@ -293,9 +294,9 @@ describe('analyzeHistoricalData', () => {
 
   test('computes full insights', () => {
     const dates = Array.from({ length: 30 }, (_, i) => {
-      const d = new Date('2024-01-01');
+      const d = new Date('2024-01-01T00:00:00');
       d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalDateString(d);
     });
     const volumes = dates.map((_, i) => 1000 + i * 10 + Math.random() * 50);
 
@@ -319,13 +320,13 @@ describe('analyzeHistoricalData', () => {
 describe('getForecastFromPatterns', () => {
   test('uses day of week pattern', () => {
     const dates = Array.from({ length: 28 }, (_, i) => {
-      const d = new Date('2024-01-01'); // Monday
+      const d = new Date('2024-01-01T00:00:00'); // Monday
       d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalDateString(d);
     });
     // Weekdays high, weekends low
     const volumes = dates.map(date => {
-      const dow = new Date(date).getDay();
+      const dow = parseDateDow(date);
       return dow === 0 || dow === 6 ? 500 : 1000;
     });
 

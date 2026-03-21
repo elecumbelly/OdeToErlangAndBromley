@@ -28,6 +28,7 @@ import {
 } from '../lib/forecasting/advancedForecasting';
 import { useDatabaseStore } from '../store/databaseStore';
 import { useCalculatorStore } from '../store/calculatorStore';
+import { toLocalDateString } from '../lib/dateUtils';
 import { MetricCard } from './ui/MetricCard';
 import {
   BarChart,
@@ -118,10 +119,10 @@ export default function HistoricalAnalysis() {
         const end = range.maxDate;
 
         if (rangeFilter > 0) {
-          const endDate = new Date(range.maxDate);
+          const endDate = new Date(`${range.maxDate}T00:00:00`);
           const startDate = new Date(endDate);
           startDate.setDate(endDate.getDate() - rangeFilter);
-          const isoStart = startDate.toISOString().split('T')[0];
+          const isoStart = toLocalDateString(startDate);
           start = isoStart > range.minDate ? isoStart : range.minDate;
         }
 

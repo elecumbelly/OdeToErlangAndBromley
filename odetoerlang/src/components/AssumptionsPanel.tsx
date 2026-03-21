@@ -3,6 +3,7 @@ import { useDatabaseStore } from '../store/databaseStore';
 import { useToast } from './ui/Toast';
 import { Button } from './ui/Button';
 import { FormField } from './ui/FormField';
+import { toLocalDateString } from '../lib/dateUtils';
 import { NumberInput } from './ui/NumberInput';
 import {
   Dialog,
@@ -57,7 +58,7 @@ const AssumptionsPanel: React.FC = () => {
   };
 
   const openEditDialog = (assumption?: Assumption) => {
-    setEditingAssumption(assumption ? { ...assumption } : { valid_from: new Date().toISOString().split('T')[0] });
+    setEditingAssumption(assumption ? { ...assumption } : { valid_from: toLocalDateString() });
     setIsDialogOpen(true);
   };
 

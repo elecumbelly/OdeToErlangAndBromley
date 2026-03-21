@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
+import { calculateStaffing, type ErlangEngineOutput } from '../lib/calculations/erlangEngine';
 import { useCalculatorStore } from '../store/calculatorStore';
-import type { StaffingMetrics } from '../lib/calculations/erlangC';
 import type { CalculationInputs } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { NumberInput } from './ui/NumberInput';
@@ -10,7 +9,7 @@ interface Scenario {
   id: string;
   name: string;
   inputs: CalculationInputs;
-  results: StaffingMetrics | null;
+  results: ErlangEngineOutput | null;
 }
 
 const CHART_THEME = {
@@ -69,14 +68,23 @@ export default function ScenarioComparison() {
   const calculateAll = () => {
     const updated = scenarios.map(scenario => ({
       ...scenario,
-      results: calculateStaffingMetrics({
-        volume: scenario.inputs.volume,
-        aht: scenario.inputs.aht,
-        intervalSeconds: scenario.inputs.intervalMinutes * 60,
-        targetSL: scenario.inputs.targetSLPercent / 100,
-        thresholdSeconds: scenario.inputs.thresholdSeconds,
-        shrinkagePercent: scenario.inputs.shrinkagePercent / 100,
-        maxOccupancy: scenario.inputs.maxOccupancy / 100
+      results: calculateStaffing({
+        model: scenario.inputs.model,
+        workload: {
+          volume: scenario.inputs.volume,
+          aht: scenario.inputs.aht,
+          intervalMinutes: scenario.inputs.intervalMinutes,
+        },
+        constraints: {
+          targetSLPercent: scenario.inputs.targetSLPercent,
+          thresholdSeconds: scenario.inputs.thresholdSeconds,
+          maxOccupancy: scenario.inputs.maxOccupancy,
+        },
+        behavior: {
+          shrinkagePercent: scenario.inputs.shrinkagePercent,
+          averagePatience: scenario.inputs.averagePatience,
+          concurrency: scenario.inputs.concurrency,
+        },
       })
     }));
     setScenarios(updated);
@@ -119,7 +127,7 @@ export default function ScenarioComparison() {
     .map(s => ({
       name: s.name,
       FTE: s.results?.totalFTE || 0,
-      'SL %': (s.results?.serviceLevel || 0) * 100,
+      'SL %': s.results?.serviceLevel || 0,
       'ASA (s)': s.results?.asa || 0
     }));
 
@@ -233,8 +241,8 @@ export default function ScenarioComparison() {
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-text-muted">SL Achieved</span>
-                      <span className={`font-medium ${scenario.results.serviceLevel >= scenario.inputs.targetSLPercent / 100 ? 'text-green' : 'text-amber'}`}>
-                        {(scenario.results.serviceLevel * 100).toFixed(1)}%
+                      <span className={`font-medium ${scenario.results.serviceLevel >= scenario.inputs.targetSLPercent ? 'text-green' : 'text-amber'}`}>
+                        {scenario.results.serviceLevel.toFixed(1)}%
                       </span>
                     </div>
                   </div>

@@ -19,6 +19,7 @@ import {
   type Snapshot,
   type ContactRecord,
 } from './types';
+import { toLocalDateString } from '../lib/dateUtils';
 
 /**
  * Simple seeded pseudo-random number generator (Mulberry32)
@@ -278,7 +279,7 @@ export class SimulationEngine {
         max_wait_time,
         occupancy
       ) VALUES (
-        '${contactDate.toISOString().split('T')[0]}',
+        '${toLocalDateString(contactDate)}',
         ${Math.floor(record.arrivalTime / 30) % 48},
         ${hour},
         ${record.campaignId || 'NULL'},

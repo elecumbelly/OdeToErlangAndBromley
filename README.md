@@ -54,7 +54,7 @@ OdeToErlang represents a new breed of web application:
 - **Database:** `sql.js` (SQLite compiled to WebAssembly) providing a 31-table relational schema in-browser.
 - **Persistence:** SQLite binary is persisted to **IndexedDB**—your data survives browser refreshes and works offline.
 - **Logic:** Complex math and optimization engines written in pure TypeScript.
-- **UI:** React 19 + Tailwind CSS + Recharts for hardware-accelerated visualizations.
+- **UI:** React 18 + Tailwind CSS + Recharts for hardware-accelerated visualizations.
 
 ---
 

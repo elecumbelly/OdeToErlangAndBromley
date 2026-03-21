@@ -20,6 +20,7 @@ import {
   type Role,
   type Campaign
 } from '../../lib/database/dataAccess';
+import { toLocalDateString } from '../../lib/dateUtils';
 import { useToast } from '../ui/Toast';
 
 type ActiveView = 'pipeline' | 'requests';
@@ -356,7 +357,7 @@ function RequestsManager() {
       setRoleId(roles.length > 0 ? roles[0].id : null);
       setCampaignId(null);
       setQuantity(1);
-      setRequestedDate(new Date().toISOString().split('T')[0]);
+      setRequestedDate(toLocalDateString());
       setTargetDate('');
       setStatus('Open');
       setNotes('');

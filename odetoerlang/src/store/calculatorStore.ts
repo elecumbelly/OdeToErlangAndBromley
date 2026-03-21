@@ -4,6 +4,7 @@ import type { CalculationInputs, CalculationResults } from '../types';
 import { CalculationService } from '../lib/services/CalculationService';
 import type { ValidationResult } from '../lib/validation/inputValidation';
 import { useDatabaseStore } from './databaseStore'; // Import database store
+import { toLocalDateString } from '../lib/dateUtils';
 
 // Simple debounce utility - avoids lodash dependency
 function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
@@ -153,7 +154,7 @@ export const useCalculatorStore = create<CalculatorState>()(
   persist(
     (set, get) => ({
       inputs: DEFAULT_INPUTS,
-      date: new Date().toISOString().split('T')[0], // Default to today
+      date: toLocalDateString(),
       results: null,
       staffingModel: DEFAULT_STAFFING_MODEL,
       validation: { valid: true, errors: [] },
@@ -252,7 +253,7 @@ export const useCalculatorStore = create<CalculatorState>()(
       reset: () => {
         set({ 
           inputs: DEFAULT_INPUTS, 
-          date: new Date().toISOString().split('T')[0], 
+          date: toLocalDateString(),
           results: null, 
           abandonmentMetrics: null, 
           activeProductivityModifier: 1.0,

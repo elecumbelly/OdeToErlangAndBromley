@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDatabaseStore } from '../store/databaseStore';
 import { useCalculatorStore } from '../store/calculatorStore';
+import { toLocalDateString } from '../lib/dateUtils';
 
 const ScenarioManager: React.FC = () => {
   const {
@@ -40,7 +41,7 @@ const ScenarioManager: React.FC = () => {
   const handleSaveCalculation = () => {
     if (!selectedScenarioId || !results) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     const forecastName = `${inputs.model} calculation - ${today}`;
 
     const id = saveCurrentForecast(
@@ -51,8 +52,8 @@ const ScenarioManager: React.FC = () => {
       inputs.aht,
       results.requiredAgents,
       results.totalFTE,
-      results.serviceLevel / 100,
-      results.occupancy / 100,
+      results.serviceLevel,
+      results.occupancy,
       results.asa
     );
 

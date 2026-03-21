@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDatabaseStore } from '../store/databaseStore';
+import { toLocalDateString } from '../lib/dateUtils';
 
 const CampaignSelector: React.FC = () => {
   const {
@@ -37,7 +38,7 @@ const CampaignSelector: React.FC = () => {
   const handleCreateCampaign = () => {
     if (!newCampaignName.trim() || !selectedClientId) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     const id = addCampaign({
       campaign_name: newCampaignName.trim(),
       client_id: selectedClientId as number,

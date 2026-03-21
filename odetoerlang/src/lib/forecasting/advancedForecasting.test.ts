@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'vitest';
+import { toLocalDateString } from '../dateUtils';
 import {
   simpleMovingAverage,
   weightedMovingAverage,
@@ -227,9 +228,9 @@ describe('forecastWithExponentialSmoothing', () => {
   test('captures seasonality (triple)', () => {
     const values = Array.from({ length: 28 }, (_, i) => 100 + (i % 7) * 10);
     const dates = values.map((_, i) => {
-      const d = new Date('2024-01-01');
+      const d = new Date('2024-01-01T00:00:00');
       d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalDateString(d);
     });
 
     const result = forecastWithExponentialSmoothing(values, dates, 14, 7, 'triple');

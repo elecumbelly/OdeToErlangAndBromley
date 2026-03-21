@@ -300,9 +300,9 @@ export async function seedDatabase() {
     db.run(`
       INSERT INTO OptimizationMethods (method_key, method_name, version, description)
       VALUES
-        ('greedy', 'Greedy Fill', '1.0', 'Baseline gap-first fill'),
-        ('local_search', 'Local Search', '1.0', 'Iterative swap-based improvement'),
-        ('solver', 'Solver', '0.1', 'Placeholder for ILP/CP-SAT solver');
+        ('greedy', 'Greedy Fill', '1.0', 'Fast fill that logs but does not block constraint violations'),
+        ('local_search', 'Local Search', '1.0', 'Greedy fill that skips assignments violating rest/hours constraints'),
+        ('solver', 'Solver', '0.1', 'Falls back to Local Search; ILP/CP-SAT solver planned but not yet implemented');
     `);
 
     db.run('COMMIT');
