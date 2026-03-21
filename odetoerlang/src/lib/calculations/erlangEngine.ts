@@ -81,25 +81,29 @@ export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput 
   const maxOccupancy = constraints.maxOccupancy / 100;
   const shrinkage = behavior.shrinkagePercent / 100;
 
+  // Apply concurrency factor (e.g. chat agents handling multiple sessions)
+  const concurrency = Math.min(10, Math.max(1, behavior.concurrency ?? 1));
+  const effectiveAHT = workload.aht / concurrency;
+
   // Validation
   if (workload.aht <= 0 || workload.volume < 0 || intervalSeconds <= 0) return null;
   if (targetSL <= 0 || targetSL > 1 || constraints.thresholdSeconds <= 0 || maxOccupancy <= 0 || maxOccupancy > 1) return null;
   if (shrinkage < 0 || shrinkage >= 1) return null;
-  
+
   // Erlang A (and former X) requires patience
   if (model === 'A' && (behavior.averagePatience === undefined || behavior.averagePatience <= 0)) {
-    return null; 
+    return null;
   }
 
-  // Calculate base traffic intensity
-  const trafficIntensity = calculateTrafficIntensity(workload.volume, workload.aht, intervalSeconds);
+  // Calculate base traffic intensity using concurrency-adjusted AHT
+  const trafficIntensity = calculateTrafficIntensity(workload.volume, effectiveAHT, intervalSeconds);
 
   let result: ErlangEngineOutput | null = null;
 
   if (model === 'C') {
     const metrics = calculateStaffingMetrics({
       volume: workload.volume,
-      aht: workload.aht,
+      aht: effectiveAHT,
       intervalSeconds,
       targetSL,
       thresholdSeconds: constraints.thresholdSeconds,
@@ -125,7 +129,7 @@ export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput 
   } else if (model === 'A') {
     const metricsA = calculateErlangAMetrics({
       volume: workload.volume,
-      aht: workload.aht,
+      aht: effectiveAHT,
       intervalMinutes: workload.intervalMinutes,
       targetSLPercent: constraints.targetSLPercent,
       thresholdSeconds: constraints.thresholdSeconds,
@@ -202,12 +206,15 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
   const shrinkage = behavior.shrinkagePercent / 100;
   const actualAgents = providedActualAgents ?? fixedAgents;
 
+  const concurrency = Math.min(10, Math.max(1, behavior.concurrency ?? 1));
+  const effectiveAHT = workload.aht / concurrency;
+
   if (workload.aht <= 0 || workload.volume < 0 || intervalSeconds <= 0) return null;
   if (fixedAgents <= 0 || maxOccupancy <= 0 || maxOccupancy > 1) return null;
   if (shrinkage < 0 || shrinkage >= 1) return null;
   if (model === 'A' && (behavior.averagePatience === undefined || behavior.averagePatience <= 0)) return null;
 
-  const trafficIntensity = calculateTrafficIntensity(workload.volume, workload.aht, intervalSeconds);
+  const trafficIntensity = calculateTrafficIntensity(workload.volume, effectiveAHT, intervalSeconds);
   const totalFTE = calculateFTE(fixedAgents, shrinkage);
   const occupancy = calculateOccupancy(trafficIntensity, fixedAgents);
   const actualOccupancy = calculateOccupancy(trafficIntensity, actualAgents);
@@ -229,14 +236,14 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
   let blockingProbability: number | undefined;
 
   if (model === 'C') {
-    serviceLevel = calculateServiceLevel(fixedAgents, trafficIntensity, workload.aht, constraints.thresholdSeconds);
-    asa = calculateASA(fixedAgents, trafficIntensity, workload.aht);
+    serviceLevel = calculateServiceLevel(fixedAgents, trafficIntensity, effectiveAHT, constraints.thresholdSeconds);
+    asa = calculateASA(fixedAgents, trafficIntensity, effectiveAHT);
   } else if (model === 'A') {
-    const theta = behavior.averagePatience! / workload.aht;
-    serviceLevel = calculateServiceLevelWithAbandonment(fixedAgents, trafficIntensity, workload.aht, constraints.thresholdSeconds, behavior.averagePatience!);
-    asa = calculateASAWithAbandonment(fixedAgents, trafficIntensity, workload.aht, behavior.averagePatience!);
-    abandonmentRate = calculateAbandonmentProbability(fixedAgents, trafficIntensity, theta);
-    expectedAbandonments = calculateExpectedAbandonments(workload.volume, fixedAgents, trafficIntensity, theta);
+    const patienceRatio = behavior.averagePatience! / effectiveAHT;
+    serviceLevel = calculateServiceLevelWithAbandonment(fixedAgents, trafficIntensity, effectiveAHT, constraints.thresholdSeconds, behavior.averagePatience!);
+    asa = calculateASAWithAbandonment(fixedAgents, trafficIntensity, effectiveAHT, behavior.averagePatience!);
+    abandonmentRate = calculateAbandonmentProbability(fixedAgents, trafficIntensity, patienceRatio);
+    expectedAbandonments = calculateExpectedAbandonments(workload.volume, fixedAgents, trafficIntensity, patienceRatio);
     answeredContacts = workload.volume - expectedAbandonments;
   } else if (model === 'B') {
     blockingProbability = calculateErlangB(trafficIntensity, fixedAgents);
@@ -290,7 +297,7 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
     requiredAgents: fixedAgents,
     effectiveAgents: fixedAgents,
     actualAgents,
-    totalFTE: calculateFTE(fixedAgents, shrinkage),
+    totalFTE,
     serviceLevel: serviceLevel * 100,
     asa: isFinite(asa) ? asa : 99999,
     occupancy: occupancy * 100,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { useDatabaseStore } from '../store/databaseStore';
+import { toLocalDateString } from '../lib/dateUtils';
 import { useCSVWorker } from '../hooks/useCSVWorker';
 import { useToast } from './ui/Toast';
 import { type HistoricalData, saveHistoricalDataBatch } from '../lib/database/dataAccess';
@@ -252,7 +253,7 @@ export default function SmartCSVImport() {
           campaign_name: 'Imported Campaign 1',
           client_id: clientId,
           channel_type: 'Voice',
-          start_date: new Date().toISOString().split('T')[0],
+          start_date: toLocalDateString(),
           end_date: null,
           sla_target_percent: 80,
           sla_threshold_seconds: 20,
@@ -294,7 +295,7 @@ export default function SmartCSVImport() {
           const rowData: Partial<HistoricalData> = {
             import_batch_id: importBatchId,
             campaign_id: targetCampaignId as number, // Safe assertion now
-            date: new Date().toISOString().split('T')[0],
+            date: toLocalDateString(),
           };
 
           let volume = 0;
@@ -322,14 +323,39 @@ export default function SmartCSVImport() {
               case 'asa': rowData.asa = parseTimeToSeconds(valueStr || valueNum); break;
               case 'actual_agents': rowData.actual_agents = valueNum; break;
               case 'actual_fte': rowData.actual_fte = valueNum; break;
-              case 'date':
+              case 'date': {
+                let parsedDate: string | null = null;
                 if (valueStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                  rowData.date = valueStr;
-                } else {
-                  // Only warn once per batch to avoid spam
-                  if (index === 0) addToast(`Invalid date format. Using current date.`, 'warning');
+                  // ISO: YYYY-MM-DD
+                  parsedDate = valueStr;
+                } else if (valueStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+                  // MM/DD/YYYY (Avaya, US-style)
+                  const [mm, dd, yyyy] = valueStr.split('/');
+                  parsedDate = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                } else if (valueStr.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
+                  // MM-DD-YYYY
+                  const [mm, dd, yyyy] = valueStr.split('-');
+                  parsedDate = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                }
+                // Validate date is real (rejects Feb 31, Apr 31, etc.)
+                if (parsedDate) {
+                  const [yStr, mStr, dStr] = parsedDate.split('-');
+                  const testDate = new Date(Number(yStr), Number(mStr) - 1, Number(dStr));
+                  if (
+                    testDate.getFullYear() !== Number(yStr) ||
+                    testDate.getMonth() + 1 !== Number(mStr) ||
+                    testDate.getDate() !== Number(dStr)
+                  ) {
+                    parsedDate = null;
+                  }
+                }
+                if (parsedDate) {
+                  rowData.date = parsedDate;
+                } else if (index === 0) {
+                  addToast(`Unrecognised date format "${valueStr}". Rows without valid dates will use today's date.`, 'warning');
                 }
                 break;
+              }
               case 'interval_start': rowData.interval_start = valueStr; break;
               case 'interval_end': rowData.interval_end = valueStr; break;
             }

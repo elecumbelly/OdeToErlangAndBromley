@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateAchievableMetrics } from './erlangEngine';
+import { calculateStaffing, calculateAchievableMetrics } from './erlangEngine';
 import { CalculationService } from '../services/CalculationService';
 import { createDefaultInputs } from '../../tests/fixtures/calculatorInputs';
 
@@ -72,5 +72,72 @@ describe('CalculationService.calculate - staffing constraint uses maxOccupancy',
 
     expect(strictSL).toBeLessThan(relaxedSL);
     expect(stricter.achievableMetrics?.occupancyCapApplied).toBe(true);
+  });
+});
+
+describe('calculateStaffing - concurrency factor', () => {
+  const baseInput = {
+    model: 'C' as const,
+    workload: { volume: 500, aht: 300, intervalMinutes: 30 },
+    constraints: { targetSLPercent: 80, thresholdSeconds: 20, maxOccupancy: 90 },
+    behavior: { shrinkagePercent: 25, concurrency: 1 },
+  };
+
+  it('requires fewer agents when concurrency > 1', () => {
+    const singleChat = calculateStaffing(baseInput);
+    const tripleChat = calculateStaffing({
+      ...baseInput,
+      behavior: { ...baseInput.behavior, concurrency: 3 },
+    });
+
+    expect(singleChat).not.toBeNull();
+    expect(tripleChat).not.toBeNull();
+    expect(tripleChat!.requiredAgents).toBeLessThan(singleChat!.requiredAgents);
+    expect(tripleChat!.totalFTE).toBeLessThan(singleChat!.totalFTE);
+  });
+
+  it('treats concurrency=1 and concurrency=undefined identically', () => {
+    const explicit = calculateStaffing(baseInput);
+    const implicit = calculateStaffing({
+      ...baseInput,
+      behavior: { shrinkagePercent: 25 },
+    });
+
+    expect(explicit).not.toBeNull();
+    expect(implicit).not.toBeNull();
+    expect(explicit!.requiredAgents).toBe(implicit!.requiredAgents);
+  });
+
+  it('clamps concurrency below 1 to 1', () => {
+    const zeroConcurrency = calculateStaffing({
+      ...baseInput,
+      behavior: { ...baseInput.behavior, concurrency: 0 },
+    });
+    const oneConcurrency = calculateStaffing(baseInput);
+
+    expect(zeroConcurrency).not.toBeNull();
+    expect(zeroConcurrency!.requiredAgents).toBe(oneConcurrency!.requiredAgents);
+  });
+});
+
+describe('calculateAchievableMetrics - concurrency factor', () => {
+  const baseInput = {
+    model: 'C' as const,
+    fixedAgents: 30,
+    workload: { volume: 200, aht: 240, intervalMinutes: 30 },
+    constraints: { thresholdSeconds: 20, maxOccupancy: 90 },
+    behavior: { shrinkagePercent: 25, concurrency: 1 },
+  };
+
+  it('achieves higher service level with concurrency > 1 for same agent count', () => {
+    const single = calculateAchievableMetrics(baseInput);
+    const double = calculateAchievableMetrics({
+      ...baseInput,
+      behavior: { ...baseInput.behavior, concurrency: 2 },
+    });
+
+    expect(single).not.toBeNull();
+    expect(double).not.toBeNull();
+    expect(double!.serviceLevel).toBeGreaterThan(single!.serviceLevel);
   });
 });

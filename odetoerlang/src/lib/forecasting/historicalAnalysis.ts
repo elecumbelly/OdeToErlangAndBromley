@@ -8,6 +8,8 @@
  * - Performance metrics aggregation
  */
 
+import { parseDateDow, parseDateMonth } from '../dateUtils';
+
 import type { HistoricalData } from '../database/dataAccess';
 
 // ============================================================================
@@ -210,7 +212,7 @@ export function analyzeDayOfWeek(dailyAggregates: DailyAggregate[]): DayOfWeekPa
   const byDayOfWeek = new Map<number, DailyAggregate[]>();
 
   dailyAggregates.forEach(agg => {
-    const dow = new Date(agg.date).getDay();
+    const dow = parseDateDow(agg.date);
     const existing = byDayOfWeek.get(dow) || [];
     existing.push(agg);
     byDayOfWeek.set(dow, existing);
@@ -252,7 +254,7 @@ export function analyzeMonthly(dailyAggregates: DailyAggregate[]): MonthlyPatter
   const byMonth = new Map<number, DailyAggregate[]>();
 
   dailyAggregates.forEach(agg => {
-    const month = new Date(agg.date).getMonth() + 1;
+    const month = parseDateMonth(agg.date);
     const existing = byMonth.get(month) || [];
     existing.push(agg);
     byMonth.set(month, existing);
@@ -392,9 +394,9 @@ export function getForecastFromPatterns(
   targetDate: string,
   applyTrend: boolean = true
 ): number {
-  const target = new Date(targetDate);
-  const dow = target.getDay();
-  const month = target.getMonth() + 1;
+  const dow = parseDateDow(targetDate);
+  const month = parseDateMonth(targetDate);
+  const target = new Date(`${targetDate}T00:00:00`);
 
   // Get base volume from day-of-week pattern
   const dowPattern = insights.dayOfWeekPatterns.find(p => p.dayOfWeek === dow);
@@ -415,7 +417,7 @@ export function getForecastFromPatterns(
   // Apply trend adjustment if requested
   if (applyTrend && insights.volumeTrend.rSquared > 0.5) {
     // Calculate days from start of data
-    const startDate = new Date(insights.dateRange.start);
+    const startDate = new Date(`${insights.dateRange.start}T00:00:00`);
     const daysSinceStart = Math.floor((target.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     const trendAdjustment = 1 + (insights.volumeTrend.percentChange / 100) *
       (daysSinceStart / insights.dailyAggregates.length);

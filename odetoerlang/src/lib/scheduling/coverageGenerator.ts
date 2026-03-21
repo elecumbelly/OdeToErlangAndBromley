@@ -1,5 +1,6 @@
 import { CalculationService } from '../services/CalculationService';
 import { normalizeModel } from '../calculations/erlangEngine';
+import { enumerateLocalDates } from '../dateUtils';
 import type { CalculationInputs, ErlangVariant } from '../../types';
 import {
   getSchedulePlanById,
@@ -42,20 +43,6 @@ const formatMinutes = (minutes: number) => {
   const hours = Math.floor(safe / 60);
   const mins = safe % 60;
   return `${padTime(hours)}:${padTime(mins)}:00`;
-};
-
-const enumerateDates = (startDate: string, endDate: string): string[] => {
-  const dates: string[] = [];
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return dates;
-
-  for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
-    dates.push(current.toISOString().split('T')[0]);
-  }
-
-  return dates;
 };
 
 const buildIntervalPattern = (intervals: number): number[] => {
@@ -122,7 +109,7 @@ export function generateCoverageRequirements(
     throw new Error('No skills found for coverage generation.');
   }
 
-  const dates = enumerateDates(plan.start_date, plan.end_date);
+  const dates = enumerateLocalDates(plan.start_date, plan.end_date);
   const forecasts = plan.scenario_id
     ? getForecastsByScenarioAndDateRange(plan.scenario_id, plan.campaign_id, plan.start_date, plan.end_date)
     : [];
@@ -155,8 +142,8 @@ export function generateCoverageRequirements(
         const result = CalculationService.calculate(inputs, DEFAULT_STAFFING_MODEL);
         let requiredAgents = 0;
         if (result.results) {
-          const fte = result.results.totalFTE ?? 0;
-          requiredAgents = fte > 0 ? Math.max(1, Math.ceil(fte)) : 0;
+          const agents = result.results.requiredAgents ?? 0;
+          requiredAgents = agents > 0 ? Math.max(1, Math.ceil(agents)) : 0;
         }
 
         requirements.push({

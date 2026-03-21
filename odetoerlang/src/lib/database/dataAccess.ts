@@ -7,6 +7,7 @@
 
 import type { SqlValue } from 'sql.js';
 import { getDatabase, saveDatabase } from './initDatabase';
+import { toLocalDateString } from '../dateUtils';
 
 // ============================================================================
 // TYPES
@@ -68,8 +69,8 @@ export interface Forecast {
   forecasted_aht: number | null;
   required_agents: number | null;
   required_fte: number | null;
-  expected_sla: number | null;
-  expected_occupancy: number | null;
+  expected_sla: number | null; // percentage 0-100 (note: HistoricalData.sla_achieved uses 0-1)
+  expected_occupancy: number | null; // percentage 0-100
   expected_asa: number | null;
   created_at: string;
 }
@@ -333,7 +334,7 @@ export function getAllAssumptions(): Assumption[] {
  */
 export function getCurrentAssumptions(
   campaignId: number | null = null,
-  asOfDate: string = new Date().toISOString().split('T')[0]
+  asOfDate: string = toLocalDateString()
 ): Assumption[] {
   const db = getDatabase();
   const sql = `

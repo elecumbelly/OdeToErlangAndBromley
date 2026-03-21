@@ -3,6 +3,7 @@ import { useCalculatorStore } from '../store/calculatorStore';
 import { exportDatabase, importDatabase, getCurrentSchemaVersion, saveDatabase } from '../lib/database/initDatabase';
 import { getTableCounts } from '../lib/database/dataAccess';
 import { useToast } from './ui/Toast';
+import { toLocalDateString } from '../lib/dateUtils';
 
 export default function ExportPanel() {
   const { inputs, results } = useCalculatorStore();
@@ -11,7 +12,8 @@ export default function ExportPanel() {
   const [tableCounts, setTableCounts] = useState<Record<string, number>>({});
   const [importing, setImporting] = useState(false);
 
-  const modelName = inputs.model === 'B' ? 'Erlang B' : inputs.model === 'A' ? 'Erlang A' : 'Erlang C';
+  const MODEL_NAMES: Record<string, string> = { B: 'Erlang B', A: 'Erlang A', C: 'Erlang C' };
+  const modelName = MODEL_NAMES[inputs.model] ?? 'Erlang C';
 
   useEffect(() => {
     try {
@@ -64,7 +66,7 @@ export default function ExportPanel() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `odetoerlang-results-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `odetoerlang-results-${toLocalDateString()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -86,7 +88,7 @@ export default function ExportPanel() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `odetoerlang-config-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `odetoerlang-config-${toLocalDateString()}.json`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -94,19 +96,19 @@ export default function ExportPanel() {
   const exportDetailedReport = () => {
     if (!results) return;
 
-    const methodology =
-      inputs.model === 'B'
-        ? `Formula Used: Erlang B (loss/blocking model)\n\nStep 2: Apply Erlang B\n  Computes lines/agents required so blocking ≤ ${(100 - inputs.targetSLPercent).toFixed(0)}% (success ≥ ${inputs.targetSLPercent}%)`
-        : inputs.model === 'A'
-          ? `Formula Used: Erlang A (abandonment model)\n\nStep 2: Apply Erlang A\n  Uses abandonment (patience) to estimate answer probability within threshold`
-          : `Formula Used: Erlang C (infinite patience model)\n\nStep 2: Apply Erlang C\n  Uses iterative Erlang C calculation to find minimum agents`;
+    let methodology: string;
+    let notes: string;
 
-    const notes =
-      inputs.model === 'B'
-        ? `• Erlang B has no queue: contacts are blocked when all lines are busy\n• Use for trunk/circuit planning or pure loss systems`
-        : inputs.model === 'A'
-          ? `• Erlang A accounts for customer abandonment (patience)\n• Use for operational staffing when abandonment is non-trivial`
-          : `• Erlang C assumes infinite customer patience (no abandonment)\n• Erlang C can overestimate service level compared to real-world data`;
+    if (inputs.model === 'B') {
+      methodology = `Formula Used: Erlang B (loss/blocking model)\n\nStep 2: Apply Erlang B\n  Computes lines/agents required so blocking ≤ ${(100 - inputs.targetSLPercent).toFixed(0)}% (success ≥ ${inputs.targetSLPercent}%)`;
+      notes = `• Erlang B has no queue: contacts are blocked when all lines are busy\n• Use for trunk/circuit planning or pure loss systems`;
+    } else if (inputs.model === 'A') {
+      methodology = `Formula Used: Erlang A (abandonment model)\n\nStep 2: Apply Erlang A\n  Uses abandonment (patience) to estimate answer probability within threshold`;
+      notes = `• Erlang A accounts for customer abandonment (patience)\n• Use for operational staffing when abandonment is non-trivial`;
+    } else {
+      methodology = `Formula Used: Erlang C (infinite patience model)\n\nStep 2: Apply Erlang C\n  Uses iterative Erlang C calculation to find minimum agents`;
+      notes = `• Erlang C assumes infinite customer patience (no abandonment)\n• Erlang C can overestimate service level compared to real-world data`;
+    }
 
     const report = `
 OdeToErlangAndBromley - Contact Centre Capacity Planning Report
@@ -192,7 +194,7 @@ A tribute to A.K. Erlang and the mathematical foundations of queuing theory
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `odetoerlang-report-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `odetoerlang-report-${toLocalDateString()}.txt`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -298,7 +300,7 @@ A tribute to A.K. Erlang and the mathematical foundations of queuing theory
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `odetoerlang-db-${new Date().toISOString().split('T')[0]}.sqlite`;
+                a.download = `odetoerlang-db-${toLocalDateString()}.sqlite`;
                 a.click();
                 window.URL.revokeObjectURL(url);
                 addToast('Database exported (browser file)', 'success');

@@ -50,7 +50,7 @@ These fields **must** be mapped for import to succeed:
 
 | Field | Description | Expected Data Type | Example Values |
 |-------|-------------|-------------------|----------------|
-| **Date** | Date of the interval | YYYY-MM-DD | 2025-01-20 |
+| **Date** | Date of the interval | YYYY-MM-DD, MM/DD/YYYY, or MM-DD-YYYY | 2025-01-20, 01/20/2025, 01-20-2025 |
 | **Call Volume** | Total incoming calls/contacts in interval | Integer | 100, 1523, 45 |
 | **Average Handle Time (AHT)** | Talk time + after-call work | Seconds or HH:MM:SS | 240, 00:04:00, 4:12 |
 

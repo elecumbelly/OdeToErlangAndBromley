@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
 import { NumberInput } from '../ui/NumberInput';
+import { toLocalDateString } from '../../lib/dateUtils';
 import type { CalendarEvent } from '../../lib/database/dataAccess';
 import { useDatabaseStore } from '../../store/databaseStore';
 
@@ -19,7 +20,7 @@ const EVENT_TYPES = ['Training', 'Meeting', 'Holiday', 'Downtime', 'Onboarding',
 
 export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave, onDelete, initialDate, eventToEdit }) => {
   const { selectedCampaignId } = useDatabaseStore();
-  const dateBase = initialDate || new Date().toISOString().split('T')[0];
+  const dateBase = initialDate || toLocalDateString();
 
   const [name, setName] = useState(() => eventToEdit?.event_name ?? '');
   const [type, setType] = useState(() => eventToEdit?.event_type ?? 'Training');

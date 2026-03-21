@@ -57,6 +57,7 @@ export const VALIDATION = {
   shrinkagePercent: { min: 0, max: 99 },
   maxOccupancyPercent: { min: 50, max: 100 },
   averagePatienceSeconds: { min: 10, max: 1800 }, // 10 seconds to 30 minutes
+  concurrency: { min: 1, max: 10 }, // 1 (voice) to 10 (chat/email)
 } as const;
 
 // Channel types
