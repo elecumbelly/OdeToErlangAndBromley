@@ -68,7 +68,7 @@ export default function ControlsPanel({
     const newConfig = { ...localConfig, [field]: value };
     // If updating underlying rates directly, sync display
     if (field === 'arrivalRate') setDisplayVolume(value * 60);
-    if (field === 'serviceRate') setDisplayAHT(1 / value);
+    if (field === 'serviceRate') setDisplayAHT(value > 0 ? 1 / value : 0);
     
     setLocalConfig(newConfig);
 
@@ -212,7 +212,7 @@ export default function ControlsPanel({
                 <NumberInput
                   step="100"
                   value={localConfig.maxTime}
-                  onChange={(e) => handleFieldChange('maxTime', parseFloat(e.target.value))}
+                  onChange={(e) => handleFieldChange('maxTime', parseFloat(e.target.value) || 0)}
                   className="w-full bg-bg-surface border border-border-subtle rounded px-2 py-1"
                 />
               </div>
@@ -221,7 +221,7 @@ export default function ControlsPanel({
                 <NumberInput
                   step="0.01"
                   value={localConfig.arrivalRate}
-                  onChange={(e) => handleFieldChange('arrivalRate', parseFloat(e.target.value))}
+                  onChange={(e) => handleFieldChange('arrivalRate', parseFloat(e.target.value) || 0)}
                   className="w-full bg-bg-surface border border-border-subtle rounded px-2 py-1 font-mono"
                 />
               </div>
