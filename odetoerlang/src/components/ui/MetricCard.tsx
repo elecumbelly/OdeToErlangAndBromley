@@ -15,6 +15,18 @@ interface MetricCardProps {
   className?: string;
   animate?: boolean;
   glow?: boolean;
+  /**
+   * Optional target value. When provided, a delta badge is shown next to
+   * the trend arrow: e.g. `+3.2` (above target, success) or `-1.1` (below).
+   * Caller decides which direction is "good" via `targetGoodDirection`.
+   */
+  target?: number;
+  targetGoodDirection?: 'higher' | 'lower';
+  /**
+   * Optional historical series for a sparkline. ~5-20 points produces a
+   * useful trend. Series-end is interpreted as the most recent value.
+   */
+  history?: number[];
 }
 
 const statusStyles: Record<MetricStatus, string> = {
@@ -53,6 +65,40 @@ const trendStyles: Record<MetricTrend, string> = {
   neutral: 'text-text-muted',
 };
 
+function computeDeltaBadge(
+  value: number | string,
+  target: number | undefined,
+  decimals: number,
+  targetGoodDirection: 'higher' | 'lower'
+): { text: string; good: boolean } | null {
+  if (typeof target !== 'number' || typeof value !== 'number') return null;
+  const delta = value - target;
+  const sign = delta > 0 ? '+' : '';
+  const good = targetGoodDirection === 'higher' ? delta >= 0 : delta <= 0;
+  return { text: `${sign}${delta.toFixed(decimals)} vs target`, good };
+}
+
+function Sparkline({ data, status }: { data: number[]; status: MetricStatus }) {
+  if (data.length < 2) return null;
+  const w = 60;
+  const h = 16;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const pts = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / range) * h;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Trend over time">
+      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth={1.5} className={statusStyles[status]} />
+    </svg>
+  );
+}
+
 export function MetricCard({
   label,
   value,
@@ -64,6 +110,9 @@ export function MetricCard({
   className,
   animate = true,
   glow = false,
+  target,
+  targetGoodDirection = 'higher',
+  history,
 }: MetricCardProps) {
   const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
   const displayValue = useAnimatedValue(numericValue, animate ? 400 : 0);
@@ -75,6 +124,8 @@ export function MetricCard({
           minimumFractionDigits: decimals,
           maximumFractionDigits: decimals,
         });
+
+  const deltaBadge = computeDeltaBadge(value, target, decimals, targetGoodDirection);
 
   return (
     <div
@@ -89,11 +140,14 @@ export function MetricCard({
         <span className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">
           {label}
         </span>
-        {trend && (
-          <span className={cn('text-sm font-medium', trendStyles[trend])}>
-            {trendIcons[trend]}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {history && history.length > 1 && <Sparkline data={history} status={status} />}
+          {trend && (
+            <span className={cn('text-sm font-medium', trendStyles[trend])}>
+              {trendIcons[trend]}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-2 flex items-baseline gap-1">
@@ -102,6 +156,12 @@ export function MetricCard({
         </span>
         {unit && <span className="text-xs text-text-muted">{unit}</span>}
       </div>
+
+      {deltaBadge && (
+        <p className={cn('mt-1 text-2xs font-mono tabular-nums', deltaBadge.good ? 'text-green' : 'text-amber')}>
+          {deltaBadge.text}
+        </p>
+      )}
 
       {description && (
         <p className="mt-2 text-2xs text-text-muted">{description}</p>

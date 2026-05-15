@@ -3,10 +3,22 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CalculationInputs, CalculationResults } from '../types';
 import { CalculationService } from '../lib/services/CalculationService';
 import type { ValidationResult } from '../lib/validation/inputValidation';
-import { useDatabaseStore } from './databaseStore'; // Import database store
 import { toLocalDateString } from '../lib/dateUtils';
 
-// Simple debounce utility - avoids lodash dependency
+/**
+ * Calculator does not know about the database. A productivity getter is
+ * injected once at app boot via setProductivityProvider(); tests can stub it
+ * to return any value. Default is 1.0 (no modifier), which is also what the
+ * pre-decoupling behaviour returned when no calendar events were present.
+ */
+type ProductivityProvider = (date: string) => number;
+let productivityProvider: ProductivityProvider = () => 1.0;
+
+export function setProductivityProvider(provider: ProductivityProvider): void {
+  productivityProvider = provider;
+}
+
+/** Lightweight debounce so we don't pull in lodash for a single helper. */
 function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   return ((...args: Parameters<T>) => {
@@ -15,8 +27,7 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
   }) as T;
 }
 
-// Debounce delay in ms - prevents excessive recalculation on rapid input
-const DEBOUNCE_DELAY = 300;
+const CALCULATE_DEBOUNCE_MS = 300;
 
 interface ShiftType {
   hours: number;
@@ -102,10 +113,22 @@ const DEFAULT_STAFFING_MODEL: StaffingModel = {
   useAsConstraint: false,
 };
 
-// Helper to calculate productive agents from staffing model with multiple shift types
+// A typical employee works 5 days/week, so coverage spreads across more
+// people the more days the centre is open (7-day site = each agent on 5/7
+// of days on average).
+const STANDARD_WORK_WEEK_DAYS = 5;
+
+/**
+ * Compute productive agents from the staffing model with multi-shift mix.
+ *
+ * Semantics: `effectiveAgents = staffPerShift × (1 - shrinkage/100) × productivity`.
+ * Productivity (default 1.0) is a multiplicative capacity scaler; values < 1
+ * model calendar events like training/holidays that reduce taking-call time.
+ */
 export function calculateProductiveAgents(
   staffingModel: StaffingModel,
-  shrinkagePercent: number
+  shrinkagePercent: number,
+  productivityModifier: number = 1.0
 ): { staffPerShift: number; productiveAgents: number; shiftsToFillDay: number; shiftBreakdown: Array<{ hours: number; staff: number; shifts: number }> } {
   const enabledShifts = staffingModel.shiftTypes.filter(s => s.enabled);
 
@@ -113,39 +136,31 @@ export function calculateProductiveAgents(
     return { staffPerShift: 0, productiveAgents: 0, shiftsToFillDay: 0, shiftBreakdown: [] };
   }
 
-  // Normalize proportions to sum to 100%
   const totalProportion = enabledShifts.reduce((sum, s) => sum + s.proportion, 0);
-
-  // Calculate staff available per day based on days open
-  // If open 7 days with 5-day work week, each person works 5/7 of days on average
-  const standardWorkWeek = 5; // Typical employee works 5 days/week
   const daysOpenPerWeek = Math.max(1, staffingModel.daysOpenPerWeek);
-  const staffAvailablePerDay = staffingModel.totalHeadcount * (standardWorkWeek / daysOpenPerWeek);
+  const staffAvailablePerDay = staffingModel.totalHeadcount * (STANDARD_WORK_WEEK_DAYS / daysOpenPerWeek);
 
-  // Calculate breakdown by shift type
   const shiftBreakdown = enabledShifts.map(shift => {
-    const normalizedProportion = totalProportion > 0 ? shift.proportion / totalProportion : 1 / enabledShifts.length;
-    const staffOnThisShift = Math.round(staffAvailablePerDay * normalizedProportion);
-    const shiftsNeeded = staffingModel.operatingHoursPerDay / shift.hours;
+    const normalizedProportion = totalProportion > 0
+      ? shift.proportion / totalProportion
+      : 1 / enabledShifts.length;
     return {
       hours: shift.hours,
-      staff: staffOnThisShift,
-      shifts: shiftsNeeded,
+      staff: Math.round(staffAvailablePerDay * normalizedProportion),
+      shifts: staffingModel.operatingHoursPerDay / shift.hours,
     };
   });
 
-  // Calculate weighted average shifts to fill day
-  const totalStaffWeighted = shiftBreakdown.reduce((sum, b) => sum + b.staff, 0);
+  const totalStaff = shiftBreakdown.reduce((sum, b) => sum + b.staff, 0);
   const weightedShifts = shiftBreakdown.reduce((sum, b) => sum + (b.shifts * b.staff), 0);
-  const shiftsToFillDay = totalStaffWeighted > 0 ? weightedShifts / totalStaffWeighted : 0;
+  const shiftsToFillDay = totalStaff > 0 ? weightedShifts / totalStaff : 0;
 
-  // Staff per shift is weighted average
-  const staffPerShift = totalStaffWeighted > 0
+  const staffPerShift = totalStaff > 0
     ? Math.round(shiftBreakdown.reduce((sum, b) => sum + (b.staff / b.shifts), 0))
     : 0;
 
-  // Apply shrinkage to get productive agents
-  const productiveAgents = Math.round(staffPerShift * (1 - shrinkagePercent / 100));
+  const productivity = Math.max(0, productivityModifier);
+  const productiveAgents = Math.round(staffPerShift * (1 - shrinkagePercent / 100) * productivity);
 
   return { staffPerShift, productiveAgents, shiftsToFillDay, shiftBreakdown };
 }
@@ -166,7 +181,6 @@ export const useCalculatorStore = create<CalculatorState>()(
         set((state) => ({
           inputs: { ...state.inputs, [key]: value }
         }));
-        // Auto-calculate on input change
         get().calculate();
       },
 
@@ -179,7 +193,6 @@ export const useCalculatorStore = create<CalculatorState>()(
         set((state) => ({
           staffingModel: { ...state.staffingModel, [key]: value }
         }));
-        // Auto-calculate when staffing model changes
         get().calculate();
       },
 
@@ -201,44 +214,7 @@ export const useCalculatorStore = create<CalculatorState>()(
 
       calculate: debounce(() => {
         const { inputs, staffingModel, date } = get();
-        const { calendarEvents } = useDatabaseStore.getState();
-
-        // Calculate productivity modifier from calendar events for the selected date
-        let productivityModifier = 1.0;
-        
-        if (calendarEvents.length > 0) {
-          // Filter events that overlap with the selected date
-          // Simple logic: if event starts or ends on this date, or encompasses it.
-          // Assuming event times are in ISO format.
-          // We'll just check if the event *starts* on this date for simplicity for now, 
-          // or ideally, if the date falls within the range.
-          
-          const targetDateStart = new Date(date + 'T00:00:00');
-          const targetDateEnd = new Date(date + 'T23:59:59');
-
-          const dailyEvents = calendarEvents.filter(event => {
-            const eventStart = new Date(event.start_datetime);
-            const eventEnd = new Date(event.end_datetime);
-            return eventStart <= targetDateEnd && eventEnd >= targetDateStart;
-          });
-
-          if (dailyEvents.length > 0) {
-            // Calculate weighted average or simple min?
-            // If there's a 0% productivity event (Holiday), modifier should be 0?
-            // Or does it apply to specific staff?
-            // "Productivity modifier" in CalendarEvents table usually means "staff available during this event are X% productive".
-            // But does the event apply to ALL staff? The `applies_to_filter` field exists but is currently null/JSON.
-            // Assumption: Events apply to ALL staff for the Calculator tab (global planner).
-            
-            // If multiple events, how do they combine?
-            // Simple approach: Take the minimum productivity (pessimistic).
-            // E.g. Holiday (0%) overrides Training (50%).
-            productivityModifier = dailyEvents.reduce((min, event) => {
-              return Math.min(min, event.productivity_modifier);
-            }, 1.0);
-          }
-        }
-
+        const productivityModifier = productivityProvider(date);
         const serviceResult = CalculationService.calculate(inputs, staffingModel, productivityModifier);
 
         set({
@@ -248,7 +224,7 @@ export const useCalculatorStore = create<CalculatorState>()(
           validation: serviceResult.validation,
           activeProductivityModifier: productivityModifier,
         });
-      }, DEBOUNCE_DELAY),
+      }, CALCULATE_DEBOUNCE_MS),
 
       reset: () => {
         set({ 

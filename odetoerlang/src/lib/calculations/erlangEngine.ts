@@ -34,7 +34,52 @@ export interface ErlangEngineInput {
   model: ErlangVariant | string; // Accept both for compatibility, normalized internally
   workload: { volume: number; aht: number; intervalMinutes: number };
   constraints: { targetSLPercent: number; thresholdSeconds: number; maxOccupancy: number };
-  behavior: { shrinkagePercent: number; averagePatience?: number; concurrency?: number };
+  behavior: {
+    shrinkagePercent: number;
+    averagePatience?: number;
+    concurrency?: number;
+    /**
+     * Per-extra-session overhead when concurrency > 1. Default 0.15 (15%).
+     * Linear scaling assumes zero context-switch cost (a chat agent handling
+     * 4 sessions does 4× the work in the same wall-clock time); in practice
+     * each extra session adds bookkeeping overhead. `effectiveAHT` becomes:
+     *   (aht / concurrency) × (1 + (concurrency - 1) × concurrencyOverhead)
+     * Set to 0 to recover the old linear behaviour.
+     */
+    concurrencyOverhead?: number;
+  };
+}
+
+/** Default per-extra-session overhead applied when concurrencyOverhead is unset. */
+export const DEFAULT_CONCURRENCY_OVERHEAD = 0.15;
+
+/**
+ * Compute the effective handle time for a concurrent-handling channel.
+ * concurrency=1 (or overhead=0) recovers the raw AHT divided by concurrency.
+ */
+export function effectiveAHTForConcurrency(aht: number, concurrency: number, overhead: number = DEFAULT_CONCURRENCY_OVERHEAD): number {
+  const c = Math.min(10, Math.max(1, concurrency));
+  const o = Math.max(0, overhead);
+  return (aht / c) * (1 + (c - 1) * o);
+}
+
+/**
+ * Apply the occupancy-cap penalty to a service-level / ASA pair.
+ * SL drops in proportion to severity; ASA grows. Severity=0 is a no-op.
+ */
+function applyOccupancyPenalty(serviceLevel: number, asa: number, severity: number): { serviceLevel: number; asa: number } {
+  if (severity <= 0) return { serviceLevel, asa };
+  return {
+    serviceLevel: Math.max(0, Math.min(serviceLevel * (1 - severity), 1)),
+    asa: isFinite(asa) ? asa * (1 + 2 * severity) : asa,
+  };
+}
+
+/** Resolve the concurrency-adjusted AHT from the behavior block. */
+function resolveEffectiveAHT(aht: number, behavior: ErlangEngineInput['behavior']): number {
+  const concurrency = Math.min(10, Math.max(1, behavior.concurrency ?? 1));
+  const overhead = behavior.concurrencyOverhead ?? DEFAULT_CONCURRENCY_OVERHEAD;
+  return effectiveAHTForConcurrency(aht, concurrency, overhead);
 }
 
 export interface ErlangEngineOutput {
@@ -50,7 +95,19 @@ export interface ErlangEngineOutput {
   canAchieveTarget: boolean; // Indicates if target SL was met
   occupancyCapApplied?: boolean;
   requiredAgentsForMaxOccupancy?: number;
+  /**
+   * @deprecated Use `occupancyViolationSeverity` instead. The legacy
+   * `occupancyPenalty` semantics were inverted (approached 1.0 as cap was
+   * violated harder). Kept here for one release for backwards compatibility
+   * with persisted output. New code should consume `occupancyViolationSeverity`.
+   */
   occupancyPenalty?: number;
+  /**
+   * 0 when no cap violation, →1 as `actualAgents` falls below
+   * `requiredAgentsForMaxOccupancy`. Service level is scaled by `(1 - s)`
+   * and ASA by `(1 + 2·s)` under cap violation.
+   */
+  occupancyViolationSeverity?: number;
 
   // Additional metrics
   abandonmentRate?: number;
@@ -63,6 +120,13 @@ export interface ErlangEngineOutput {
   diagnostics: {
     trafficIntensity: number; // Erlangs
     utilizationPercent: number; // Raw utilization without shrinkage (0-100)
+    /**
+     * True when the underlying formula assumes steady-state (stationary)
+     * arrivals over the interval. M/M/c (Erlang C) is stationary; Erlang A
+     * partially accounts for abandonment but is still an approximation.
+     * Surfaced so UI can flag intervals with bursty intraday volume.
+     */
+    assumesStationary: boolean;
   };
 }
 
@@ -75,27 +139,24 @@ export interface ErlangEngineOutput {
  */
 export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput | null {
   const { workload, constraints, behavior } = input;
-  const model = normalizeModel(input.model); // Normalize model
+  const model = normalizeModel(input.model);
   const intervalSeconds = workload.intervalMinutes * 60;
   const targetSL = constraints.targetSLPercent / 100;
   const maxOccupancy = constraints.maxOccupancy / 100;
   const shrinkage = behavior.shrinkagePercent / 100;
 
-  // Apply concurrency factor (e.g. chat agents handling multiple sessions)
-  const concurrency = Math.min(10, Math.max(1, behavior.concurrency ?? 1));
-  const effectiveAHT = workload.aht / concurrency;
+  // Apply concurrency factor with overhead curve (chat/email agents).
+  const effectiveAHT = resolveEffectiveAHT(workload.aht, behavior);
 
-  // Validation
   if (workload.aht <= 0 || workload.volume < 0 || intervalSeconds <= 0) return null;
   if (targetSL <= 0 || targetSL > 1 || constraints.thresholdSeconds <= 0 || maxOccupancy <= 0 || maxOccupancy > 1) return null;
   if (shrinkage < 0 || shrinkage >= 1) return null;
 
-  // Erlang A (and former X) requires patience
+  // Erlang A (and former X) requires a patience parameter.
   if (model === 'A' && (behavior.averagePatience === undefined || behavior.averagePatience <= 0)) {
     return null;
   }
 
-  // Calculate base traffic intensity using concurrency-adjusted AHT
   const trafficIntensity = calculateTrafficIntensity(workload.volume, effectiveAHT, intervalSeconds);
 
   let result: ErlangEngineOutput | null = null;
@@ -123,6 +184,7 @@ export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput 
         diagnostics: {
           trafficIntensity,
           utilizationPercent: calculateOccupancy(trafficIntensity, metrics.requiredAgents) * 100,
+          assumesStationary: true,
         },
       };
     }
@@ -156,6 +218,7 @@ export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput 
         diagnostics: {
           trafficIntensity,
           utilizationPercent: occupancy * 100,
+          assumesStationary: false,
         },
       };
     }
@@ -165,7 +228,7 @@ export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput 
     const targetBlocking = 1 - targetSL;
     const requiredLines = calculateRequiredLinesB(trafficIntensity, targetBlocking);
     const actualBlocking = calculateErlangB(trafficIntensity, requiredLines);
-    
+
     // In Erlang B (pure loss), occupancy is carried traffic / lines
     const carriedTraffic = trafficIntensity * (1 - actualBlocking);
     const occupancy = requiredLines > 0 ? carriedTraffic / requiredLines : 0;
@@ -185,6 +248,7 @@ export function calculateStaffing(input: ErlangEngineInput): ErlangEngineOutput 
       diagnostics: {
         trafficIntensity,
         utilizationPercent: occupancy * 100,
+        assumesStationary: true,
       }
     };
   }
@@ -206,8 +270,7 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
   const shrinkage = behavior.shrinkagePercent / 100;
   const actualAgents = providedActualAgents ?? fixedAgents;
 
-  const concurrency = Math.min(10, Math.max(1, behavior.concurrency ?? 1));
-  const effectiveAHT = workload.aht / concurrency;
+  const effectiveAHT = resolveEffectiveAHT(workload.aht, behavior);
 
   if (workload.aht <= 0 || workload.volume < 0 || intervalSeconds <= 0) return null;
   if (fixedAgents <= 0 || maxOccupancy <= 0 || maxOccupancy > 1) return null;
@@ -218,12 +281,17 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
   const totalFTE = calculateFTE(fixedAgents, shrinkage);
   const occupancy = calculateOccupancy(trafficIntensity, fixedAgents);
   const actualOccupancy = calculateOccupancy(trafficIntensity, actualAgents);
-  const canAchieveTarget = true; 
+  const canAchieveTarget = true;
   const requiredAgentsForMaxOccupancy = Math.ceil(trafficIntensity / maxOccupancy);
   const occupancyCapViolated = actualAgents < requiredAgentsForMaxOccupancy;
-  const occupancyPenalty = occupancyCapViolated
-    ? Math.max(0, Math.min(1, actualAgents / requiredAgentsForMaxOccupancy))
-    : 1;
+  // Severity: 0 when not violated, →1 as actualAgents → 0. Quadratic to make
+  // mild violations cheap and severe under-staffing expensive.
+  const occupancyViolationSeverity = occupancyCapViolated && requiredAgentsForMaxOccupancy > 0
+    ? Math.max(0, Math.min(1, 1 - actualAgents / requiredAgentsForMaxOccupancy))
+    : 0;
+  // Deprecated alias for one release: callers reading this still get a usable
+  // number, but new code should consume occupancyViolationSeverity directly.
+  const occupancyPenalty = 1 - occupancyViolationSeverity;
   const occupancyCapApplied = occupancyCapViolated;
 
   let serviceLevel = 0;
@@ -249,48 +317,43 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
     blockingProbability = calculateErlangB(trafficIntensity, fixedAgents);
     serviceLevel = 1 - blockingProbability; // Success rate
     asa = 0;
-    // Recalculate occupancy for Erlang B (carried traffic / lines)
+    // Erlang B occupancy = carried traffic / lines.
     const carriedTraffic = trafficIntensity * (1 - blockingProbability);
     const bOccupancy = fixedAgents > 0 ? carriedTraffic / fixedAgents : 0;
 
-    if (occupancyCapApplied) {
-      serviceLevel = Math.max(0, Math.min(serviceLevel * occupancyPenalty, 1));
-      const penaltyDenominator = occupancyPenalty > 0 ? occupancyPenalty : 0.001;
-      asa = asa / penaltyDenominator;
-    }
-    
+    const penalised = applyOccupancyPenalty(serviceLevel, asa, occupancyViolationSeverity);
+
     return {
       model: 'B',
       requiredAgents: fixedAgents,
       effectiveAgents: fixedAgents,
       actualAgents,
       totalFTE,
-      serviceLevel: serviceLevel * 100,
-      asa,
+      serviceLevel: penalised.serviceLevel * 100,
+      asa: penalised.asa,
       occupancy: bOccupancy * 100,
       actualOccupancy: actualOccupancy * 100,
       canAchieveTarget,
       occupancyCapApplied,
       requiredAgentsForMaxOccupancy,
       occupancyPenalty,
+      occupancyViolationSeverity,
       blockingProbability,
       diagnostics: {
         trafficIntensity,
         utilizationPercent: bOccupancy * 100,
+        assumesStationary: true,
       }
     };
   } else {
     return null;
   }
 
-  // Apply occupancy penalty if the supplied staffing would exceed the occupancy cap.
-  if (occupancyCapApplied) {
-    serviceLevel = Math.max(0, Math.min(serviceLevel * occupancyPenalty, 1));
-    if (isFinite(asa)) {
-      const penaltyDenominator = occupancyPenalty > 0 ? occupancyPenalty : 0.001;
-      asa = asa / penaltyDenominator;
-    }
-  }
+  // Severity is 0 when not violated → no change. Otherwise SL drops and ASA
+  // climbs in proportion (item Tier-1 #1 fix from ultrathink audit).
+  const penalised = applyOccupancyPenalty(serviceLevel, asa, occupancyViolationSeverity);
+  serviceLevel = penalised.serviceLevel;
+  asa = penalised.asa;
 
   return {
     model,
@@ -306,6 +369,7 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
     occupancyCapApplied,
     requiredAgentsForMaxOccupancy,
     occupancyPenalty,
+    occupancyViolationSeverity,
     abandonmentRate,
     expectedAbandonments,
     answeredContacts,
@@ -314,6 +378,7 @@ export function calculateAchievableMetrics(input: ErlangAchievableInput): Erlang
     diagnostics: {
       trafficIntensity,
       utilizationPercent: occupancy * 100,
+      assumesStationary: model === 'C',
     },
   };
 }

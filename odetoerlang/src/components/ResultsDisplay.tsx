@@ -4,6 +4,25 @@ import { useToast } from './ui/Toast';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { calculateAchievableMetrics } from '../lib/calculations/erlangEngine';
 
+const INFINITY_GLYPH = '∞';
+
+function formatNumber(num: number, decimals: number = 2): string {
+  if (num === Infinity) return INFINITY_GLYPH;
+  if (isNaN(num)) return '-';
+  return num.toFixed(decimals);
+}
+
+function formatTime(seconds: number): string {
+  if (seconds === Infinity) return INFINITY_GLYPH;
+  if (isNaN(seconds)) return '-';
+  if (seconds < 60) return `${formatNumber(seconds, 0)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${minutes}m ${secs}s`;
+}
+
+const STICKY_HIDDEN_KEY = 'ode_sticky_kpi_hidden';
+
 const ResultsDisplay = memo(() => {
   const { results, inputs, abandonmentMetrics, staffingModel, activeProductivityModifier, achievableMetrics } = useCalculatorStore();
   const { addToast } = useToast();
@@ -44,21 +63,17 @@ const ResultsDisplay = memo(() => {
   }, [results, inputs]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('ode_sticky_kpi_hidden');
-    if (stored === 'true') {
+    if (localStorage.getItem(STICKY_HIDDEN_KEY) === 'true') {
       setShowStickyBar(false);
     }
 
-    const handler = () => {
+    const SCROLL_THRESHOLD_PX = 10;
+    const handleScroll = () => {
       const start = performance.now();
       const currentY = window.scrollY;
       const delta = currentY - lastScrollY.current;
-      if (Math.abs(delta) > 10) {
-        if (delta > 0) {
-          setStickyHiddenForScroll(true);
-        } else {
-          setStickyHiddenForScroll(false);
-        }
+      if (Math.abs(delta) > SCROLL_THRESHOLD_PX) {
+        setStickyHiddenForScroll(delta > 0);
         lastScrollY.current = currentY;
       }
       const duration = performance.now() - start;
@@ -66,8 +81,8 @@ const ResultsDisplay = memo(() => {
         console.debug('[perf] sticky scroll handler', duration.toFixed(2), 'ms');
       }
     };
-    window.addEventListener('scroll', handler, { passive: true });
-    return () => window.removeEventListener('scroll', handler);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   if (!results) {
@@ -78,21 +93,6 @@ const ResultsDisplay = memo(() => {
       </div>
     );
   }
-
-  const formatNumber = (num: number, decimals: number = 2): string => {
-    if (num === Infinity) return '\u221e';
-    if (isNaN(num)) return '-';
-    return num.toFixed(decimals);
-  };
-
-  const formatTime = (seconds: number): string => {
-    if (seconds === Infinity) return '\u221e';
-    if (isNaN(seconds)) return '-';
-    if (seconds < 60) return `${formatNumber(seconds, 0)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    return `${minutes}m ${secs}s`;
-  };
 
   const getStatusColor = (value: number, target: number): string => {
     if (value >= target) return 'text-green';
@@ -175,7 +175,7 @@ const ResultsDisplay = memo(() => {
   const toggleSticky = () => {
     const next = !showStickyBar;
     setShowStickyBar(next);
-    localStorage.setItem('ode_sticky_kpi_hidden', next ? 'false' : 'true');
+    localStorage.setItem(STICKY_HIDDEN_KEY, next ? 'false' : 'true');
   };
 
   return (
@@ -325,7 +325,7 @@ const ResultsDisplay = memo(() => {
         )}
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6" role="status" aria-live="polite" aria-atomic="false">
           {inputs.solveFor === 'sl' && achievableMetrics ? (
             <>
               {/* Achieved SL */}
@@ -527,6 +527,11 @@ const ResultsDisplay = memo(() => {
             <p>{inputs.model.toUpperCase()}({formatNumber(results.trafficIntensity, 2)}, {inputs.targetSLPercent}/{inputs.thresholdSeconds}) = <span className="text-cyan font-semibold">{results.requiredAgents}</span> agents</p>
             <p>FTE = {results.requiredAgents} / (1 - {inputs.shrinkagePercent/100}) = <span className="text-magenta font-semibold">{formatNumber(results.totalFTE, 1)}</span></p>
           </div>
+          {results.assumesStationary === true && (
+            <p className="mt-3 text-xs text-amber-DEFAULT/80 font-mono">
+              ⚠ Steady-state assumption: result accuracy degrades for intervals with bursty / non-stationary arrivals.
+            </p>
+          )}
         </div>
 
         {/* Insights */}
