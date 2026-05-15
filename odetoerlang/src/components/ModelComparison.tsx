@@ -129,64 +129,72 @@ export default function ModelComparison() {
         {/* Input Parameters */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div>
-            <label className={labelClass}>Volume</label>
+            <label htmlFor="mc-volume" className={labelClass}>Volume</label>
             <NumberInput
+              id="mc-volume"
               value={inputs.volume}
               onChange={(e) => handleInputChange('volume', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>AHT (sec)</label>
+            <label htmlFor="mc-aht" className={labelClass}>AHT (sec)</label>
             <NumberInput
+              id="mc-aht"
               value={inputs.aht}
               onChange={(e) => handleInputChange('aht', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>SL Target %</label>
+            <label htmlFor="mc-sl-target" className={labelClass}>SL Target %</label>
             <NumberInput
+              id="mc-sl-target"
               value={inputs.targetSLPercent}
               onChange={(e) => handleInputChange('targetSLPercent', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Threshold (sec)</label>
+            <label htmlFor="mc-threshold" className={labelClass}>Threshold (sec)</label>
             <NumberInput
+              id="mc-threshold"
               value={inputs.thresholdSeconds}
               onChange={(e) => handleInputChange('thresholdSeconds', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Shrinkage %</label>
+            <label htmlFor="mc-shrinkage" className={labelClass}>Shrinkage %</label>
             <NumberInput
+              id="mc-shrinkage"
               value={inputs.shrinkagePercent}
               onChange={(e) => handleInputChange('shrinkagePercent', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Max Occupancy %</label>
+            <label htmlFor="mc-max-occupancy" className={labelClass}>Max Occupancy %</label>
             <NumberInput
+              id="mc-max-occupancy"
               value={inputs.maxOccupancy}
               onChange={(e) => handleInputChange('maxOccupancy', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Patience (sec)</label>
+            <label htmlFor="mc-patience" className={labelClass}>Patience (sec)</label>
             <NumberInput
+              id="mc-patience"
               value={inputs.averagePatience}
               onChange={(e) => handleInputChange('averagePatience', parseFloat(e.target.value) || 0)}
               className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Interval (min)</label>
+            <label htmlFor="mc-interval-minutes" className={labelClass}>Interval (min)</label>
             <select
+              id="mc-interval-minutes"
               value={inputs.intervalMinutes}
               onChange={(e) => handleInputChange('intervalMinutes', parseFloat(e.target.value))}
               className={inputClass}

@@ -112,11 +112,18 @@ export function CommandPalette({ open, onOpenChange, entries, onSelect }: Comman
               key={entry.id}
               role="option"
               aria-selected={i === activeIndex}
+              tabIndex={-1}
               className={`px-4 py-2 cursor-pointer flex items-center gap-3 ${
                 i === activeIndex ? 'bg-bg-elevated' : 'hover:bg-bg-elevated/50'
               }`}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => choose(entry.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  choose(entry.id);
+                }
+              }}
             >
               <span className="text-lg" aria-hidden="true">{entry.icon}</span>
               <div className="flex-1 min-w-0">

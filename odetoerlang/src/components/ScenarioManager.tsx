@@ -134,12 +134,21 @@ const ScenarioManager: React.FC = () => {
           scenarios.map((scenario) => (
             <div
               key={scenario.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selectedScenarioId === scenario.id}
               className={`p-2 rounded-md border cursor-pointer transition-all ${
                 selectedScenarioId === scenario.id
                   ? 'border-cyan/50 bg-cyan/5'
                   : 'border-border-muted hover:border-border-subtle hover:bg-bg-hover'
               }`}
               onClick={() => selectScenario(scenario.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  selectScenario(scenario.id);
+                }
+              }}
             >
               <div className="flex justify-between items-start">
                 <div>

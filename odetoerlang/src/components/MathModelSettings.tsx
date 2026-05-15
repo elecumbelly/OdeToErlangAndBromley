@@ -115,8 +115,9 @@ export default function MathModelSettings() {
                   error={getError('aht')}
                 />
                 <div>
-                  <label className={labelClass}>Interval (min)</label>
+                  <label htmlFor="math-interval-minutes" className={labelClass}>Interval (min)</label>
                   <select
+                    id="math-interval-minutes"
                     value={inputs.intervalMinutes}
                     onChange={(e) => updateInput('intervalMinutes', e.target.value)}
                     className={selectClass}
@@ -127,8 +128,9 @@ export default function MathModelSettings() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>Model</label>
+                  <label htmlFor="math-model" className={labelClass}>Model</label>
                   <select
+                    id="math-model"
                     value={inputs.model}
                     onChange={(e) => updateInput('model', e.target.value)}
                     className={selectClass}

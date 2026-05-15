@@ -30,26 +30,11 @@ export default function ControlsPanel({
   const [errors, setErrors] = useState<string[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Derived state for friendlier inputs (Volume/AHT)
-  // Arrival Rate (lambda) is per MINUTE in standard Erlang C usage usually, but simulation might use seconds.
-  // Assuming simulation time unit = 1 second for simplicity in conversion logic below.
-  // Wait, Erlang calculations typically normalize. Let's assume standard WFM inputs:
-  // Volume = Calls per Hour
-  // AHT = Seconds
-  // Lambda (arrivals/sec) = Volume / 3600
-  // Mu (services/sec) = 1 / AHT
-  
-  // NOTE: The simulation engine might treat time differently.
-  // Checking default presets:
-  // Balanced: arrivalRate: 0.8, serviceRate: 0.1, servers: 10
-  // 0.8 arrivals/unit. 0.1 services/unit (service time = 10 units).
-  // If unit = second: 0.8 calls/sec = 2880 calls/hour. Service = 10s.
-  // Let's expose "Arrivals per Minute" and "Avg Service Time (sec)" to keep it relatable.
-  
-  const [displayVolume, setDisplayVolume] = useState(localConfig.arrivalRate * 60); // Arrivals per minute
-  const [displayAHT, setDisplayAHT] = useState(1 / localConfig.serviceRate); // Service time in units
+  // Friendlier UI units: simulation stores arrivalRate per tick and serviceRate
+  // as 1/AHT; we surface "arrivals per minute" and "AHT in seconds" instead.
+  const [displayVolume, setDisplayVolume] = useState(localConfig.arrivalRate * 60);
+  const [displayAHT, setDisplayAHT] = useState(1 / localConfig.serviceRate);
 
-  // Update local config when prop changes
   useEffect(() => {
     setLocalConfig(config);
     setDisplayVolume(config.arrivalRate * 60);
@@ -108,10 +93,11 @@ export default function ControlsPanel({
       <div className="space-y-6 flex-1">
         {/* Preset Scenarios */}
         <div>
-          <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-2 block">
+          <label htmlFor="controls-load-scenario" className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-2 block">
             Load Scenario
           </label>
           <select
+            id="controls-load-scenario"
             className="w-full bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary focus:border-cyan outline-none"
             onChange={(e) => handlePresetSelect(e.target.value)}
             defaultValue=""
@@ -129,10 +115,11 @@ export default function ControlsPanel({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
+              <label htmlFor="controls-arrivals-per-min" className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
                 Arrivals / Min
               </label>
               <NumberInput
+                id="controls-arrivals-per-min"
                 min="1"
                 step="1"
                 value={Math.round(displayVolume)}
@@ -145,10 +132,11 @@ export default function ControlsPanel({
               />
             </div>
             <div>
-              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
+              <label htmlFor="controls-aht" className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
                 Avg Handle Time
               </label>
               <NumberInput
+                id="controls-aht"
                 min="1"
                 step="1"
                 value={Math.round(displayAHT)}
@@ -164,10 +152,11 @@ export default function ControlsPanel({
           </div>
 
           <div>
-            <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
+            <label htmlFor="controls-servers" className="text-2xs font-semibold text-text-secondary uppercase tracking-widest mb-1 block">
               Agents (Servers)
             </label>
             <NumberInput
+              id="controls-servers"
               step="1"
               min="1"
               value={localConfig.servers}
@@ -208,8 +197,9 @@ export default function ControlsPanel({
           {showAdvanced && (
             <div className="mt-3 space-y-3 p-3 bg-bg-elevated/50 rounded-lg border border-border-muted text-xs">
               <div>
-                <label className="block text-text-muted mb-1">Sim Horizon (ticks)</label>
+                <label htmlFor="controls-sim-horizon" className="block text-text-muted mb-1">Sim Horizon (ticks)</label>
                 <NumberInput
+                  id="controls-sim-horizon"
                   step="100"
                   value={localConfig.maxTime}
                   onChange={(e) => handleFieldChange('maxTime', parseFloat(e.target.value) || 0)}
@@ -217,8 +207,9 @@ export default function ControlsPanel({
                 />
               </div>
               <div>
-                <label className="block text-text-muted mb-1">Raw λ (Arr/Tick)</label>
+                <label htmlFor="controls-arrival-rate" className="block text-text-muted mb-1">Raw λ (Arr/Tick)</label>
                 <NumberInput
+                  id="controls-arrival-rate"
                   step="0.01"
                   value={localConfig.arrivalRate}
                   onChange={(e) => handleFieldChange('arrivalRate', parseFloat(e.target.value) || 0)}

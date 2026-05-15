@@ -249,8 +249,8 @@ const InputPanel: React.FC = () => {
 
           {/* Solve For Mode Selection */}
           <div className="pt-4 border-t border-border-muted/30">
-            <label className={labelClass}>Calculate Requirement Based On</label>
-            <div className="flex bg-bg-elevated rounded-lg p-1 mt-2 border border-border-subtle">
+            <div id="solve-for-label" className={labelClass}>Calculate Requirement Based On</div>
+            <div role="radiogroup" aria-labelledby="solve-for-label" className="flex bg-bg-elevated rounded-lg p-1 mt-2 border border-border-subtle">
               <button
                 onClick={() => setInput('solveFor', 'agents')}
                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${

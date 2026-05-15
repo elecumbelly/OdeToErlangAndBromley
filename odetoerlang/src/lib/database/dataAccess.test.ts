@@ -237,6 +237,23 @@ describe('dataAccess - Scenarios', () => {
     expect(baseline).toBeNull();
   });
 
+  test('getBaselineScenario excludes soft-deleted baseline', () => {
+    const mockStep = vi.fn().mockReturnValue(false);
+    const mockFree = vi.fn();
+
+    mockPrepare.mockReturnValueOnce({
+      step: mockStep,
+      free: mockFree,
+    });
+
+    const baseline = getBaselineScenario();
+
+    expect(mockPrepare).toHaveBeenCalledWith(
+      expect.stringContaining('deleted_at IS NULL')
+    );
+    expect(baseline).toBeNull();
+  });
+
   test('createScenario clears existing baseline when isBaseline=true', () => {
     mockExec.mockReturnValueOnce([{ values: [[5]] }]);
 

@@ -148,6 +148,7 @@ const AssumptionsPanel: React.FC = () => {
             </FormField>
             <FormField label="Valid From" id="valid-from">
               <input
+                id="valid-from"
                 type="date"
                 value={editingAssumption?.valid_from || ''}
                 onChange={(e) => setEditingAssumption({ ...editingAssumption, valid_from: e.target.value })}
@@ -157,6 +158,7 @@ const AssumptionsPanel: React.FC = () => {
             </FormField>
             <FormField label="Valid To" id="valid-to">
               <input
+                id="valid-to"
                 type="date"
                 value={editingAssumption?.valid_to || ''}
                 onChange={(e) => setEditingAssumption({ ...editingAssumption, valid_to: e.target.value || null })}

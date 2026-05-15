@@ -86,8 +86,9 @@ const CampaignSelector: React.FC = () => {
         <div className="mb-4 p-3 bg-bg-elevated border border-border-muted rounded-lg space-y-3">
           {/* Client Selection */}
           <div>
-            <label className={labelClass}>Client</label>
+            <label htmlFor="campaign-selector-client" className={labelClass}>Client</label>
             <select
+              id="campaign-selector-client"
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value ? parseInt(e.target.value) : '')}
               className={inputClass}
@@ -104,8 +105,9 @@ const CampaignSelector: React.FC = () => {
           {/* Quick Client Create */}
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="text-2xs text-text-muted">Or create new:</label>
+              <label htmlFor="campaign-selector-new-client" className="text-2xs text-text-muted">Or create new:</label>
               <input
+                id="campaign-selector-new-client"
                 type="text"
                 value={newClientName}
                 onChange={(e) => setNewClientName(e.target.value)}
@@ -164,8 +166,9 @@ const CampaignSelector: React.FC = () => {
 
       {/* Campaign Selector */}
       <div>
-        <label className={labelClass}>Active Campaign</label>
+        <label htmlFor="campaign-selector-active" className={labelClass}>Active Campaign</label>
         <select
+          id="campaign-selector-active"
           value={selectedCampaignId ?? ''}
           onChange={(e) => selectCampaign(e.target.value ? parseInt(e.target.value) : null)}
           className={inputClass}

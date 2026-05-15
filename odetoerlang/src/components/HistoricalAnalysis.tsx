@@ -65,6 +65,17 @@ const CHART_THEME = {
   }
 };
 
+const trendDirectionToIndicator = (direction: string): 'up' | 'down' | 'neutral' => {
+  switch (direction) {
+    case 'increasing':
+      return 'up';
+    case 'decreasing':
+      return 'down';
+    default:
+      return 'neutral';
+  }
+};
+
 const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
   if (active && payload && payload.length) {
     return (
@@ -216,8 +227,9 @@ export default function HistoricalAnalysis() {
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Active Campaign</label>
+              <label htmlFor="historical-active-campaign" className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Active Campaign</label>
               <select
+                id="historical-active-campaign"
                 value={selectedCampaignId ?? ''}
                 onChange={handleCampaignChange}
                 className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-cyan/20 focus:border-cyan outline-none min-w-[200px]"
@@ -230,8 +242,9 @@ export default function HistoricalAnalysis() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Analysis Range</label>
+              <label htmlFor="historical-analysis-range" className="text-2xs font-semibold text-text-secondary uppercase tracking-widest">Analysis Range</label>
               <select
+                id="historical-analysis-range"
                 value={rangeFilter}
                 onChange={e => setRangeFilter(Number(e.target.value))}
                 disabled={!selectedCampaignId}
@@ -310,7 +323,7 @@ export default function HistoricalAnalysis() {
               label="Avg Daily Volume"
               value={insights.volumeStats.mean}
               decimals={0}
-              trend={insights.volumeTrend.direction === 'increasing' ? 'up' : insights.volumeTrend.direction === 'decreasing' ? 'down' : 'neutral'}
+              trend={trendDirectionToIndicator(insights.volumeTrend.direction)}
               description={`Trending ${insights.volumeTrend.direction}`}
             />
             <MetricCard
@@ -405,8 +418,9 @@ export default function HistoricalAnalysis() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-surface border border-border-subtle rounded-xl p-4">
             <h3 className="text-base font-bold text-text-primary">Forecast Comparison</h3>
             <div className="flex items-center gap-3">
-              <label className="text-sm text-text-secondary">Horizon:</label>
+              <label htmlFor="forecast-horizon-days" className="text-sm text-text-secondary">Horizon:</label>
               <select
+                id="forecast-horizon-days"
                 value={forecastDays}
                 onChange={e => setForecastDays(Number(e.target.value))}
                 className="bg-bg-elevated border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-text-primary outline-none focus:ring-1 focus:ring-cyan"

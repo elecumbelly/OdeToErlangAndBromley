@@ -64,6 +64,20 @@ type CoverageSummary = {
   skills: number;
 };
 
+const summarizeCoverageRequirements = (
+  requirements: ReturnType<typeof getCoverageRequirements>
+): CoverageSummary => {
+  const dates = new Set(requirements.map((req) => req.requirement_date));
+  const intervals = new Set(requirements.map((req) => `${req.requirement_date}-${req.interval_start}`));
+  const skills = new Set(requirements.map((req) => req.skill_id));
+  return {
+    total: requirements.length,
+    dates: dates.size,
+    intervals: intervals.size,
+    skills: skills.size,
+  };
+};
+
 export default function SchedulingTab() {
   const {
     campaigns,
@@ -140,16 +154,7 @@ export default function SchedulingTab() {
       setCoverageSummary(null);
       return;
     }
-    const requirements = getCoverageRequirements(selectedPlan.id);
-    const dates = new Set(requirements.map((req) => req.requirement_date));
-    const intervals = new Set(requirements.map((req) => `${req.requirement_date}-${req.interval_start}`));
-    const skills = new Set(requirements.map((req) => req.skill_id));
-    setCoverageSummary({
-      total: requirements.length,
-      dates: dates.size,
-      intervals: intervals.size,
-      skills: skills.size,
-    });
+    setCoverageSummary(summarizeCoverageRequirements(getCoverageRequirements(selectedPlan.id)));
   }, [selectedPlan, scheduleRuns]);
 
   useEffect(() => {
@@ -291,29 +296,21 @@ export default function SchedulingTab() {
       ? JSON.stringify({ template_id: template.id, template_name: template.template_name })
       : null;
 
-    const runAId = addScheduleRun({
-      schedule_plan_id: selectedPlan.id,
-      method_id: methodAId,
-      run_group_id: runGroupId,
-      label: 'A',
-      status: 'Queued',
-      started_at: null,
-      completed_at: null,
-      notes: templateNotes,
-      created_by: 'system',
-    });
+    const queueRun = (label: 'A' | 'B', methodId: number) =>
+      addScheduleRun({
+        schedule_plan_id: selectedPlan.id,
+        method_id: methodId,
+        run_group_id: runGroupId,
+        label,
+        status: 'Queued',
+        started_at: null,
+        completed_at: null,
+        notes: templateNotes,
+        created_by: 'system',
+      });
 
-    const runBId = addScheduleRun({
-      schedule_plan_id: selectedPlan.id,
-      method_id: methodBId,
-      run_group_id: runGroupId,
-      label: 'B',
-      status: 'Queued',
-      started_at: null,
-      completed_at: null,
-      notes: templateNotes,
-      created_by: 'system',
-    });
+    const runAId = queueRun('A', methodAId);
+    const runBId = queueRun('B', methodBId);
 
     try {
       if (runAId > 0) {
@@ -338,16 +335,7 @@ export default function SchedulingTab() {
     }
     try {
       generateCoverageRequirements(selectedPlan.id, inputs);
-      const requirements = getCoverageRequirements(selectedPlan.id);
-      const dates = new Set(requirements.map((req) => req.requirement_date));
-      const intervals = new Set(requirements.map((req) => `${req.requirement_date}-${req.interval_start}`));
-      const skills = new Set(requirements.map((req) => req.skill_id));
-      setCoverageSummary({
-        total: requirements.length,
-        dates: dates.size,
-        intervals: intervals.size,
-        skills: skills.size,
-      });
+      setCoverageSummary(summarizeCoverageRequirements(getCoverageRequirements(selectedPlan.id)));
     } catch (error) {
       console.error('Failed to generate coverage requirements:', error);
       setCoverageError('Failed to generate coverage requirements.');
@@ -723,10 +711,11 @@ export default function SchedulingTab() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-2xs font-semibold text-text-secondary uppercase tracking-widest">
+                <label htmlFor="scheduling-method-a" className="block text-2xs font-semibold text-text-secondary uppercase tracking-widest">
                   Method A
                 </label>
                 <select
+                  id="scheduling-method-a"
                   value={methodAId}
                   onChange={(e) => setMethodAId(Number(e.target.value))}
                   className="mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
@@ -739,10 +728,11 @@ export default function SchedulingTab() {
                 </select>
               </div>
               <div>
-                <label className="block text-2xs font-semibold text-text-secondary uppercase tracking-widest">
+                <label htmlFor="scheduling-method-b" className="block text-2xs font-semibold text-text-secondary uppercase tracking-widest">
                   Method B
                 </label>
                 <select
+                  id="scheduling-method-b"
                   value={methodBId}
                   onChange={(e) => setMethodBId(Number(e.target.value))}
                   className="mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
@@ -757,10 +747,11 @@ export default function SchedulingTab() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-2xs font-semibold text-text-secondary uppercase tracking-widest">
+                <label htmlFor="scheduling-shift-template" className="block text-2xs font-semibold text-text-secondary uppercase tracking-widest">
                   Shift Template
                 </label>
                 <select
+                  id="scheduling-shift-template"
                   value={templateId}
                   onChange={(e) => setTemplateId(Number(e.target.value))}
                   className="mt-1 block w-full rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"

@@ -224,6 +224,7 @@ export default function ACDImport() {
             onChange={handleFileUpload}
             className="hidden"
             id="acd-upload"
+            aria-label="Upload ACD CSV file"
           />
           <label htmlFor="acd-upload" className="cursor-pointer flex flex-col items-center space-y-2">
             <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

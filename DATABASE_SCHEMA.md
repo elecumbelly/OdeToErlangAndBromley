@@ -2,7 +2,7 @@
 
 **Platform:** Web (SQLite via `sql.js`, persisted in IndexedDB)  
 **Source of truth:** `odetoerlang/src/lib/database/schema.sql`  
-**Migrations:** `odetoerlang/src/lib/database/initDatabase.ts` (`CURRENT_SCHEMA_VERSION = 3`)
+**Migrations:** `odetoerlang/src/lib/database/initDatabase.ts` (`CURRENT_SCHEMA_VERSION = 4`)
 
 This file is a human-readable overview. For exact DDL (columns, constraints, indexes), use `odetoerlang/src/lib/database/schema.sql`.
 
@@ -61,3 +61,6 @@ This file is a human-readable overview. For exact DDL (columns, constraints, ind
 
 - Database initialization and persistence are handled in-browser; there is no server-side database.
 - If you change `schema.sql`, update the migration logic and bump `CURRENT_SCHEMA_VERSION`.
+
+### Soft delete (v4)
+- `Scenarios` and `CalendarEvents` carry a nullable `deleted_at` timestamp. Active-row queries must include `WHERE deleted_at IS NULL`. Rows are never hard-deleted by user-initiated flows.

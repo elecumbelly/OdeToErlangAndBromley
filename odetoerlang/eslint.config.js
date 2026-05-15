@@ -5,16 +5,6 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import tseslint from 'typescript-eslint'
 
-// Demote every `error` rule to `warn`, but keep explicit `off` rules off.
-function softenA11yRulesToWarn(rules) {
-  return Object.fromEntries(
-    Object.entries(rules).map(([rule, severity]) => [
-      rule,
-      severity === 'off' ? 'off' : 'warn',
-    ]),
-  );
-}
-
 export default [
   { ignores: ['dist'] },
   js.configs.recommended,
@@ -33,11 +23,7 @@ export default [
     rules: {
       ...reactHooks.configs.recommended.rules,
       ...reactRefresh.configs.vite.rules,
-      // Start a11y rules at `warn` so existing components surface issues
-      // without blocking CI. New code added under Phase 5+ should aim to
-      // produce zero warnings. Promote to `error` once the existing surface
-      // is swept (see TODO list / Phase 6 scope).
-      ...softenA11yRulesToWarn(jsxA11y.flatConfigs.recommended.rules),
+      ...jsxA11y.flatConfigs.recommended.rules,
     },
   },
 ]

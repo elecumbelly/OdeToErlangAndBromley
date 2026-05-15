@@ -156,6 +156,30 @@ function getLastInsertId(): number {
   return db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
 }
 
+/**
+ * Run a scalar query (e.g. SELECT COUNT(*)) and return the first column of
+ * the first row, or `fallback` if there are no rows. Accepts optional bind
+ * parameters so callers can avoid string interpolation.
+ */
+function getScalar<T extends SqlValue>(
+  sql: string,
+  params: SqlValue[] = [],
+  fallback: T
+): T {
+  const db = getDatabase();
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  try {
+    if (stmt.step()) {
+      const value = stmt.get()[0];
+      return (value ?? fallback) as T;
+    }
+    return fallback;
+  } finally {
+    stmt.free();
+  }
+}
+
 // ============================================================================
 // CAMPAIGNS
 // ============================================================================
@@ -251,7 +275,9 @@ export function getScenarioById(id: number, includeDeleted: boolean = false): Sc
  */
 export function getBaselineScenario(): Scenario | null {
   const db = getDatabase();
-  const stmt = db.prepare('SELECT * FROM Scenarios WHERE is_baseline = 1 LIMIT 1');
+  const stmt = db.prepare(
+    'SELECT * FROM Scenarios WHERE is_baseline = 1 AND deleted_at IS NULL LIMIT 1'
+  );
   return stmtToObject<Scenario>(stmt);
 }
 
@@ -421,19 +447,14 @@ export function upsertAssumption(
  */
 export function getClients(activeOnly: boolean = true, limit: number = 50, offset: number = 0): PaginatedResult<Client> {
   const db = getDatabase();
+  const whereClause = activeOnly ? ' WHERE active = 1' : '';
 
-  const countSql = activeOnly
-    ? 'SELECT COUNT(*) as count FROM Clients WHERE active = 1'
-    : 'SELECT COUNT(*) as count FROM Clients';
-  const countResult = db.exec(countSql);
+  const countResult = db.exec(`SELECT COUNT(*) as count FROM Clients${whereClause}`);
   const total = countResult[0]?.values[0]?.[0] as number ?? 0;
 
-  const sql = activeOnly
-    ? `SELECT * FROM Clients WHERE active = 1 ORDER BY client_name LIMIT ${limit} OFFSET ${offset}`
-    : `SELECT * FROM Clients ORDER BY client_name LIMIT ${limit} OFFSET ${offset}`;
-
-  const result = db.exec(sql);
-  const data = execToArray<Client>(result);
+  const data = execToArray<Client>(
+    db.exec(`SELECT * FROM Clients${whereClause} ORDER BY client_name LIMIT ${limit} OFFSET ${offset}`)
+  );
 
   return { data, total };
 }
@@ -605,45 +626,18 @@ export function getHistoricalData(
   endDate: string
 ): HistoricalData[] {
   const db = getDatabase();
-  let sql = `
-    SELECT * FROM HistoricalData
-    WHERE date >= ? AND date <= ?
-  `;
-  const params: SqlValue[] = [startDate, endDate];
+  const campaignClause = campaignId !== null ? ' AND campaign_id = ?' : '';
+  const params: SqlValue[] = campaignId !== null
+    ? [startDate, endDate, campaignId]
+    : [startDate, endDate];
 
-  if (campaignId !== null) {
-    sql += ' AND campaign_id = ?';
-    params.push(campaignId);
-  }
-
-  sql += ' ORDER BY date ASC, interval_start ASC';
-
-  const stmt = db.prepare(sql);
+  const stmt = db.prepare(
+    `SELECT * FROM HistoricalData
+     WHERE date >= ? AND date <= ?${campaignClause}
+     ORDER BY date ASC, interval_start ASC`
+  );
   stmt.bind(params);
-
-  const results: HistoricalData[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    results.push({
-      id: row.id as number,
-      import_batch_id: row.import_batch_id as number | undefined,
-      campaign_id: row.campaign_id as number,
-      date: row.date as string,
-      interval_start: row.interval_start as string | undefined,
-      interval_end: row.interval_end as string | undefined,
-      volume: row.volume as number,
-      aht: row.aht as number | undefined,
-      abandons: row.abandons as number | undefined,
-      sla_achieved: row.sla_achieved as number | undefined,
-      asa: row.asa as number | undefined,
-      actual_fte: row.actual_fte as number | undefined,
-      actual_agents: row.actual_agents as number | undefined,
-      created_at: row.created_at as string | undefined,
-    });
-  }
-  stmt.free();
-
-  return results;
+  return stmtToArray<HistoricalData>(stmt);
 }
 
 /**
@@ -653,32 +647,21 @@ export function getHistoricalDateRange(
   campaignId: number | null
 ): { minDate: string | null; maxDate: string | null; recordCount: number } {
   const db = getDatabase();
-  let sql = `
-    SELECT MIN(date) as min_date, MAX(date) as max_date, COUNT(*) as record_count
-    FROM HistoricalData
-  `;
-  const params: SqlValue[] = [];
+  const whereClause = campaignId !== null ? ' WHERE campaign_id = ?' : '';
+  const params: SqlValue[] = campaignId !== null ? [campaignId] : [];
 
-  if (campaignId !== null) {
-    sql += ' WHERE campaign_id = ?';
-    params.push(campaignId);
-  }
-
-  const stmt = db.prepare(sql);
+  const stmt = db.prepare(
+    `SELECT MIN(date) as min_date, MAX(date) as max_date, COUNT(*) as record_count
+     FROM HistoricalData${whereClause}`
+  );
   stmt.bind(params);
 
-  let result = { minDate: null as string | null, maxDate: null as string | null, recordCount: 0 };
-  if (stmt.step()) {
-    const row = stmt.getAsObject();
-    result = {
-      minDate: row.min_date as string | null,
-      maxDate: row.max_date as string | null,
-      recordCount: row.record_count as number
-    };
-  }
-  stmt.free();
-
-  return result;
+  const row = stmtToObject<{ min_date: string | null; max_date: string | null; record_count: number }>(stmt);
+  return {
+    minDate: row?.min_date ?? null,
+    maxDate: row?.max_date ?? null,
+    recordCount: row?.record_count ?? 0,
+  };
 }
 
 /**
@@ -690,40 +673,36 @@ export function getHistoricalVolumeSummary(
   endDate: string
 ): Array<{ date: string; totalVolume: number; avgAht: number; avgSla: number }> {
   const db = getDatabase();
-  let sql = `
-    SELECT
-      date,
-      SUM(volume) as total_volume,
-      AVG(aht) as avg_aht,
-      AVG(sla_achieved) as avg_sla
-    FROM HistoricalData
-    WHERE date >= ? AND date <= ?
-  `;
-  const params: SqlValue[] = [startDate, endDate];
+  const campaignClause = campaignId !== null ? ' AND campaign_id = ?' : '';
+  const params: SqlValue[] = campaignId !== null
+    ? [startDate, endDate, campaignId]
+    : [startDate, endDate];
 
-  if (campaignId !== null) {
-    sql += ' AND campaign_id = ?';
-    params.push(campaignId);
-  }
-
-  sql += ' GROUP BY date ORDER BY date ASC';
-
-  const stmt = db.prepare(sql);
+  const stmt = db.prepare(
+    `SELECT
+       date,
+       SUM(volume) as total_volume,
+       AVG(aht) as avg_aht,
+       AVG(sla_achieved) as avg_sla
+     FROM HistoricalData
+     WHERE date >= ? AND date <= ?${campaignClause}
+     GROUP BY date ORDER BY date ASC`
+  );
   stmt.bind(params);
 
-  const results: Array<{ date: string; totalVolume: number; avgAht: number; avgSla: number }> = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    results.push({
-      date: row.date as string,
-      totalVolume: row.total_volume as number,
-      avgAht: row.avg_aht as number || 0,
-      avgSla: row.avg_sla as number || 0
-    });
-  }
-  stmt.free();
+  const rows = stmtToArray<{
+    date: string;
+    total_volume: number;
+    avg_aht: number | null;
+    avg_sla: number | null;
+  }>(stmt);
 
-  return results;
+  return rows.map((row) => ({
+    date: row.date,
+    totalVolume: row.total_volume,
+    avgAht: row.avg_aht ?? 0,
+    avgSla: row.avg_sla ?? 0,
+  }));
 }
 
 /**
@@ -1368,20 +1347,13 @@ export interface PaginatedResult<T> {
 
 export function getStaff(activeOnly: boolean = true, limit: number = 50, offset: number = 0): PaginatedResult<Staff> {
   const db = getDatabase();
-  
-  // Get total count first
-  const countSql = activeOnly
-    ? 'SELECT COUNT(*) as count FROM Staff WHERE end_date IS NULL'
-    : 'SELECT COUNT(*) as count FROM Staff';
-  const countResult = db.exec(countSql);
-  const total = countResult[0]?.values[0]?.[0] as number ?? 0;
+  const whereClause = activeOnly ? ' WHERE end_date IS NULL' : '';
 
-  // Get paginated data
-  const sql = activeOnly
-    ? `SELECT * FROM Staff WHERE end_date IS NULL ORDER BY last_name, first_name LIMIT ? OFFSET ?`
-    : `SELECT * FROM Staff ORDER BY last_name, first_name LIMIT ? OFFSET ?`;
-    
-  const stmt = db.prepare(sql);
+  const total = getScalar<number>(`SELECT COUNT(*) FROM Staff${whereClause}`, [], 0);
+
+  const stmt = db.prepare(
+    `SELECT * FROM Staff${whereClause} ORDER BY last_name, first_name LIMIT ? OFFSET ?`
+  );
   stmt.bind([limit, offset]);
   const data = stmtToArray<Staff>(stmt);
 
@@ -1523,32 +1495,20 @@ export function deleteSite(id: number): void {
 
 export function getContracts(clientId: number | null = null, limit: number = 50, offset: number = 0): PaginatedResult<Contract> {
   const db = getDatabase();
-  let total = 0;
-  let data: Contract[] = [];
+  const whereClause = clientId ? ' WHERE client_id = ?' : '';
+  const whereParams: SqlValue[] = clientId ? [clientId] : [];
 
-  if (clientId) {
-    // Count
-    const countStmt = db.prepare('SELECT COUNT(*) as count FROM Contracts WHERE client_id = ?');
-    countStmt.bind([clientId]);
-    if (countStmt.step()) {
-      total = countStmt.getAsObject().count as number;
-    }
-    countStmt.free();
+  const total = getScalar<number>(
+    `SELECT COUNT(*) FROM Contracts${whereClause}`,
+    whereParams,
+    0
+  );
 
-    // Data
-    const stmt = db.prepare('SELECT * FROM Contracts WHERE client_id = ? ORDER BY start_date DESC LIMIT ? OFFSET ?');
-    stmt.bind([clientId, limit, offset]);
-    data = stmtToArray<Contract>(stmt);
-  } else {
-    // Count
-    const countResult = db.exec('SELECT COUNT(*) as count FROM Contracts');
-    total = countResult[0]?.values[0]?.[0] as number ?? 0;
-
-    // Data
-    const stmt = db.prepare('SELECT * FROM Contracts ORDER BY start_date DESC LIMIT ? OFFSET ?');
-    stmt.bind([limit, offset]);
-    data = stmtToArray<Contract>(stmt);
-  }
+  const stmt = db.prepare(
+    `SELECT * FROM Contracts${whereClause} ORDER BY start_date DESC LIMIT ? OFFSET ?`
+  );
+  stmt.bind([...whereParams, limit, offset]);
+  const data = stmtToArray<Contract>(stmt);
 
   return { data, total };
 }
@@ -1731,27 +1691,19 @@ export function getRecruitmentRequests(
   offset: number = 0
 ): PaginatedResult<RecruitmentRequest> {
   const db = getDatabase();
+  const whereClause = status ? ' WHERE status = ?' : '';
+  const whereParams: SqlValue[] = status ? [status] : [];
 
-  // Count
-  const countSql = status
-    ? `SELECT COUNT(*) as count FROM RecruitmentRequests WHERE status = '${status}'`
-    : 'SELECT COUNT(*) as count FROM RecruitmentRequests';
-  const countResult = db.exec(countSql);
-  const total = countResult[0]?.values[0]?.[0] as number ?? 0;
+  const total = getScalar<number>(
+    `SELECT COUNT(*) FROM RecruitmentRequests${whereClause}`,
+    whereParams,
+    0
+  );
 
-  // Data
-  let sql = 'SELECT * FROM RecruitmentRequests';
-  const params: SqlValue[] = [];
-
-  if (status) {
-    sql += ' WHERE status = ?';
-    params.push(status);
-  }
-  sql += ' ORDER BY requested_date DESC LIMIT ? OFFSET ?';
-  params.push(limit, offset);
-
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
+  const stmt = db.prepare(
+    `SELECT * FROM RecruitmentRequests${whereClause} ORDER BY requested_date DESC LIMIT ? OFFSET ?`
+  );
+  stmt.bind([...whereParams, limit, offset]);
   const data = stmtToArray<RecruitmentRequest>(stmt);
 
   return { data, total };

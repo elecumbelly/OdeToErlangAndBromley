@@ -88,40 +88,44 @@ export default function MultiChannelPanel() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="mc-interval-min" className="block text-sm font-medium text-gray-700 mb-1">
               Interval (min)
             </label>
             <NumberInput
+              id="mc-interval-min"
               value={intervalMinutes}
               onChange={(e) => setInput('intervalMinutes', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="mc-shrinkage" className="block text-sm font-medium text-gray-700 mb-1">
               Shrinkage (%)
             </label>
             <NumberInput
+              id="mc-shrinkage"
               value={shrinkage}
               onChange={(e) => setInput('shrinkagePercent', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="mc-max-occupancy" className="block text-sm font-medium text-gray-700 mb-1">
               Max Occupancy (%)
             </label>
             <NumberInput
+              id="mc-max-occupancy"
               value={maxOccupancy}
               onChange={(e) => setInput('maxOccupancy', Number(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="mc-blending" className="block text-sm font-medium text-gray-700 mb-1">
               Blending (%)
             </label>
             <NumberInput
+              id="mc-blending"
               value={blendingPercent}
               onChange={(e) => setBlendingPercent(Number(e.target.value))}
               min="0"
@@ -168,42 +172,47 @@ export default function MultiChannelPanel() {
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Volume</label>
+                  <label htmlFor={`channel-${channel.id}-volume`} className="block text-xs font-medium text-gray-600 mb-1">Volume</label>
                   <NumberInput
+                    id={`channel-${channel.id}-volume`}
                     value={channel.volume}
                     onChange={(e) => updateChannel(channel.id, { volume: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">AHT (sec)</label>
+                  <label htmlFor={`channel-${channel.id}-aht`} className="block text-xs font-medium text-gray-600 mb-1">AHT (sec)</label>
                   <NumberInput
+                    id={`channel-${channel.id}-aht`}
                     value={channel.aht}
                     onChange={(e) => updateChannel(channel.id, { aht: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Target SL (%)</label>
+                  <label htmlFor={`channel-${channel.id}-sl`} className="block text-xs font-medium text-gray-600 mb-1">Target SL (%)</label>
                   <NumberInput
+                    id={`channel-${channel.id}-sl`}
                     value={channel.targetSL}
                     onChange={(e) => updateChannel(channel.id, { targetSL: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Threshold (sec)</label>
+                  <label htmlFor={`channel-${channel.id}-threshold`} className="block text-xs font-medium text-gray-600 mb-1">Threshold (sec)</label>
                   <NumberInput
+                    id={`channel-${channel.id}-threshold`}
                     value={channel.threshold}
                     onChange={(e) => updateChannel(channel.id, { threshold: Number(e.target.value) })}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label htmlFor={`channel-${channel.id}-concurrent`} className="block text-xs font-medium text-gray-600 mb-1">
                     Concurrent Contacts (chat/email)
                   </label>
                   <NumberInput
+                    id={`channel-${channel.id}-concurrent`}
                     value={channel.concurrent}
                     onChange={(e) => updateChannel(channel.id, { concurrent: Number(e.target.value) })}
                     min="1"

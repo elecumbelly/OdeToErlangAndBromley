@@ -5,6 +5,82 @@ All notable changes to OdeToErlangAndBromley will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-05-15
+
+### Added
+- Soft-delete (`deleted_at`) on Scenarios and CalendarEvents; SELECTs filter active rows.
+- BroadcastChannel cross-tab calendar sync with origin-tab echo guard.
+- Cmd/Ctrl+K command palette with fuzzy filter over 17 destinations.
+- Cross-tab KPI aria-live regions and `jsx-a11y` ESLint plugin (warn-level groundwork).
+- Diagnostics surface for stationarity assumption with UI badge in `ResultsDisplay`.
+- DES-backed sanity harness replacing the fake Monte Carlo.
+
+### Changed
+- **Erlang B** switched to log-stable inverse recurrence (stays finite at A=5000+ where the prior iterative form underflowed past A~100). `erlangBLinear` kept as parity reference.
+- **Concurrency** now applies a configurable overhead curve (default 15%) instead of a naive linear AHT divide; `effectiveAHTForConcurrency` exposed.
+- **Occupancy penalty inverted** to `occupancyViolationSeverity` so SL falls and ASA climbs as understaffing worsens. `occupancyPenalty` remains as a deprecated alias for one release.
+- **Shrinkage × productivity** now coherent: `effectiveAgents = headcount × (1 − shrinkage/100) × productivity`.
+- Calculator store decoupled from `databaseStore`; productivity provider injected at boot via `setProductivityProvider`.
+- `saveDatabase()` uses a soft mutex preventing mid-write export snapshots.
+- DB migrations wrapped in BEGIN/COMMIT/ROLLBACK with version bump inside the transaction.
+- Composite indexes: `HistoricalData(campaign_id,date)`, `Forecasts(scenario_id,campaign_id,forecast_date)`, `CalendarEvents(campaign_id,start,end)`.
+- Dialog: focus trap, Esc-to-close, focus restoration, `role="dialog"`.
+- Chart theming via new `useChartTheme` hook reading CSS variables (no more hardcoded hex).
+- CSV worker: 10s per-attempt timeout, one retry, structured fallback log, main-thread fallback preserved.
+
+### Fixed
+- `getBaselineScenario` missing `deleted_at IS NULL` filter (surfaced soft-deleted baselines).
+- SQL injection in `getRecruitmentRequests` count query (`status` now passes through a bound parameter).
+- All 94 outstanding `jsx-a11y` warnings; rules promoted from `warn` to `error`.
+
+### Removed
+- Unused `decimal.js` dependency.
+- Unused `@testing-library/user-event` devDependency.
+
+### Rollback note
+Reverting after a user has reached v4 schema will resurrect soft-deleted scenarios and calendar events because v3 `dataAccess` lacks the `deleted_at IS NULL` filter. No data loss; user-visible regression. Document in release notes if downgrade is ever needed.
+
+## [0.2.2] - 2026-02
+
+### Fixed
+- **P1**: Shrinkage double-count in coverage generator (was using `totalFTE` instead of `requiredAgents`).
+- **P1**: Misleading scheduler method descriptions.
+- **P2**: Concurrency now wired into `erlangEngine` (was accepted but ignored).
+- **P2**: CSV date-format support (MM/DD/YYYY, MM-DD-YYYY) with roundtrip validation.
+- **P2**: Timezone-unsafe dates across 20+ files; centralized on new `dateUtils` module.
+- **P2**: What-if scenarios were hardcoded to Erlang C — now routes through `erlangEngine` respecting the active model.
+- **P2**: Added concurrency validation and upper-bound clamping (max 10).
+- **P3**: SLA/occupancy unit mismatch in ScenarioManager (was dividing by 100 before saving when DB expects 0–100).
+
+### Changed
+- Security and crash-resilience pass from CodeRabbit scan: path traversal, SSRF, credential leakage, XSS, input validation, null guards, division by zero, timeout handling, session leaks, race conditions, error propagation.
+
+### Docs
+- Corrected Erlang A formula in `FORMULAS.md`.
+- Fixed React version and test counts in READMEs.
+- Updated `CSV-FORMATS.md` with supported date formats.
+- Updated `SCHEDULING.md` method descriptions.
+
+## [0.2.1] - 2026-01
+
+### Added
+- Simple Mode landing page and mode toggle for new users.
+- Basic/Scientific mode tabs in Simulation Controls.
+- Dashboard test coverage.
+
+### Changed
+- Consolidated navigation into 6 functional Hubs with sub-tabs.
+- Modernized SimulationTab and QueueVisual with glassmorphism UI.
+- Simplified ControlsPanel with Volume/AHT inputs.
+- Replaced busy dashboard with clean KPI launchpad.
+
+### Removed
+- Redundant hero section from calculator tab.
+- 1-2-3 onboarding banner.
+
+### Docs
+- Added explicit tribute to Lester Bromley and his Erlang for Excel plugin.
+
 ## [0.2.0] - 2025-12-08
 
 ### Added
@@ -39,8 +115,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Missing Dialog component**
 - **SmartCSVImport avgVolume destructuring**
 - **databaseStore getAssumptions parameter issue**
-
-## [Unreleased]
 
 ## [0.1.0] - 2025-01-23
 

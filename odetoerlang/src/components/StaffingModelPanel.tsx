@@ -214,6 +214,7 @@ const StaffingModelPanel: React.FC = () => {
                 type="checkbox"
                 checked={staffingModel.useAsConstraint}
                 onChange={handleConstraintChange}
+                aria-label="Use staffing model as constraint"
                 className="mt-0.5 h-5 w-5 bg-bg-surface border-border-subtle rounded text-green focus:ring-green/30 focus:ring-2 cursor-pointer"
               />
               <div className="flex-1">
