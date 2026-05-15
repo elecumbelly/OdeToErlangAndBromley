@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ToastProvider } from './components/ui/Toast'
+import { setProductivityProvider } from './store/calculatorStore'
+import { useDatabaseStore } from './store/databaseStore'
+
+setProductivityProvider((date) => useDatabaseStore.getState().getProductivityForDate(date));
 
 // Simple error boundary that doesn't depend on any UI components
 class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {

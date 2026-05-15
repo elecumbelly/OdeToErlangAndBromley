@@ -7,8 +7,14 @@ import AssumptionsPanel from './components/AssumptionsPanel';
 import ThemeToggle from './components/ui/ThemeToggle';
 import MathModelSettings from './components/MathModelSettings';
 import SimpleLanding from './components/SimpleLanding';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { useCalculatorStore } from './store/calculatorStore';
+import { CommandPalette, type CommandEntry } from './components/CommandPalette';
+import { useDatabaseStore, __databaseStoreTabId } from './store/databaseStore';
+import { initDatabase } from './lib/database/initDatabase';
+import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
 
-// Lazy-loaded components for code splitting - reduces initial bundle size
+// Lazy-loaded tabs — code-split so the initial bundle stays small.
 const ChartsPanel = lazy(() => import('./components/ChartsPanel'));
 const SmartCSVImport = lazy(() => import('./components/SmartCSVImport'));
 const ExportPanel = lazy(() => import('./components/ExportPanel'));
@@ -25,8 +31,62 @@ const BPOTab = lazy(() => import('./components/BPO/BPOTab'));
 const SchedulingTab = lazy(() => import('./components/SchedulingTab'));
 const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 
-import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { useCalculatorStore } from './store/calculatorStore';
+const TAB_DESCRIPTIONS: Record<string, { hub: string; description: string }> = {
+  dashboard: { hub: 'Command', description: 'KPI launchpad — at-a-glance metrics and quick actions' },
+  calculator: { hub: 'Calculator', description: 'Primary Erlang B/C/A staffing calculator' },
+  modelcomp: { hub: 'Calculator', description: 'Side-by-side comparison of Erlang B, C, A' },
+  capacity: { hub: 'Calculator', description: 'Reverse calc — what SL can I hit with N agents?' },
+  multichannel: { hub: 'Calculator', description: 'Voice/chat/email blended staffing with concurrency' },
+  historical: { hub: 'Analytics', description: 'Imported volume trends and forecasting' },
+  scenarios: { hub: 'Analytics', description: 'Baseline + variants comparison' },
+  charts: { hub: 'Analytics', description: 'Sensitivity and trade-off visualisations' },
+  workforce: { hub: 'Planning', description: 'Staff, roles, and recruitment' },
+  scheduling: { hub: 'Planning', description: 'Coverage requirements and shift optimisation' },
+  calendar: { hub: 'Planning', description: 'Calendar view of shifts and events' },
+  bpo: { hub: 'Planning', description: 'Clients and contracts (BPO ops)' },
+  import: { hub: 'Data', description: 'Smart CSV / ACD data import' },
+  export: { hub: 'Data', description: 'Export results and database backups' },
+  assumptions: { hub: 'Data', description: 'Global and per-campaign parameter overrides' },
+  simulation: { hub: 'Lab', description: 'Animated discrete-event queue simulation' },
+  learn: { hub: 'Lab', description: 'Step-by-step Erlang math walk-through' },
+};
+
+type Tab = 'dashboard' | 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
+type Mode = 'simple' | 'advanced';
+
+const HUB_GROUPS: Array<{ id: string; name: string; icon: string; tabs: Tab[] }> = [
+  { id: 'command', name: 'Command', icon: '📊', tabs: ['dashboard'] },
+  { id: 'calculator_hub', name: 'Calculator', icon: '🧮', tabs: ['calculator', 'modelcomp', 'capacity', 'multichannel'] },
+  { id: 'analytics_hub', name: 'Analytics', icon: '📈', tabs: ['historical', 'scenarios', 'charts'] },
+  { id: 'planning_hub', name: 'Planning', icon: '👥', tabs: ['workforce', 'scheduling', 'calendar', 'bpo'] },
+  { id: 'data_hub', name: 'Data', icon: '📥', tabs: ['import', 'export', 'assumptions'] },
+  { id: 'lab_hub', name: 'Lab', icon: '🧪', tabs: ['simulation', 'learn'] },
+];
+
+const ALL_TABS: Array<{ id: Tab; name: string; icon: string; shortName?: string }> = [
+  { id: 'dashboard', name: 'Overview', icon: '🏠', shortName: 'OVER' },
+  { id: 'calculator', name: 'Standard', icon: '🧮', shortName: 'STD' },
+  { id: 'charts', name: 'Visuals', icon: '📈', shortName: 'CHART' },
+  { id: 'multichannel', name: 'Multi-Channel', icon: '💬', shortName: 'MULTI' },
+  { id: 'scenarios', name: 'What-If', icon: '⚖️', shortName: 'SCENAR' },
+  { id: 'modelcomp', name: 'Compare Models', icon: '🔄', shortName: 'COMP' },
+  { id: 'capacity', name: 'Reverse Calc', icon: '🔋', shortName: 'CAP' },
+  { id: 'assumptions', name: 'Assumptions', icon: '📋', shortName: 'ASSUM' },
+  { id: 'historical', name: 'Historical', icon: '📜', shortName: 'HIST' },
+  { id: 'calendar', name: 'Calendar', icon: '📅', shortName: 'CAL' },
+  { id: 'scheduling', name: 'Scheduling', icon: '⏰', shortName: 'SCHED' },
+  { id: 'workforce', name: 'Workforce', icon: '👥', shortName: 'STAFF' },
+  { id: 'bpo', name: 'BPO', icon: '🏢', shortName: 'BPO' },
+  { id: 'simulation', name: 'Simulation', icon: '🎲', shortName: 'SIM' },
+  { id: 'import', name: 'Import', icon: '📥', shortName: 'IN' },
+  { id: 'export', name: 'Export', icon: '📤', shortName: 'OUT' },
+  { id: 'learn', name: 'Educational', icon: '🎓', shortName: 'EDU' },
+];
+
+// Tabs that need the database before they can render meaningful content.
+const DB_DEPENDENT_TABS: Tab[] = ['historical', 'calendar', 'scheduling', 'workforce', 'bpo', 'assumptions', 'import'];
+
+const TOUR_SEEN_KEY = 'ode_tour_seen';
 
 // Loading fallback for lazy-loaded components
 function TabLoadingFallback() {
@@ -42,13 +102,6 @@ function TabLoadingFallback() {
     </div>
   );
 }
-import { useDatabaseStore } from './store/databaseStore';
-import { initDatabase } from './lib/database/initDatabase';
-import { seedDatabase, isDatabaseSeeded } from './lib/database/seedData';
-
-type Tab = 'dashboard' | 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
-type Mode = 'simple' | 'advanced';
-
 function DbLoadingState({ stage, error }: { stage: InitStage; error: string | null }) {
   if (stage === 'error') {
     return (
@@ -102,6 +155,19 @@ function App() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [showTour, setShowTour] = useState<boolean>(false);
   const [tourStep, setTourStep] = useState<number>(0);
+  const [paletteOpen, setPaletteOpen] = useState<boolean>(false);
+
+  // Cmd+K / Ctrl+K opens the command palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(p => !p);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const dbReady = initStage === 'ready';
 
@@ -134,10 +200,33 @@ function App() {
     }
   }, [dbReady, calculate, refreshAll]);
 
+  // Cross-tab sync: when another tab mutates the calendar, refresh local
+  // cache and re-run the calculator. originTabId guards against self-echo.
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel('odetoerlang');
+    const onMessage = (event: MessageEvent) => {
+      const msg = event.data as { type?: string; table?: string; originTabId?: string };
+      if (msg?.type !== 'invalidate') return;
+      if (msg.originTabId === __databaseStoreTabId) return;
+      if (msg.table === 'CalendarEvents') {
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+        const end = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString();
+        useDatabaseStore.getState().fetchCalendarEvents(start, end);
+        calculate();
+      }
+    };
+    channel.addEventListener('message', onMessage);
+    return () => {
+      channel.removeEventListener('message', onMessage);
+      channel.close();
+    };
+  }, [calculate]);
+
   // Onboarding banner persistence
   useEffect(() => {
-    const tourSeen = localStorage.getItem('ode_tour_seen');
-    if (tourSeen === 'true') {
+    if (localStorage.getItem(TOUR_SEEN_KEY) === 'true') {
       setShowTour(false);
     }
   }, []);
@@ -163,6 +252,11 @@ function App() {
     },
   ];
 
+  const dismissTour = () => {
+    setShowTour(false);
+    localStorage.setItem(TOUR_SEEN_KEY, 'true');
+  };
+
   const handleTourNext = () => {
     const next = tourStep + 1;
     if (next < tourSteps.length) {
@@ -170,8 +264,7 @@ function App() {
       tourSteps[next].action();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      setShowTour(false);
-      localStorage.setItem('ode_tour_seen', 'true');
+      dismissTour();
     }
   };
 
@@ -179,11 +272,6 @@ function App() {
     const prev = Math.max(0, tourStep - 1);
     setTourStep(prev);
     tourSteps[prev].action();
-  };
-
-  const skipTour = () => {
-    setShowTour(false);
-    localStorage.setItem('ode_tour_seen', 'true');
   };
 
   const enterAdvanced = (tab?: Tab) => {
@@ -198,47 +286,35 @@ function App() {
     setShowTour(false);
   };
 
-  const groups = [
-    { id: 'command', name: 'Command', icon: '📊', tabs: ['dashboard'] },
-    { id: 'calculator_hub', name: 'Calculator', icon: '🧮', tabs: ['calculator', 'modelcomp', 'capacity', 'multichannel'] },
-    { id: 'analytics_hub', name: 'Analytics', icon: '📈', tabs: ['historical', 'scenarios', 'charts'] },
-    { id: 'planning_hub', name: 'Planning', icon: '👥', tabs: ['workforce', 'scheduling', 'calendar', 'bpo'] },
-    { id: 'data_hub', name: 'Data', icon: '📥', tabs: ['import', 'export', 'assumptions'] },
-    { id: 'lab_hub', name: 'Lab', icon: '🧪', tabs: ['simulation', 'learn'] },
-  ];
-
-  const allTabs: { id: Tab; name: string; icon: string; shortName?: string }[] = [
-    { id: 'dashboard', name: 'Overview', icon: '🏠', shortName: 'OVER' },
-    { id: 'calculator', name: 'Standard', icon: '🧮', shortName: 'STD' },
-    { id: 'charts', name: 'Visuals', icon: '📈', shortName: 'CHART' },
-    { id: 'multichannel', name: 'Multi-Channel', icon: '💬', shortName: 'MULTI' },
-    { id: 'scenarios', name: 'What-If', icon: '⚖️', shortName: 'SCENAR' },
-    { id: 'modelcomp', name: 'Compare Models', icon: '🔄', shortName: 'COMP' },
-    { id: 'capacity', name: 'Reverse Calc', icon: '🔋', shortName: 'CAP' },
-    { id: 'assumptions', name: 'Assumptions', icon: '📋', shortName: 'ASSUM' },
-    { id: 'historical', name: 'Historical', icon: '📜', shortName: 'HIST' },
-    { id: 'calendar', name: 'Calendar', icon: '📅', shortName: 'CAL' },
-    { id: 'scheduling', name: 'Scheduling', icon: '⏰', shortName: 'SCHED' },
-    { id: 'workforce', name: 'Workforce', icon: '👥', shortName: 'STAFF' },
-    { id: 'bpo', name: 'BPO', icon: '🏢', shortName: 'BPO' },
-    { id: 'simulation', name: 'Simulation', icon: '🎲', shortName: 'SIM' },
-    { id: 'import', name: 'Import', icon: '📥', shortName: 'IN' },
-    { id: 'export', name: 'Export', icon: '📤', shortName: 'OUT' },
-    { id: 'learn', name: 'Educational', icon: '🎓', shortName: 'EDU' }
-  ];
-
-  // Helper to find which group a tab belongs to
-  const getGroupIdForTab = (tabId: Tab) => groups.find(g => g.tabs.includes(tabId))?.id || 'command';
-
-  const activeGroup = getGroupIdForTab(activeTab);
-  const currentGroup = groups.find(g => g.id === activeGroup);
-  const visibleSubTabs = allTabs.filter(t => currentGroup?.tabs.includes(t.id));
+  const currentGroup = HUB_GROUPS.find(g => g.tabs.includes(activeTab)) ?? HUB_GROUPS[0];
+  const activeGroup = currentGroup.id;
+  const visibleSubTabs = ALL_TABS.filter(t => currentGroup.tabs.includes(t.id));
 
   const showDbLoadingBanner = mode === 'advanced' && initStage !== 'ready' && initStage !== 'error';
   const showDbErrorBanner = mode === 'advanced' && initStage === 'error';
 
+  const paletteEntries: CommandEntry[] = ALL_TABS.map(t => {
+    const meta = TAB_DESCRIPTIONS[t.id] ?? { hub: 'Other', description: t.name };
+    return {
+      id: t.id,
+      name: t.name,
+      icon: t.icon,
+      hubName: meta.hub,
+      description: meta.description,
+    };
+  });
+
   return (
     <div className="min-h-screen bg-bg-base">
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        entries={paletteEntries}
+        onSelect={(id) => {
+          setActiveTab(id as Tab);
+          if (mode === 'simple') setMode('advanced');
+        }}
+      />
       {/* Skip Link for Accessibility */}
       <a href="#main-content" className="skip-link">
         Skip to main content
@@ -327,10 +403,10 @@ function App() {
           <nav className="bg-bg-surface border-b border-border-subtle sticky top-0 z-20" role="navigation" aria-label="Hub navigation">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex space-x-1 overflow-x-auto py-2 scrollbar-none" role="tablist">
-                {groups.map((group) => (
+                {HUB_GROUPS.map((group) => (
                   <button
                     key={group.id}
-                    onClick={() => setActiveTab(group.tabs[0] as Tab)}
+                    onClick={() => setActiveTab(group.tabs[0])}
                     className={`
                       px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-fast rounded-lg
                       flex items-center gap-2 uppercase tracking-widest
@@ -403,7 +479,7 @@ function App() {
               {/* Lazy-loaded tabs */}
               <ErrorBoundary>
                 <Suspense fallback={<TabLoadingFallback />}>
-                  {!dbReady && ['historical', 'calendar', 'scheduling', 'workforce', 'bpo', 'assumptions', 'import'].includes(activeTab) ? (
+                  {!dbReady && DB_DEPENDENT_TABS.includes(activeTab) ? (
                     <DbLoadingState stage={initStage} error={dbError} />
                   ) : (
                     <>
@@ -525,7 +601,7 @@ function App() {
                 <h3 className="text-lg font-semibold text-text-primary">{tourSteps[tourStep].title}</h3>
               </div>
               <button
-                onClick={skipTour}
+                onClick={dismissTour}
                 className="text-2xs text-text-muted hover:text-text-secondary"
               >
                 Skip

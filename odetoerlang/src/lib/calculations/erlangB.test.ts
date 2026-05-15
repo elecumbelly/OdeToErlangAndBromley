@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { erlangB } from './erlangC';
+import { erlangB, erlangBLinear } from './erlangC';
 
 /**
  * Erlang B (Loss Formula) Standalone Tests
@@ -252,5 +252,54 @@ describe('Erlang B - Practical scenarios', () => {
     // Should need around 16-17 lines for 10 Erlangs at 2% GoS
     expect(lines).toBeGreaterThanOrEqual(15);
     expect(lines).toBeLessThanOrEqual(20);
+  });
+});
+
+describe('Erlang B - Numerical stability at scale', () => {
+  test('parity with linear form at low A (within 1e-12 relative)', () => {
+    const cases: Array<[number, number]> = [
+      [1, 0.5], [5, 3], [10, 7], [20, 15], [50, 40], [50, 49.9],
+    ];
+    for (const [c, A] of cases) {
+      const stable = erlangB(c, A);
+      const linear = erlangBLinear(c, A);
+      if (linear > 1e-15) {
+        const rel = Math.abs(stable - linear) / linear;
+        expect(rel).toBeLessThan(1e-10);
+      } else {
+        expect(stable).toBeLessThan(1e-10);
+      }
+    }
+  });
+
+  test('returns finite, monotone-decreasing-in-c values at A=500', () => {
+    const A = 500;
+    let prev = Infinity;
+    for (const c of [510, 520, 540, 580, 650, 800, 1000]) {
+      const b = erlangB(c, A);
+      expect(Number.isFinite(b)).toBe(true);
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(b).toBeLessThanOrEqual(1);
+      expect(b).toBeLessThanOrEqual(prev + 1e-12);
+      prev = b;
+    }
+  });
+
+  test('returns finite values at A=1000 and A=5000', () => {
+    const b1000 = erlangB(1100, 1000);
+    expect(Number.isFinite(b1000)).toBe(true);
+    expect(b1000).toBeGreaterThanOrEqual(0);
+    expect(b1000).toBeLessThan(1);
+
+    const b5000 = erlangB(5500, 5000);
+    expect(Number.isFinite(b5000)).toBe(true);
+    expect(b5000).toBeGreaterThanOrEqual(0);
+    expect(b5000).toBeLessThan(1);
+  });
+
+  test('agents >> traffic returns 0 (overflow path), not NaN', () => {
+    const b = erlangB(5000, 50);
+    expect(Number.isFinite(b)).toBe(true);
+    expect(b).toBe(0);
   });
 });

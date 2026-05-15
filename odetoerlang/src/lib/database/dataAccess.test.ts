@@ -196,7 +196,9 @@ describe('dataAccess - Scenarios', () => {
 
     const scenarios = getScenarios();
 
-    expect(mockExec).toHaveBeenCalledWith('SELECT * FROM Scenarios ORDER BY created_at DESC');
+    expect(mockExec).toHaveBeenCalledWith(
+      'SELECT * FROM Scenarios WHERE deleted_at IS NULL ORDER BY created_at DESC'
+    );
     expect(scenarios).toHaveLength(2);
   });
 
@@ -256,10 +258,13 @@ describe('dataAccess - Scenarios', () => {
     expect(mockRun.mock.calls[0][0]).toContain('INSERT INTO Scenarios');
   });
 
-  test('deleteScenario removes scenario by ID', () => {
+  test('deleteScenario soft-deletes scenario by setting deleted_at', () => {
     deleteScenario(3);
 
-    expect(mockRun).toHaveBeenCalledWith('DELETE FROM Scenarios WHERE id = ?', [3]);
+    expect(mockRun).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE Scenarios SET deleted_at = CURRENT_TIMESTAMP'),
+      [3]
+    );
   });
 
   test('setBaselineScenario updates baseline atomically', () => {

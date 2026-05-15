@@ -27,6 +27,13 @@ export interface CalculationResults {
   asa: number; // Average Speed of Answer in seconds
   occupancy: number; // As percentage
   canAchieveTarget: boolean;
+  /**
+   * True when the underlying queueing formula assumes steady-state arrivals
+   * over the interval (Erlang B / Erlang C). False for Erlang A (still
+   * approximate but accounts for abandonment). UI uses this to badge
+   * forecasts where bursty intraday volume would violate the assumption.
+   */
+  assumesStationary?: boolean;
 }
 
 export interface TooltipContent {

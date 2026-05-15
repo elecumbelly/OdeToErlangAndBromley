@@ -18,7 +18,7 @@
       "eslint --fix"
     ],
     "*.{ts,tsx}": [
-      "vitest related --run"
+      "vitest related --run --maxWorkers=2 --testTimeout=60000"
     ]
   },
   "dependencies": {
@@ -27,7 +27,6 @@
     "@fullcalendar/react": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "decimal.js": "^10.6.0",
     "idb": "^8.0.3",
     "papaparse": "^5.5.3",
     "react": "^18.3.1",
@@ -50,6 +49,7 @@
     "@vitest/coverage-v8": "^2.1.4",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.7",
     "globals": "^15.11.0",

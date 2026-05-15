@@ -56,7 +56,26 @@ export async function initDatabase(): Promise<Database> {
 }
 
 // Current schema version - increment when adding migrations
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
+
+/**
+ * Run a single migration inside a transaction. If any statement (including
+ * the schema_version bump) fails, the transaction rolls back and the version
+ * stays at the previous value — so the next startup retries the same step
+ * against an unchanged schema rather than a half-applied one.
+ */
+function runMigrationInTransaction(targetVersion: number, sql: string, description: string): void {
+  if (!db) throw new Error('Database not initialized');
+  db.exec('BEGIN TRANSACTION');
+  try {
+    db.exec(sql);
+    db.exec(`INSERT OR REPLACE INTO schema_version (version, description) VALUES (${targetVersion}, '${description.replace(/'/g, "''")}')`);
+    db.exec('COMMIT');
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch { /* swallow rollback failure to expose real error */ }
+    throw err;
+  }
+}
 
 /**
  * Get the current schema version from the database
@@ -88,32 +107,42 @@ async function runMigrations(): Promise<void> {
   if (currentVersion < CURRENT_SCHEMA_VERSION) {
 
 
-    // Migration 0 → 1: Add schema_version table to legacy databases
+    // Migration 0 → 1: Add schema_version table to legacy databases.
+    // Bootstrap migration: can't use runMigrationInTransaction because the
+    // schema_version table doesn't exist yet to record the version bump.
     if (currentVersion < 1) {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS schema_version (
-          version INTEGER PRIMARY KEY,
-          applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          description TEXT
-        );
-        INSERT OR IGNORE INTO schema_version (version, description)
-        VALUES (1, 'Initial schema - WFM Ready Reckoner');
-      `);
-
+      db.exec('BEGIN TRANSACTION');
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER PRIMARY KEY,
+            applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            description TEXT
+          );
+          INSERT OR IGNORE INTO schema_version (version, description)
+          VALUES (1, 'Initial schema - WFM Ready Reckoner');
+        `);
+        db.exec('COMMIT');
+      } catch (err) {
+        try { db.exec('ROLLBACK'); } catch { /* expose real error */ }
+        throw err;
+      }
     }
 
     // Migration 1 → 2: Add erlang_model column to Scenarios table
     if (currentVersion < 2) {
-      db.exec(`
-        ALTER TABLE Scenarios ADD COLUMN erlang_model TEXT DEFAULT 'C';
-        INSERT OR REPLACE INTO schema_version (version, description)
-        VALUES (2, 'Add erlang_model column to Scenarios');
-      `);
+      runMigrationInTransaction(
+        2,
+        `ALTER TABLE Scenarios ADD COLUMN erlang_model TEXT DEFAULT 'C'`,
+        'Add erlang_model column to Scenarios',
+      );
     }
 
     // Migration 2 → 3: Add scheduling tables
     if (currentVersion < 3) {
-      db.exec(`
+      runMigrationInTransaction(
+        3,
+        `
         CREATE TABLE IF NOT EXISTS SchedulePlans (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           plan_name TEXT NOT NULL,
@@ -273,10 +302,33 @@ async function runMigrations(): Promise<void> {
           ('greedy', 'Greedy Fill', '1.0', 'Fast fill that logs but does not block constraint violations'),
           ('local_search', 'Local Search', '1.0', 'Greedy fill that skips assignments violating rest/hours constraints'),
           ('solver', 'Solver', '0.1', 'Falls back to Local Search; ILP/CP-SAT solver planned but not yet implemented');
+        `,
+        'Add scheduling tables',
+      );
+    }
 
-        INSERT OR REPLACE INTO schema_version (version, description)
-        VALUES (3, 'Add scheduling tables');
-      `);
+    // Migration 3 → 4: Soft-delete columns + comparison_group + composite indexes
+    if (currentVersion < 4) {
+      runMigrationInTransaction(
+        4,
+        `
+        ALTER TABLE Scenarios ADD COLUMN deleted_at DATETIME NULL;
+        ALTER TABLE Scenarios ADD COLUMN comparison_group TEXT NULL;
+        ALTER TABLE CalendarEvents ADD COLUMN deleted_at DATETIME NULL;
+
+        CREATE INDEX IF NOT EXISTS idx_historical_campaign_date
+          ON HistoricalData(campaign_id, date);
+        CREATE INDEX IF NOT EXISTS idx_forecasts_scenario_campaign_date
+          ON Forecasts(scenario_id, campaign_id, forecast_date);
+        CREATE INDEX IF NOT EXISTS idx_calevents_campaign_range
+          ON CalendarEvents(campaign_id, start_datetime, end_datetime);
+        CREATE INDEX IF NOT EXISTS idx_scenarios_deleted_at
+          ON Scenarios(deleted_at);
+        CREATE INDEX IF NOT EXISTS idx_calevents_deleted_at
+          ON CalendarEvents(deleted_at);
+        `,
+        'Soft-delete columns + comparison_group + composite indexes',
+      );
     }
 
     await saveDatabase();
@@ -297,18 +349,32 @@ function createTables() {
 }
 
 /**
- * Save database to IndexedDB (called after every write)
+ * Save database to IndexedDB (called after every write).
+ *
+ * Soft mutex: while a save is in flight, concurrent callers await the same
+ * promise rather than racing on db.export(). Prevents corrupt snapshots
+ * when a write fires during an in-progress export (e.g. user clicks "Export
+ * .sqlite" while a calendar event is being saved).
  */
+let saveInFlight: Promise<void> | null = null;
 export async function saveDatabase(): Promise<void> {
   if (!db) return;
+  if (saveInFlight) return saveInFlight;
 
-  try {
-    const data = db.export();
-    await saveDatabaseBinary(data);
-
-  } catch (error) {
-    console.error('❌ Failed to save database:', error);
-  }
+  saveInFlight = (async () => {
+    try {
+      // Capture db locally so a null-out elsewhere can't race us mid-export.
+      const local = db;
+      if (!local) return;
+      const data = local.export();
+      await saveDatabaseBinary(data);
+    } catch (error) {
+      console.error('❌ Failed to save database:', error);
+    } finally {
+      saveInFlight = null;
+    }
+  })();
+  return saveInFlight;
 }
 
 /**

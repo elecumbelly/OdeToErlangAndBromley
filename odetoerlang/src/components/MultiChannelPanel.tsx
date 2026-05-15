@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { calculateStaffingMetrics } from '../lib/calculations/erlangC';
+import { effectiveAHTForConcurrency } from '../lib/calculations/erlangEngine';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { NumberInput } from './ui/NumberInput';
 
@@ -15,43 +16,20 @@ interface Channel {
   icon: string;
 }
 
+const DEFAULT_CHANNELS: Channel[] = [
+  { id: '1', name: 'Voice Calls', type: 'voice', volume: 100, aht: 240, targetSL: 80, threshold: 20,   concurrent: 1, icon: '📞' },
+  { id: '2', name: 'Live Chat',   type: 'chat',  volume: 50,  aht: 180, targetSL: 85, threshold: 60,   concurrent: 3, icon: '💬' },
+  { id: '3', name: 'Email',       type: 'email', volume: 30,  aht: 300, targetSL: 90, threshold: 3600, concurrent: 5, icon: '📧' },
+];
+
+// Pooling efficiency multiplier — at 100% blending, dedicated FTE drops by
+// ~15% in line with typical observed savings (10–20%) when agents handle
+// multiple channels.
+const POOLING_EFFICIENCY_FACTOR = 0.15;
+
 export default function MultiChannelPanel() {
   const { inputs, setInput } = useCalculatorStore();
-  const [channels, setChannels] = useState<Channel[]>([
-    {
-      id: '1',
-      name: 'Voice Calls',
-      type: 'voice',
-      volume: 100,
-      aht: 240,
-      targetSL: 80,
-      threshold: 20,
-      concurrent: 1,
-      icon: '📞'
-    },
-    {
-      id: '2',
-      name: 'Live Chat',
-      type: 'chat',
-      volume: 50,
-      aht: 180,
-      targetSL: 85,
-      threshold: 60,
-      concurrent: 3,
-      icon: '💬'
-    },
-    {
-      id: '3',
-      name: 'Email',
-      type: 'email',
-      volume: 30,
-      aht: 300,
-      targetSL: 90,
-      threshold: 3600,
-      concurrent: 5,
-      icon: '📧'
-    }
-  ]);
+  const [channels, setChannels] = useState<Channel[]>(DEFAULT_CHANNELS);
 
   const [blendingPercent, setBlendingPercent] = useState(60);
   const intervalMinutes = inputs.intervalMinutes;
@@ -81,11 +59,11 @@ export default function MultiChannelPanel() {
     setChannels(channels.filter(ch => ch.id !== id));
   };
 
-  // Calculate staffing for each channel
+  // Adjust each channel's AHT for concurrency using the engine's overhead
+  // curve (chat/email at c > 1 pays a context-switching cost). The old
+  // behaviour was a linear divide (channel.aht / channel.concurrent).
   const channelResults = channels.map(channel => {
-    // Adjust for concurrency - effective AHT is divided by concurrent contacts
-    const effectiveAHT = channel.aht / channel.concurrent;
-
+    const effectiveAHT = effectiveAHTForConcurrency(channel.aht, channel.concurrent);
     const result = calculateStaffingMetrics({
       volume: channel.volume,
       aht: effectiveAHT,
@@ -93,22 +71,14 @@ export default function MultiChannelPanel() {
       targetSL: channel.targetSL / 100,
       thresholdSeconds: channel.threshold,
       shrinkagePercent: shrinkage / 100,
-      maxOccupancy: maxOccupancy / 100
+      maxOccupancy: maxOccupancy / 100,
     });
-
-    return {
-      channel,
-      ...result
-    };
+    return { channel, ...result };
   });
 
-  // Calculate blended staffing (shared agents across channels)
   const totalFTEDedicated = channelResults.reduce((sum, r) => sum + r.totalFTE, 0);
-
-  // Blended model assumes agents can handle multiple channels
-  // Efficiency gain from pooling (typically 10-20% reduction)
-  const blendingEfficiency = blendingPercent / 100;
-  const totalFTEBlended = totalFTEDedicated * (1 - blendingEfficiency * 0.15);
+  const blendingFraction = blendingPercent / 100;
+  const totalFTEBlended = totalFTEDedicated * (1 - blendingFraction * POOLING_EFFICIENCY_FACTOR);
 
   return (
     <div className="space-y-6">

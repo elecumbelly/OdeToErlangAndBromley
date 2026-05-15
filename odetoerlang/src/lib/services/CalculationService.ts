@@ -21,10 +21,20 @@ interface StaffingModel {
   useAsConstraint: boolean;
 }
 
-// Helper to calculate productive agents from staffing model with multiple shift types
+/**
+ * Calculate productive agents from the staffing model and an optional
+ * productivity modifier. Mirrors `calculateProductiveAgents` in the calculator
+ * store; kept local to avoid an import cycle (store imports this service).
+ *
+ * Semantics: `effectiveAgents = staffPerShift × (1 - shrinkage) × productivity`.
+ * Productivity scales available capacity (e.g. a training day cuts the count
+ * of agents that can take calls); shrinkage erodes capacity separately. The
+ * two compose multiplicatively.
+ */
 function calculateProductiveAgentsFromModel(
   staffingModel: StaffingModel,
-  shrinkagePercent: number
+  shrinkagePercent: number,
+  productivityModifier: number = 1.0
 ): number {
   const enabledShifts = staffingModel.shiftTypes.filter(s => s.enabled);
 
@@ -32,30 +42,28 @@ function calculateProductiveAgentsFromModel(
     return 0;
   }
 
-  // Normalize proportions
   const totalProportion = enabledShifts.reduce((sum, s) => sum + s.proportion, 0);
 
-  // Calculate staff available per day based on days open
-  // If open 7 days with 5-day work week, each person works 5/7 of days on average
-  const standardWorkWeek = 5; // Typical employee works 5 days/week
+  const STANDARD_WORK_WEEK = 5;
   const daysOpenPerWeek = Math.max(1, staffingModel.daysOpenPerWeek);
-  const staffAvailablePerDay = staffingModel.totalHeadcount * (standardWorkWeek / daysOpenPerWeek);
+  const staffAvailablePerDay = staffingModel.totalHeadcount * (STANDARD_WORK_WEEK / daysOpenPerWeek);
 
-  // Calculate breakdown by shift type
   const shiftBreakdown = enabledShifts.map(shift => {
-    const normalizedProportion = totalProportion > 0 ? shift.proportion / totalProportion : 1 / enabledShifts.length;
+    const normalizedProportion = totalProportion > 0
+      ? shift.proportion / totalProportion
+      : 1 / enabledShifts.length;
     const staffOnThisShift = Math.round(staffAvailablePerDay * normalizedProportion);
     const shiftsNeeded = staffingModel.operatingHoursPerDay / shift.hours;
     return { staff: staffOnThisShift, shifts: shiftsNeeded };
   });
 
-  // Staff per shift is weighted average
   const totalStaff = shiftBreakdown.reduce((sum, b) => sum + b.staff, 0);
   const staffPerShift = totalStaff > 0
     ? Math.round(shiftBreakdown.reduce((sum, b) => sum + (b.staff / b.shifts), 0))
     : 0;
 
-  return Math.round(staffPerShift * (1 - shrinkagePercent / 100));
+  const productivity = Math.max(0, productivityModifier);
+  return Math.round(staffPerShift * (1 - shrinkagePercent / 100) * productivity);
 }
 
 interface AchievableMetrics {
@@ -104,8 +112,10 @@ export class CalculationService {
       };
     }
 
-    // Apply productivity modifier to shrinkage
-    const effectiveShrinkagePercent = 100 - ((100 - inputs.shrinkagePercent) * productivityModifier);
+    // Productivity scales available capacity, not workload demand.
+    // The Erlang engine receives the raw shrinkage; productivity is applied
+    // when computing how many productive agents the staffing model yields.
+    const productivity = Math.max(0, productivityModifier);
 
     let results: CalculationResults | null = null;
     let abandonmentMetrics: CalculationServiceResult['abandonmentMetrics'] = null;
@@ -125,7 +135,7 @@ export class CalculationService {
         maxOccupancy: inputs.maxOccupancy,
       },
       behavior: {
-        shrinkagePercent: effectiveShrinkagePercent,
+        shrinkagePercent: inputs.shrinkagePercent,
         averagePatience: inputs.averagePatience,
         concurrency: inputs.concurrency,
       },
@@ -142,6 +152,7 @@ export class CalculationService {
         asa: engineResult.asa,
         occupancy: engineResult.occupancy,
         canAchieveTarget: engineResult.canAchieveTarget,
+        assumesStationary: engineResult.diagnostics.assumesStationary,
       };
       abandonmentMetrics = engineResult.abandonmentRate !== undefined ? {
         abandonmentRate: engineResult.abandonmentRate,
@@ -152,29 +163,24 @@ export class CalculationService {
       } : null;
     }
 
-    // --- If staffing model is set OR solveFor='sl', also calculate what's achievable with your staff ---
-    // If solveFor='sl', use the simple currentHeadcount input.
-    // Otherwise, fall back to the detailed staffing model.
-    let productiveAgents = 0;
-    
-    if (inputs.solveFor === 'sl' && (inputs.currentHeadcount || 0) > 0) {
-      productiveAgents = Math.round((inputs.currentHeadcount || 0) * (1 - inputs.shrinkagePercent / 100));
-    } else {
-      productiveAgents = calculateProductiveAgentsFromModel(staffingModel, inputs.shrinkagePercent);
-    }
+    // --- Achievable-with-your-staff branch ---
+    // If solveFor='sl', use the simple currentHeadcount input; otherwise fall
+    // back to the detailed staffing model. Productivity multiplies headcount:
+    //   effectiveAgents = headcount × (1 - shrinkage) × productivity
+    const useSimpleHeadcount = inputs.solveFor === 'sl' && (inputs.currentHeadcount || 0) > 0;
+    const productiveAgents = useSimpleHeadcount
+      ? Math.round((inputs.currentHeadcount || 0) * (1 - inputs.shrinkagePercent / 100) * productivity)
+      : calculateProductiveAgentsFromModel(staffingModel, inputs.shrinkagePercent, productivity);
 
-    const hasStaffingConstraint = (productiveAgents > 0 && inputs.volume > 0) && 
-                                  (inputs.solveFor === 'sl' || staffingModel.useAsConstraint);
+    const hasStaffingConstraint = productiveAgents > 0
+      && inputs.volume > 0
+      && (inputs.solveFor === 'sl' || staffingModel.useAsConstraint);
 
     if (hasStaffingConstraint) {
-      const effectiveAgents = productiveAgents;
-      const actualAgents = productiveAgents;
-      const occupancyCapApplied = false;
-
       const achievableInput: ErlangAchievableInput = {
         model: inputs.model,
-        fixedAgents: effectiveAgents,
-        actualAgents,
+        fixedAgents: productiveAgents,
+        actualAgents: productiveAgents,
         workload: {
           volume: inputs.volume,
           aht: inputs.aht,
@@ -185,7 +191,7 @@ export class CalculationService {
           maxOccupancy: inputs.maxOccupancy,
         },
         behavior: {
-          shrinkagePercent: effectiveShrinkagePercent,
+          shrinkagePercent: inputs.shrinkagePercent,
           averagePatience: inputs.averagePatience,
           concurrency: inputs.concurrency,
         },
@@ -201,9 +207,9 @@ export class CalculationService {
           actualOccupancy: achievableResult.actualOccupancy,
           abandonmentRate: achievableResult.abandonmentRate,
           expectedAbandonments: achievableResult.expectedAbandonments,
-          effectiveAgents: achievableResult.effectiveAgents ?? effectiveAgents,
-          actualAgents,
-          occupancyCapApplied: achievableResult.occupancyCapApplied ?? occupancyCapApplied,
+          effectiveAgents: achievableResult.effectiveAgents ?? productiveAgents,
+          actualAgents: productiveAgents,
+          occupancyCapApplied: achievableResult.occupancyCapApplied ?? false,
           requiredAgentsForMaxOccupancy: achievableResult.requiredAgentsForMaxOccupancy,
           occupancyPenalty: achievableResult.occupancyPenalty,
         };

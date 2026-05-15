@@ -37,6 +37,7 @@ import {
   type ShiftTemplate,
   type OptimizationMethod,
 } from '../lib/database/dataAccess';
+import { getProductivityForDateFromEvents } from '../lib/calendar/productivity';
 
 interface DatabaseState {
   // Data
@@ -128,15 +129,43 @@ interface DatabaseState {
 
   // Diagnostics
   getTableStats: () => Record<string, number>;
+
+  // Selectors (pure reads of cached state)
+  getProductivityForDate: (date: string) => number;
 }
 
+const TAB_ID = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+  ? crypto.randomUUID()
+  : `tab-${Math.random().toString(36).slice(2)}`;
+
+type BroadcastMessage =
+  | { type: 'invalidate'; table: string; originTabId: string }
+  | { type: 'ping'; originTabId: string };
+
+let broadcastChannel: BroadcastChannel | null = null;
+function getBroadcastChannel(): BroadcastChannel | null {
+  if (typeof BroadcastChannel === 'undefined') return null;
+  if (!broadcastChannel) {
+    broadcastChannel = new BroadcastChannel('odetoerlang');
+  }
+  return broadcastChannel;
+}
+
+function broadcastInvalidate(table: string): void {
+  const ch = getBroadcastChannel();
+  if (!ch) return;
+  const msg: BroadcastMessage = { type: 'invalidate', table, originTabId: TAB_ID };
+  ch.postMessage(msg);
+}
+
+export const __databaseStoreTabId = TAB_ID;
+
 export const useDatabaseStore = create<DatabaseState>((set, get) => ({
-  currentAssumptions: [], // Initial state
   campaigns: [],
   scenarios: [],
   clients: [],
-  assumptions: [], // Initial state for all assumptions
-  campaignAssumptions: [], // Initial state for campaign-specific assumptions
+  assumptions: [],
+  campaignAssumptions: [],
   calendarEvents: [],
   schedulePlans: [],
   scheduleRuns: [],
@@ -369,6 +398,7 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
   addCalendarEvent: (event) => {
     try {
       const id = createCalendarEvent(event);
+      broadcastInvalidate('CalendarEvents');
       return id;
     } catch (err) {
       console.error('Failed to create event:', err);
@@ -380,6 +410,7 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
   editCalendarEvent: (id, updates) => {
     try {
       updateCalendarEvent(id, updates);
+      broadcastInvalidate('CalendarEvents');
     } catch (err) {
       console.error('Failed to update event:', err);
       set({ error: 'Failed to update event.' });
@@ -389,6 +420,7 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
   removeCalendarEvent: (id) => {
     try {
       deleteCalendarEvent(id);
+      broadcastInvalidate('CalendarEvents');
     } catch (err) {
       console.error('Failed to delete event:', err);
       set({ error: 'Failed to delete event.' });
@@ -499,5 +531,10 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
       console.error('Failed to get table stats:', err); // Sanitize this too
       return {};
     }
+  },
+
+  // Selectors
+  getProductivityForDate: (date) => {
+    return getProductivityForDateFromEvents(date, get().calendarEvents);
   },
 }));

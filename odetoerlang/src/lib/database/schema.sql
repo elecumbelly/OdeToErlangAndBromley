@@ -220,12 +220,16 @@ CREATE TABLE IF NOT EXISTS CalendarEvents (
   campaign_id INTEGER,
   created_by TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted_at DATETIME,                       -- Soft delete (v4+). NULL = active.
   FOREIGN KEY (campaign_id) REFERENCES Campaigns(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_dates ON CalendarEvents(start_datetime, end_datetime);
 CREATE INDEX IF NOT EXISTS idx_calendar_campaign ON CalendarEvents(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_type ON CalendarEvents(event_type);
+CREATE INDEX IF NOT EXISTS idx_calevents_deleted_at ON CalendarEvents(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_calevents_campaign_range
+  ON CalendarEvents(campaign_id, start_datetime, end_datetime);
 
 -- 13. PRODUCTIVITYCURVES - Learning curves
 CREATE TABLE IF NOT EXISTS ProductivityCurves (
@@ -269,10 +273,13 @@ CREATE TABLE IF NOT EXISTS Scenarios (
   erlang_model TEXT DEFAULT 'C',  -- 'B', 'C', or 'A' - which Erlang model to use
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  created_by TEXT
+  created_by TEXT,
+  deleted_at DATETIME,            -- Soft delete (v4+). NULL = active.
+  comparison_group TEXT           -- Optional grouping tag (v4+) for comparison sets
 );
 
 CREATE INDEX IF NOT EXISTS idx_scenarios_baseline ON Scenarios(is_baseline);
+CREATE INDEX IF NOT EXISTS idx_scenarios_deleted_at ON Scenarios(deleted_at);
 
 -- 16. FORECASTS - Predicted demand & staffing
 CREATE TABLE IF NOT EXISTS Forecasts (
@@ -298,6 +305,8 @@ CREATE INDEX IF NOT EXISTS idx_forecasts_scenario ON Forecasts(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_forecasts_campaign ON Forecasts(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_forecasts_date ON Forecasts(forecast_date);
 CREATE INDEX IF NOT EXISTS idx_forecasts_model ON Forecasts(model_type);
+CREATE INDEX IF NOT EXISTS idx_forecasts_scenario_campaign_date
+  ON Forecasts(scenario_id, campaign_id, forecast_date);
 
 -- 17. HISTORICALDATA - CSV imports (3+ years)
 CREATE TABLE IF NOT EXISTS HistoricalData (
@@ -321,6 +330,7 @@ CREATE TABLE IF NOT EXISTS HistoricalData (
 CREATE INDEX IF NOT EXISTS idx_historical_date ON HistoricalData(date);
 CREATE INDEX IF NOT EXISTS idx_historical_campaign ON HistoricalData(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_historical_batch ON HistoricalData(import_batch_id);
+CREATE INDEX IF NOT EXISTS idx_historical_campaign_date ON HistoricalData(campaign_id, date);
 
 -- ============================================================================
 -- RESOURCES & RECRUITMENT (4 tables)

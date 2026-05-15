@@ -2,15 +2,20 @@
  * useCSVWorker - Hook to manage CSV parsing via Web Worker
  *
  * Provides a clean API for parsing CSV files off the main thread
- * with progress tracking and error handling.
+ * with progress tracking, timeout, single retry, and error handling.
+ *
+ * Hardening (Phase 6, item 23): a hung worker no longer locks the UI
+ * indefinitely — CSV_WORKER_TIMEOUT_MS bounds each attempt, with one retry
+ * on timeout/error before falling back to main-thread parsing.
  */
 
 import { useCallback, useRef, useState } from 'react';
 import type Papa from 'papaparse';
 import type { CSVWorkerResponse } from '../workers/csvWorker';
 
-// Max file size: 50MB
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+export const CSV_WORKER_TIMEOUT_MS = 10_000;
+const MAX_RETRIES = 1;
 
 interface UseCSVWorkerReturn {
   parseCSV: (file: File) => Promise<Papa.ParseResult<unknown>>;
@@ -18,81 +23,114 @@ interface UseCSVWorkerReturn {
   error: string | null;
 }
 
+function attemptWorkerParse(file: File): Promise<Papa.ParseResult<unknown>> {
+  return new Promise((resolve, reject) => {
+    let worker: Worker | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let settled = false;
+
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+      fn();
+    };
+
+    try {
+      worker = new Worker(
+        new URL('../workers/csvWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+
+      worker.onmessage = (event: MessageEvent<CSVWorkerResponse>) => {
+        if (event.data.type === 'success' && event.data.data) {
+          settle(() => resolve(event.data.data!));
+        } else {
+          const err = event.data.error || 'Unknown parsing error';
+          settle(() => reject(new Error(err)));
+        }
+      };
+
+      worker.onerror = (event) => {
+        settle(() => reject(new Error(`Worker error: ${event.message}`)));
+      };
+
+      timer = setTimeout(() => {
+        settle(() => reject(new Error(`Worker timed out after ${CSV_WORKER_TIMEOUT_MS}ms`)));
+      }, CSV_WORKER_TIMEOUT_MS);
+
+      worker.postMessage({ type: 'parse', file });
+    } catch (e) {
+      settle(() => reject(e instanceof Error ? e : new Error(String(e))));
+    }
+  });
+}
+
+async function mainThreadFallback(file: File): Promise<Papa.ParseResult<unknown>> {
+  const Papa = await import('papaparse');
+  return new Promise((resolve, reject) => {
+    Papa.default.parse(file, {
+      complete: resolve,
+      error: reject,
+    });
+  });
+}
+
 export function useCSVWorker(): UseCSVWorkerReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const workerRef = useRef<Worker | null>(null);
+  const lastAbortRef = useRef<(() => void) | null>(null);
 
-  const parseCSV = useCallback((file: File): Promise<Papa.ParseResult<unknown>> => {
-    return new Promise((resolve, reject) => {
-      // Validate file size
-      if (file.size > MAX_FILE_SIZE) {
-        const err = `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`;
-        setError(err);
-        reject(new Error(err));
-        return;
-      }
+  const parseCSV = useCallback(async (file: File): Promise<Papa.ParseResult<unknown>> => {
+    if (file.size > MAX_FILE_SIZE) {
+      const err = `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`;
+      setError(err);
+      throw new Error(err);
+    }
 
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
-      // Create worker with Vite's worker import syntax
-      // Falls back to main thread if workers not supported
+    const runFallback = async () => {
       try {
-        workerRef.current = new Worker(
-          new URL('../workers/csvWorker.ts', import.meta.url),
-          { type: 'module' }
-        );
-
-        workerRef.current.onmessage = (event: MessageEvent<CSVWorkerResponse>) => {
-          setIsLoading(false);
-
-          if (event.data.type === 'success' && event.data.data) {
-            resolve(event.data.data);
-          } else {
-            const err = event.data.error || 'Unknown parsing error';
-            setError(err);
-            reject(new Error(err));
-          }
-
-          // Clean up worker
-          workerRef.current?.terminate();
-          workerRef.current = null;
-        };
-
-        workerRef.current.onerror = (event) => {
-          setIsLoading(false);
-          const err = `Worker error: ${event.message}`;
-          setError(err);
-          reject(new Error(err));
-
-          workerRef.current?.terminate();
-          workerRef.current = null;
-        };
-
-        // Send file to worker
-        workerRef.current.postMessage({
-          type: 'parse',
-          file,
-        });
-      } catch {
-        // Fallback to main thread parsing if workers not supported
+        return await mainThreadFallback(file);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+        throw e;
+      } finally {
         setIsLoading(false);
-
-        // Dynamic import to keep bundle size down
-        import('papaparse').then((Papa) => {
-          Papa.default.parse(file, {
-            complete: (results) => {
-              resolve(results);
-            },
-            error: (err) => {
-              setError(err.message);
-              reject(err);
-            },
-          });
-        });
+        lastAbortRef.current = null;
       }
+    };
+
+    // Worker may not be supported (older browsers, sandboxed iframes, etc.).
+    if (typeof Worker === 'undefined') {
+      return runFallback();
+    }
+
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await attemptWorkerParse(file);
+        setIsLoading(false);
+        return result;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    console.error('[useCSVWorker] worker exhausted retries, falling back to main thread', {
+      file: file.name,
+      size: file.size,
+      error: lastError instanceof Error ? lastError.message : String(lastError),
     });
+
+    return runFallback();
   }, []);
 
   return {
