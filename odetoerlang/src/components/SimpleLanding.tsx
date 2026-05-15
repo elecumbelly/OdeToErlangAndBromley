@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useCalculatorStore } from '../store/calculatorStore';
 import { NumberInput } from './ui/NumberInput';
 import type { CalculationInputs } from '../types';
@@ -57,9 +57,88 @@ const presets: Preset[] = [
 
 const intervalOptions = [15, 30, 60];
 
+// Matches store DEFAULT_INPUTS exactly. If the persisted state still matches
+// these defaults, the user has never touched the form and we apply the
+// beginner-friendly "Start here" preset automatically.
+const STORE_DEFAULT_FINGERPRINT = {
+  volume: 100,
+  aht: 240,
+  intervalMinutes: 30,
+  targetSLPercent: 80,
+  thresholdSeconds: 20,
+  shrinkagePercent: 25,
+  maxOccupancy: 90,
+} as const;
+
+function isPristineDefault(inputs: CalculationInputs): boolean {
+  return (
+    inputs.volume === STORE_DEFAULT_FINGERPRINT.volume &&
+    inputs.aht === STORE_DEFAULT_FINGERPRINT.aht &&
+    inputs.intervalMinutes === STORE_DEFAULT_FINGERPRINT.intervalMinutes &&
+    inputs.targetSLPercent === STORE_DEFAULT_FINGERPRINT.targetSLPercent &&
+    inputs.thresholdSeconds === STORE_DEFAULT_FINGERPRINT.thresholdSeconds &&
+    inputs.shrinkagePercent === STORE_DEFAULT_FINGERPRINT.shrinkagePercent &&
+    inputs.maxOccupancy === STORE_DEFAULT_FINGERPRINT.maxOccupancy
+  );
+}
+
+function InfoTip({ label, body }: { label: string; body: string }) {
+  const [open, setOpen] = useState(false);
+  const tipId = useId();
+  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <span ref={wrapperRef} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label={`What is ${label}?`}
+        aria-expanded={open}
+        aria-describedby={open ? tipId : undefined}
+        onClick={() => setOpen((v) => !v)}
+        onBlur={(event) => {
+          if (!wrapperRef.current?.contains(event.relatedTarget as Node)) {
+            setOpen(false);
+          }
+        }}
+        className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle bg-bg-base text-2xs font-bold leading-none text-text-secondary transition-colors hover:border-cyan/60 hover:text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
+      >
+        i
+      </button>
+      {open && (
+        <span
+          id={tipId}
+          role="tooltip"
+          className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-xl border border-border-subtle bg-bg-surface px-3 py-2 text-xs leading-relaxed text-text-secondary shadow-lg"
+        >
+          {body}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function NumberField({
   label,
   hint,
+  tip,
   min,
   max,
   step,
@@ -69,6 +148,7 @@ function NumberField({
 }: {
   label: string;
   hint: string;
+  tip?: string;
   min: number;
   max: number;
   step: number;
@@ -79,7 +159,10 @@ function NumberField({
   return (
     <label className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-semibold text-text-primary">{label}</span>
+        <span className="flex items-baseline text-sm font-semibold text-text-primary">
+          {label}
+          {tip && <InfoTip label={label} body={tip} />}
+        </span>
         <span className="text-2xs uppercase tracking-[0.18em] text-text-muted">{hint}</span>
       </div>
       <NumberInput
@@ -146,6 +229,17 @@ function Pill({
   );
 }
 
+function StepBadge({ n, title }: { n: number; title: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan text-xs font-black text-bg-base shadow-glow-cyan">
+        {n}
+      </span>
+      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-text-primary">{title}</p>
+    </div>
+  );
+}
+
 function formatWholeNumber(value: number | null | undefined) {
   return Math.max(0, Math.round(value ?? 0)).toLocaleString();
 }
@@ -166,17 +260,25 @@ function fieldError(
   return errors.find((error) => error.field === field)?.message;
 }
 
+const tooltips = {
+  volume:
+    'How many contacts (calls, chats, etc.) arrive in this interval. Use a forecast for a single 15/30/60-minute period — not the daily total.',
+  aht: 'Average Handle Time: how long an agent typically spends per contact, including talk time and after-call work. Counted in seconds.',
+  serviceLevel:
+    'The percentage of contacts you want answered within the answer-time target. Industry default is 80% answered in 20s.',
+  thresholdSeconds:
+    'The "by when" half of your service-level promise. Pairs with the % above (e.g. 80% answered within 20 seconds).',
+  shrinkage:
+    'Paid time agents are NOT taking contacts — breaks, training, meetings, sick days. Most centres run 25-35%. This is what turns "agents on the phones" into "people on payroll".',
+  maxOccupancy:
+    'A safety cap. If utilisation goes above this, the model adds more agents to prevent burnout. 85-90% is typical.',
+} as const;
+
 function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
   const inputs = useCalculatorStore((state) => state.inputs);
   const results = useCalculatorStore((state) => state.results);
   const validation = useCalculatorStore((state) => state.validation);
   const setInput = useCalculatorStore((state) => state.setInput);
-
-  useEffect(() => {
-    setInput('model', 'C');
-    setInput('solveFor', 'agents');
-    setInput('concurrency', 1);
-  }, [setInput]);
 
   const applyPreset = (preset: Preset) => {
     setInput('volume', preset.volume);
@@ -191,6 +293,25 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
     setInput('concurrency', 1);
   };
 
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    // Guard against React 18 StrictMode dev double-invoke: the captured
+    // `inputs` reflects pre-write state, so a naive re-run would re-detect
+    // the defaults and re-apply the preset after the first run already
+    // changed them. Read fresh state to make the decision.
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+
+    const state = useCalculatorStore.getState();
+    state.setInput('model', 'C');
+    state.setInput('solveFor', 'agents');
+    state.setInput('concurrency', 1);
+    if (isPristineDefault(state.inputs)) {
+      applyPreset(presets[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const heroBadges = [
     'Same Erlang engine as Advanced',
     'Browser-only and private by default',
@@ -200,6 +321,9 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
   const resultNarrative = results?.canAchieveTarget
     ? 'Target service level is achievable with the calculated staffing.'
     : 'The engine had to trade off target service and occupancy constraints.';
+
+  const agentsValue = Math.max(0, Math.round(results?.requiredAgents ?? 0));
+  const fteValue = Math.max(0, Math.round(results?.totalFTE ?? 0));
 
   return (
     <div className="space-y-6">
@@ -231,12 +355,17 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {presets.map((preset) => (
+              {presets.map((preset, index) => (
                 <button
                   key={preset.label}
                   onClick={() => applyPreset(preset)}
-                  className="rounded-2xl border border-border-subtle bg-bg-base px-4 py-3 text-left transition-colors hover:border-cyan/40 hover:bg-bg-hover"
+                  className="relative rounded-2xl border border-border-subtle bg-bg-base px-4 py-3 text-left transition-colors hover:border-cyan/40 hover:bg-bg-hover"
                 >
+                  {index === 0 && (
+                    <span className="absolute -top-2 left-3 rounded-full bg-cyan px-2 py-0.5 text-2xs font-bold uppercase tracking-[0.16em] text-bg-base shadow-glow-cyan">
+                      Start here
+                    </span>
+                  )}
                   <p className="text-sm font-semibold text-text-primary">{preset.label}</p>
                   <p className="mt-1 text-2xs uppercase tracking-[0.16em] text-text-muted">{preset.summary}</p>
                 </button>
@@ -283,12 +412,13 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
             </button>
           </div>
 
-          <div className="mt-6 space-y-6">
+          <div className="mt-6 space-y-7">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                  Contact load
-                </p>
+              <StepBadge n={1} title="How many contacts?" />
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-bg-base/50 px-4 py-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+                  Interval length
+                </span>
                 <div className="flex flex-wrap gap-2">
                   {intervalOptions.map((minutes) => (
                     <Pill
@@ -304,6 +434,7 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
               <NumberField
                 label={`Contacts arriving in ${inputs.intervalMinutes} minutes`}
                 hint="Volume"
+                tip={tooltips.volume}
                 min={0}
                 max={5000}
                 step={1}
@@ -315,6 +446,7 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
               <NumberField
                 label="Average handle time"
                 hint="Seconds"
+                tip={tooltips.aht}
                 min={1}
                 max={3600}
                 step={1}
@@ -324,58 +456,68 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <NumberField
-                label="Service level target"
-                hint="Percent"
-                min={1}
-                max={99}
-                step={1}
-                value={inputs.targetSLPercent}
-                onChange={(value) => setInput('targetSLPercent', value)}
-                error={fieldError(validation.errors, 'targetSLPercent')}
-              />
-
-              <NumberField
-                label="Answer time target"
-                hint="Seconds"
-                min={1}
-                max={600}
-                step={1}
-                value={inputs.thresholdSeconds}
-                onChange={(value) => setInput('thresholdSeconds', value)}
-                error={fieldError(validation.errors, 'thresholdSeconds')}
-              />
-            </div>
-
-            <details className="overflow-hidden rounded-2xl border border-border-subtle bg-bg-base">
-              <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                Staffing assumptions
-              </summary>
-              <div className="grid gap-4 border-t border-border-muted px-4 py-4 sm:grid-cols-2">
+            <div className="space-y-4">
+              <StepBadge n={2} title="How fast do you need to answer?" />
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberField
-                  label="Shrinkage"
+                  label="Service level target"
                   hint="Percent"
-                  min={0}
-                  max={95}
-                  step={1}
-                  value={inputs.shrinkagePercent}
-                  onChange={(value) => setInput('shrinkagePercent', value)}
-                  error={fieldError(validation.errors, 'shrinkagePercent')}
-                />
-
-                <NumberField
-                  label="Maximum occupancy"
-                  hint="Percent"
-                  min={50}
+                  tip={tooltips.serviceLevel}
+                  min={1}
                   max={99}
                   step={1}
-                  value={inputs.maxOccupancy}
-                  onChange={(value) => setInput('maxOccupancy', value)}
-                  error={fieldError(validation.errors, 'maxOccupancy')}
+                  value={inputs.targetSLPercent}
+                  onChange={(value) => setInput('targetSLPercent', value)}
+                  error={fieldError(validation.errors, 'targetSLPercent')}
+                />
+
+                <NumberField
+                  label="Answer time target"
+                  hint="Seconds"
+                  tip={tooltips.thresholdSeconds}
+                  min={1}
+                  max={600}
+                  step={1}
+                  value={inputs.thresholdSeconds}
+                  onChange={(value) => setInput('thresholdSeconds', value)}
+                  error={fieldError(validation.errors, 'thresholdSeconds')}
                 />
               </div>
-            </details>
+            </div>
+
+            <div className="space-y-4">
+              <StepBadge n={3} title="Who's actually available?" />
+              <details open className="overflow-hidden rounded-2xl border border-border-subtle bg-bg-base">
+                <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+                  Staffing assumptions
+                </summary>
+                <div className="grid gap-4 border-t border-border-muted px-4 py-4 sm:grid-cols-2">
+                  <NumberField
+                    label="Shrinkage"
+                    hint="Percent"
+                    tip={tooltips.shrinkage}
+                    min={0}
+                    max={95}
+                    step={1}
+                    value={inputs.shrinkagePercent}
+                    onChange={(value) => setInput('shrinkagePercent', value)}
+                    error={fieldError(validation.errors, 'shrinkagePercent')}
+                  />
+
+                  <NumberField
+                    label="Maximum occupancy"
+                    hint="Percent"
+                    tip={tooltips.maxOccupancy}
+                    min={50}
+                    max={99}
+                    step={1}
+                    value={inputs.maxOccupancy}
+                    onChange={(value) => setInput('maxOccupancy', value)}
+                    error={fieldError(validation.errors, 'maxOccupancy')}
+                  />
+                </div>
+              </details>
+            </div>
 
             {!validation.valid && (
               <div className="rounded-2xl border border-red/30 bg-red/10 px-4 py-3">
@@ -383,23 +525,59 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
                 <p className="mt-1 text-sm text-text-secondary">{validation.errors[0]?.message}</p>
               </div>
             )}
+
+            <details className="rounded-2xl border border-border-subtle bg-bg-base">
+              <summary className="cursor-pointer px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+                What do these terms mean?
+              </summary>
+              <dl className="space-y-3 border-t border-border-muted px-4 py-4 text-sm text-text-secondary">
+                <div>
+                  <dt className="font-semibold text-text-primary">Erlang C</dt>
+                  <dd>The classic queueing formula for call centres: assumes callers wait in a queue rather than hang up. The math behind the agent number.</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-primary">AHT (Average Handle Time)</dt>
+                  <dd>Talk time plus after-call work, per contact. The single biggest lever on staffing — a 30-second AHT bump can add several agents.</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-primary">Service Level</dt>
+                  <dd>"% of contacts answered within N seconds." Always quoted as a pair: 80/20 means 80% answered within 20s.</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-primary">Occupancy</dt>
+                  <dd>What share of logged-in time an agent is actually handling contacts. Above ~90% sustained, burnout and errors climb sharply.</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-primary">Shrinkage</dt>
+                  <dd>Paid time agents aren't on contacts: breaks, training, sick days, meetings. Typical 25-35%. Drives the gap between "agents needed" and "people to hire".</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-text-primary">FTE (Full-Time Equivalent)</dt>
+                  <dd>Headcount you actually pay for, after adding shrinkage and converting part-timers to full-time units. Always &gt; agents-on-the-floor.</dd>
+                </div>
+              </dl>
+            </details>
           </div>
         </div>
 
         <aside className="rounded-[28px] border border-border-subtle bg-bg-surface p-5 sm:p-6">
           <div className="rounded-[24px] border border-cyan/20 bg-[linear-gradient(180deg,rgba(0,255,247,0.08),transparent)] p-5">
             <p className="text-2xs uppercase tracking-[0.2em] text-cyan">Calculated result</p>
-            <div className="mt-3 flex items-end gap-3">
-              <span className="text-6xl font-black leading-none tracking-tight text-text-primary">
-                {formatWholeNumber(results?.requiredAgents)}
-              </span>
-              <span className="pb-2 text-sm font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                agents
-              </span>
-            </div>
+            <p className="mt-3 text-base leading-7 text-text-secondary">
+              You need{' '}
+              <span className="text-2xl font-black tracking-tight text-text-primary">
+                {agentsValue.toLocaleString()} agent{agentsValue === 1 ? '' : 's'}
+              </span>{' '}
+              on the floor — about{' '}
+              <span className="text-2xl font-black tracking-tight text-text-primary">
+                {fteValue.toLocaleString()}{' '}
+                {fteValue === 1 ? 'person' : 'people'} on payroll
+              </span>{' '}
+              to cover breaks and shrinkage.
+            </p>
             <p className="mt-3 text-sm text-text-secondary">
-              Estimated staffing required for {inputs.volume.toLocaleString()} contacts in {inputs.intervalMinutes}
-              {' '}minutes at {inputs.aht.toLocaleString()} seconds AHT.
+              Based on {inputs.volume.toLocaleString()} contacts in {inputs.intervalMinutes} minutes at{' '}
+              {inputs.aht.toLocaleString()}s AHT, with {inputs.shrinkagePercent}% shrinkage.
             </p>
             <p className="mt-4 rounded-2xl border border-border-subtle bg-bg-base/80 px-4 py-3 text-sm text-text-secondary">
               {resultNarrative}
