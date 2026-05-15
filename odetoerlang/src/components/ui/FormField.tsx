@@ -4,11 +4,11 @@ import { NumberInput } from './NumberInput';
 
 interface FormFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'children'> {
   label: string;
-  error?: string;
-  hint?: string;
+  error?: string | undefined;
+  hint?: string | undefined;
   icon?: ReactNode;
   children?: ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | undefined;
 }
 
 const sizeStyles = {

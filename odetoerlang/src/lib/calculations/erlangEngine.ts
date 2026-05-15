@@ -85,37 +85,37 @@ function resolveEffectiveAHT(aht: number, behavior: ErlangEngineInput['behavior'
 export interface ErlangEngineOutput {
   model: ErlangVariant;
   requiredAgents: number;
-  effectiveAgents?: number;
-  actualAgents?: number;
+  effectiveAgents?: number | undefined;
+  actualAgents?: number | undefined;
   totalFTE: number;
   serviceLevel: number; // percentage (0-100)
   asa: number; // Average Speed of Answer in seconds
   occupancy: number; // percentage (0-100)
-  actualOccupancy?: number; // percentage (0-100) using the uncapped agent count
+  actualOccupancy?: number | undefined; // percentage (0-100) using the uncapped agent count
   canAchieveTarget: boolean; // Indicates if target SL was met
-  occupancyCapApplied?: boolean;
-  requiredAgentsForMaxOccupancy?: number;
+  occupancyCapApplied?: boolean | undefined;
+  requiredAgentsForMaxOccupancy?: number | undefined;
   /**
    * @deprecated Use `occupancyViolationSeverity` instead. The legacy
    * `occupancyPenalty` semantics were inverted (approached 1.0 as cap was
    * violated harder). Kept here for one release for backwards compatibility
    * with persisted output. New code should consume `occupancyViolationSeverity`.
    */
-  occupancyPenalty?: number;
+  occupancyPenalty?: number | undefined;
   /**
    * 0 when no cap violation, →1 as `actualAgents` falls below
    * `requiredAgentsForMaxOccupancy`. Service level is scaled by `(1 - s)`
    * and ASA by `(1 + 2·s)` under cap violation.
    */
-  occupancyViolationSeverity?: number;
+  occupancyViolationSeverity?: number | undefined;
 
   // Additional metrics
-  abandonmentRate?: number;
-  expectedAbandonments?: number;
-  answeredContacts?: number;
-  retrialProbability?: number;
-  virtualTraffic?: number;
-  blockingProbability?: number; // For Erlang B
+  abandonmentRate?: number | undefined;
+  expectedAbandonments?: number | undefined;
+  answeredContacts?: number | undefined;
+  retrialProbability?: number | undefined;
+  virtualTraffic?: number | undefined;
+  blockingProbability?: number | undefined; // For Erlang B
 
   diagnostics: {
     trafficIntensity: number; // Erlangs

@@ -63,7 +63,7 @@ export function runForecast(request: ForecastRequest): ForecastResult | null {
   const inputs = mergeCalculationInputs(assumptionInputs, {
     volume: request.volume,
     model: request.model,
-    intervalMinutes: request.intervalMinutes
+    ...(request.intervalMinutes !== undefined && { intervalMinutes: request.intervalMinutes }),
   });
 
   // 4. Build ErlangEngineInput

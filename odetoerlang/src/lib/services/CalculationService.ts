@@ -66,30 +66,30 @@ function calculateProductiveAgentsFromModel(
   return Math.round(staffPerShift * (1 - shrinkagePercent / 100) * productivity);
 }
 
-interface AchievableMetrics {
+export interface AchievableMetrics {
   serviceLevel: number;
   asa: number;
   occupancy: number;
-  actualOccupancy?: number;
-  abandonmentRate?: number;
-  expectedAbandonments?: number;
+  actualOccupancy?: number | undefined;
+  abandonmentRate?: number | undefined;
+  expectedAbandonments?: number | undefined;
   effectiveAgents: number;
   actualAgents: number;
-  occupancyCapApplied?: boolean;
-  requiredAgentsForMaxOccupancy?: number;
-  occupancyPenalty?: number;
+  occupancyCapApplied?: boolean | undefined;
+  requiredAgentsForMaxOccupancy?: number | undefined;
+  occupancyPenalty?: number | undefined;
 }
 
 interface CalculationServiceResult {
   results: CalculationResults | null;
-  achievableMetrics?: AchievableMetrics | null; // What you can achieve with your staff
+  achievableMetrics?: AchievableMetrics | null | undefined; // What you can achieve with your staff
   abandonmentMetrics?: {
     abandonmentRate: number;
     expectedAbandonments: number;
     answeredContacts: number;
-    retrialProbability?: number;
-    virtualTraffic?: number;
-  } | null;
+    retrialProbability?: number | undefined;
+    virtualTraffic?: number | undefined;
+  } | null | undefined;
   validation: ValidationResult;
 }
 

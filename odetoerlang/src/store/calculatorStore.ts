@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CalculationInputs, CalculationResults } from '../types';
-import { CalculationService } from '../lib/services/CalculationService';
+import { CalculationService, type AchievableMetrics } from '../lib/services/CalculationService';
 import type { ValidationResult } from '../lib/validation/inputValidation';
 import { toLocalDateString } from '../lib/dateUtils';
 
@@ -43,20 +43,6 @@ interface StaffingModel {
   useAsConstraint: boolean;      // Use this staffing as constraint vs optimal calc
 }
 
-interface AchievableMetrics {
-  serviceLevel: number;
-  asa: number;
-  occupancy: number;
-  actualOccupancy?: number;
-  abandonmentRate?: number;
-  expectedAbandonments?: number;
-  effectiveAgents: number;
-  actualAgents: number;
-  occupancyCapApplied?: boolean;
-  requiredAgentsForMaxOccupancy?: number;
-  occupancyPenalty?: number;
-}
-
 interface CalculatorState {
   inputs: CalculationInputs;
   date: string; // Add date for calendar integration
@@ -64,15 +50,15 @@ interface CalculatorState {
   staffingModel: StaffingModel;
   validation: ValidationResult;
   useAssumptions: boolean;
-  activeProductivityModifier?: number;
-  achievableMetrics?: AchievableMetrics | null; // What you can achieve with your staff
+  activeProductivityModifier?: number | undefined;
+  achievableMetrics?: AchievableMetrics | null | undefined; // What you can achieve with your staff
   abandonmentMetrics?: {
     abandonmentRate: number;
     expectedAbandonments: number;
     answeredContacts: number;
-    retrialProbability?: number;
-    virtualTraffic?: number;
-  } | null;
+    retrialProbability?: number | undefined;
+    virtualTraffic?: number | undefined;
+  } | null | undefined;
   setInput: <K extends keyof CalculationInputs>(key: K, value: CalculationInputs[K]) => void;
   setDate: (date: string) => void; // Add setDate action
   setStaffingModel: <K extends keyof StaffingModel>(key: K, value: StaffingModel[K]) => void;

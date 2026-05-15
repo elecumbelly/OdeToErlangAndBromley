@@ -42,8 +42,8 @@ export interface Event {
 export interface Server {
   id: number;
   busy: boolean;
-  customerId?: number;
-  releaseTime?: number;
+  customerId?: number | undefined;
+  releaseTime?: number | undefined;
 }
 
 export interface TimeSeriesPoint {
@@ -95,11 +95,11 @@ export interface ContactRecord {
 
   // Channel and metadata
   channel: ChannelType;       // voice, chat, email, etc.
-  campaignId?: number;        // Campaign identifier
-  skillId?: number;           // Skill identifier
+  campaignId?: number | undefined;        // Campaign identifier
+  skillId?: number | undefined;           // Skill identifier
 
   // Channel-specific attributes
-  concurrentContacts?: number; // For chat/email (how many contacts agent handled simultaneously)
-  abandoned?: boolean;         // Customer abandoned before service
-  abandonTime?: number;        // When they abandoned
+  concurrentContacts?: number | undefined; // For chat/email (how many contacts agent handled simultaneously)
+  abandoned?: boolean | undefined;         // Customer abandoned before service
+  abandonTime?: number | undefined;        // When they abandoned
 }

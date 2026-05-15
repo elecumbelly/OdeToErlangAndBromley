@@ -148,13 +148,13 @@ function NumberField({
 }: {
   label: string;
   hint: string;
-  tip?: string;
+  tip?: string | undefined;
   min: number;
   max: number;
   step: number;
   value: number;
   onChange: (nextValue: number) => void;
-  error?: string;
+  error?: string | undefined;
 }) {
   return (
     <label className="space-y-2">

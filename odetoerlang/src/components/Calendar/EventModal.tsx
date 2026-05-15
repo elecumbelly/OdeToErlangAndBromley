@@ -11,9 +11,9 @@ interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: Omit<CalendarEvent, 'id' | 'created_at'>) => void;
-  onDelete?: () => void;
-  initialDate?: string;
-  eventToEdit?: CalendarEvent;
+  onDelete?: (() => void) | undefined;
+  initialDate?: string | undefined;
+  eventToEdit?: CalendarEvent | undefined;
 }
 
 const EVENT_TYPES = ['Training', 'Meeting', 'Holiday', 'Downtime', 'Onboarding', 'TownHall', 'Other'];
