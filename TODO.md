@@ -1,6 +1,6 @@
 # TODO - OdeToErlangAndBromley
 
-**Status:** Build/tests passing (500+), version 0.2.0. Major features shipped (calculator, scenarios/model comparison, capacity, historical/forecasting, workforce/BPO, simulation, import/export, tour, mobile sticky KPIs, DB backup).
+**Status:** Build/tests passing (569), version 0.2.3. Major features shipped (calculator, scenarios/model comparison, capacity, historical/forecasting, workforce/BPO, simulation, import/export, tour, mobile sticky KPIs, DB backup).
 
 **Open items:**
 - Mobile polish pass (visual QA on all tabs).

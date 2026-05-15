@@ -1,6 +1,6 @@
 # Automated Scheduling Engine
 
-OdeToErlang includes a sophisticated scheduling engine designed to bridge the gap between forecasted volume and individual staff rosters.
+OdeToErlangAndBromley includes a sophisticated scheduling engine designed to bridge the gap between forecasted volume and individual staff rosters.
 
 ## 📐 Core Algorithm: The "Greedy Skill-Match"
 

@@ -87,7 +87,7 @@ Where:
 
 ## Inverse Calculation Logic ("Solve For" Mode)
 
-Standard capacity planning solves for `c` (Agents) given a target `SL`. OdeToErlang supports **Inverse Calculation** where `c` is fixed and we solve for the achieved `SL`.
+Standard capacity planning solves for `c` (Agents) given a target `SL`. OdeToErlangAndBromley supports **Inverse Calculation** where `c` is fixed and we solve for the achieved `SL`.
 
 ### 1. Requirements Mode (Forward)
 The engine uses **Binary Search** to find the minimum integer `c` such that `SL(c, A, t, AHT) >= TargetSL`. 

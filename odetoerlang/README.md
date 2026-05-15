@@ -1,4 +1,4 @@
-# OdeToErlang: The Unified WFM Platform
+# OdeToErlangAndBromley: The Unified WFM Platform
 
 A comprehensive, professional-grade browser-based platform for contact centre capacity planning and scheduling. Built with React 18, SQLite-wasm, and the rigorous queuing theory of **A.K. Erlang**.
 
@@ -20,7 +20,7 @@ A comprehensive, professional-grade browser-based platform for contact centre ca
 - **State:** Zustand (State Management)
 - **Database:** `sql.js` (SQLite WASM) + `idb` (IndexedDB Persistence)
 - **Engine:** Pure TypeScript implementation of Erlang A/B/C and Scheduling Algorithms
-- **Test:** Vitest (500+ unit/integration tests)
+- **Test:** Vitest (569 unit/integration tests)
 
 ## ⚡ Performance Optimizations
 
@@ -29,7 +29,7 @@ A comprehensive, professional-grade browser-based platform for contact centre ca
 - **Non-blocking DB init:** UI renders immediately while the SQLite engine hydrates.
 - **Input Debouncing:** 300ms delay prevents UI jank during rapid parameter changes.
 
-## 🛠️ Recent Changes (v0.2.2)
+## 🛠️ Recent Changes (v0.2.3)
 
 - **Command Centre:** Added a new landing page dashboard.
 - **Unified Navigation:** Added visual icons and compact headers for mobile use.

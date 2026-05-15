@@ -80,7 +80,7 @@ Open **http://localhost:5173** in your browser.
 
 ## 🗺️ Roadmap
 
-### Current Version (v0.2.2)
+### Current Version (v0.2.3)
 - ✅ Executive Command Centre
 - ✅ Erlang A/B/C mathematical parity
 - ✅ Historical Trend Analysis
