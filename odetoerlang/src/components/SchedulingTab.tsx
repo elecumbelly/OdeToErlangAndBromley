@@ -7,76 +7,17 @@ import { StatusBadge } from './ui/StatusBadge';
 import { generateCoverageRequirements } from '../lib/scheduling/coverageGenerator';
 import { runScheduleOptimization } from '../lib/scheduling/schedulerEngine';
 import { getCoverageRequirements, getScheduleMetricsByRunIds, type ScheduleMetric } from '../lib/database/dataAccess';
-import { toLocalDateString } from '../lib/dateUtils';
-
-type PlanFormState = {
-  planName: string;
-  startDate: string;
-  endDate: string;
-  intervalMinutes: number;
-  maxWeeklyHours: number;
-  minRestHours: number;
-  allowSkillSwitch: boolean;
-  breakWindowStartMin: number;
-  breakWindowEndMin: number;
-  lunchWindowStartMin: number;
-  lunchWindowEndMin: number;
-  status: string;
-};
-
-const dateToInput = (date: Date) => toLocalDateString(date);
-
-const createDefaultPlanState = (): PlanFormState => {
-  const today = new Date();
-  const endDate = new Date(today);
-  endDate.setMonth(endDate.getMonth() + 3);
-
-  return {
-    planName: '',
-    startDate: dateToInput(today),
-    endDate: dateToInput(endDate),
-    intervalMinutes: 30,
-    maxWeeklyHours: 40,
-    minRestHours: 11,
-    allowSkillSwitch: true,
-    breakWindowStartMin: 60,
-    breakWindowEndMin: 480,
-    lunchWindowStartMin: 180,
-    lunchWindowEndMin: 360,
-    status: 'Draft',
-  };
-};
-
-const formatMinutes = (minutes: number) => `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-
-const statusVariant = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized === 'completed') return 'success';
-  if (normalized === 'failed' || normalized === 'error') return 'error';
-  if (normalized === 'running' || normalized === 'queued' || normalized === 'pending') return 'warning';
-  return 'neutral';
-};
-
-type CoverageSummary = {
-  total: number;
-  dates: number;
-  intervals: number;
-  skills: number;
-};
-
-const summarizeCoverageRequirements = (
-  requirements: ReturnType<typeof getCoverageRequirements>
-): CoverageSummary => {
-  const dates = new Set(requirements.map((req) => req.requirement_date));
-  const intervals = new Set(requirements.map((req) => `${req.requirement_date}-${req.interval_start}`));
-  const skills = new Set(requirements.map((req) => req.skill_id));
-  return {
-    total: requirements.length,
-    dates: dates.size,
-    intervals: intervals.size,
-    skills: skills.size,
-  };
-};
+import {
+  type PlanFormState,
+  type CoverageSummary,
+  dateToInput,
+  createDefaultPlanState,
+  statusVariant,
+  summarizeCoverageRequirements,
+} from './Scheduling/schedulingTypes';
+import { PlanOverviewCard } from './Scheduling/PlanOverviewCard';
+import { ComparisonDisplay } from './Scheduling/ComparisonDisplay';
+import { RecentRunsList } from './Scheduling/RecentRunsList';
 
 export default function SchedulingTab() {
   const {
@@ -219,10 +160,7 @@ export default function SchedulingTab() {
   };
 
   const updatePlanForm = (field: keyof PlanFormState, value: string | number | boolean) => {
-    setPlanForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setPlanForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSavePlan = () => {
@@ -353,24 +291,6 @@ export default function SchedulingTab() {
     }) ?? null;
   }, [runGroups, comparisonGroupId]);
 
-  const compareMetric = (
-    label: string,
-    valueA?: number,
-    valueB?: number,
-    suffix: string = ''
-  ) => {
-    if (valueA === undefined || valueB === undefined) {
-      return { label, valueA: '---', valueB: '---', delta: '---' };
-    }
-    const delta = valueB - valueA;
-    return {
-      label,
-      valueA: `${valueA}${suffix}`,
-      valueB: `${valueB}${suffix}`,
-      delta: `${delta >= 0 ? '+' : ''}${delta}${suffix}`,
-    };
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -408,16 +328,15 @@ export default function SchedulingTab() {
                 </div>
                 <p className="text-text-primary font-medium text-sm">No schedule plans</p>
                 <p className="text-text-muted text-xs mt-1 mb-4">Create a plan or start with a demo setup.</p>
-                <Button 
-                  size="sm" 
-                  variant="secondary" 
+                <Button
+                  size="sm"
+                  variant="secondary"
                   className="w-full"
                   onClick={() => {
-                    // Logic to create a demo plan
                     const today = new Date();
                     const nextWeek = new Date();
                     nextWeek.setDate(today.getDate() + 7);
-                    
+
                     const id = addSchedulePlan({
                       plan_name: 'Demo Weekly Plan',
                       campaign_id: selectedCampaignId || 1,
@@ -619,35 +538,7 @@ export default function SchedulingTab() {
         </div>
 
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wide mb-3">
-              Plan Overview
-            </h3>
-            {selectedPlan ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-text-secondary">
-                <div>
-                  <p className="text-text-muted uppercase tracking-widest text-2xs">Date Range</p>
-                  <p>{selectedPlan.start_date} to {selectedPlan.end_date}</p>
-                </div>
-                <div>
-                  <p className="text-text-muted uppercase tracking-widest text-2xs">Rules</p>
-                  <p>{selectedPlan.max_weekly_hours} hrs/week, {selectedPlan.min_rest_hours} hrs rest</p>
-                </div>
-                <div>
-                  <p className="text-text-muted uppercase tracking-widest text-2xs">Breaks</p>
-                  <p>{formatMinutes(selectedPlan.break_window_start_min)} to {formatMinutes(selectedPlan.break_window_end_min)}</p>
-                </div>
-                <div>
-                  <p className="text-text-muted uppercase tracking-widest text-2xs">Lunch</p>
-                  <p>{formatMinutes(selectedPlan.lunch_window_start_min)} to {formatMinutes(selectedPlan.lunch_window_end_min)}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-text-muted">
-                Select a schedule plan to see details and run optimization.
-              </p>
-            )}
-          </div>
+          <PlanOverviewCard selectedPlan={selectedPlan} />
 
           <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
@@ -805,116 +696,8 @@ export default function SchedulingTab() {
             </div>
           </div>
 
-          <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wide mb-3">
-              A/B Comparison
-            </h3>
-            {comparisonGroup ? (
-              (() => {
-                const runsByLabel = new Map(comparisonGroup.runs.map((run) => [run.label ?? '-', run]));
-                const runA = runsByLabel.get('A');
-                const runB = runsByLabel.get('B');
-                const metricA = runA ? metricsByRunId.get(runA.id) : undefined;
-                const metricB = runB ? metricsByRunId.get(runB.id) : undefined;
-                const metrics = [
-                  compareMetric('Coverage', metricA?.coverage_percent, metricB?.coverage_percent, '%'),
-                  compareMetric('Gap (min)', metricA?.gap_minutes, metricB?.gap_minutes),
-                  compareMetric('Overstaff (min)', metricA?.overstaff_minutes, metricB?.overstaff_minutes),
-                  compareMetric('Overtime (min)', metricA?.overtime_minutes, metricB?.overtime_minutes),
-                  compareMetric('Violations', metricA?.violations_count, metricB?.violations_count),
-                  compareMetric('Cost', metricA?.cost_estimate, metricB?.cost_estimate),
-                ];
-                return (
-                  <div className="space-y-3 text-xs text-text-secondary">
-                    <div className="grid grid-cols-4 gap-2 text-2xs uppercase tracking-widest text-text-muted">
-                      <span>Metric</span>
-                      <span>Method A</span>
-                      <span>Method B</span>
-                      <span>Delta</span>
-                    </div>
-                    {metrics.map((metric) => (
-                      <div key={metric.label} className="grid grid-cols-4 gap-2">
-                        <span>{metric.label}</span>
-                        <span>{metric.valueA}</span>
-                        <span>{metric.valueB}</span>
-                        <span>{metric.delta}</span>
-                      </div>
-                    ))}
-                    {!metricA || !metricB ? (
-                      <p className="text-2xs text-text-muted">
-                        Metrics appear once both runs complete.
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })()
-            ) : (
-              <p className="text-xs text-text-muted">Run a pair of methods to compare results.</p>
-            )}
-          </div>
-
-          <div className="bg-bg-surface border border-border-subtle rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wide mb-3">
-              Recent Runs
-            </h3>
-            {runGroups.length === 0 ? (
-              <p className="text-xs text-text-muted">No runs yet for this plan.</p>
-            ) : (
-              <div className="space-y-3">
-                {runGroups.map((group) => {
-                  const runsByLabel = new Map(group.runs.map((run) => [run.label ?? '-', run]));
-                  const runA = runsByLabel.get('A');
-                  const runB = runsByLabel.get('B');
-                  return (
-                    <div
-                      key={group.groupId}
-                      className="border border-border-muted rounded-lg p-3 bg-bg-elevated"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs text-text-secondary">
-                          Group {group.groupId.slice(0, 8)}
-                        </p>
-                        <p className="text-2xs text-text-muted">
-                          {group.runs[0]?.created_at ?? 'Unknown time'}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {[{ label: 'A', run: runA }, { label: 'B', run: runB }].map(({ label, run }) => (
-                          <div
-                            key={label}
-                            className="border border-border-subtle rounded-md p-3 bg-bg-surface"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-semibold text-text-primary">
-                                Method {label}
-                              </span>
-                              <StatusBadge size="sm" variant={statusVariant(run?.status ?? 'Pending')}>
-                                {run?.status ?? 'Pending'}
-                              </StatusBadge>
-                            </div>
-                            <p className="text-2xs text-text-secondary">
-                              {run ? methodLookup.get(run.method_id)?.method_name ?? 'Unknown method' : 'Not run'}
-                            </p>
-                            {run && metricsByRunId.get(run.id) ? (
-                              <div className="text-2xs text-text-muted mt-2 space-y-1">
-                                <p>Coverage: {metricsByRunId.get(run.id)?.coverage_percent}%</p>
-                                <p>Gap: {metricsByRunId.get(run.id)?.gap_minutes} min</p>
-                                <p>Violations: {metricsByRunId.get(run.id)?.violations_count}</p>
-                              </div>
-                            ) : (
-                              <p className="text-2xs text-text-muted mt-1">
-                                Coverage and cost metrics will appear once the run completes.
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ComparisonDisplay comparisonGroup={comparisonGroup} metricsByRunId={metricsByRunId} />
+          <RecentRunsList runGroups={runGroups} metricsByRunId={metricsByRunId} methodLookup={methodLookup} />
         </div>
       </div>
     </div>
