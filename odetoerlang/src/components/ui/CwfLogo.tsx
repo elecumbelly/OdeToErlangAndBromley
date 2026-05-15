@@ -34,5 +34,3 @@ export function CwfLogo({ size = 32, light = false, ...rest }: CwfLogoProps) {
     </svg>
   );
 }
-
-export default CwfLogo;
