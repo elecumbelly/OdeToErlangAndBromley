@@ -2,7 +2,6 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import InputPanel from './components/InputPanel';
 import ResultsDisplay from './components/ResultsDisplay';
 import StaffingModelPanel from './components/StaffingModelPanel';
-import type { InitStage } from './components/InitializationProgress';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ThemeToggle from './components/ui/ThemeToggle';
 import { CwfLogo } from './components/ui/CwfLogo';
@@ -54,6 +53,7 @@ const TAB_DESCRIPTIONS: Record<string, { hub: string; description: string }> = {
 
 type Tab = 'dashboard' | 'calculator' | 'charts' | 'multichannel' | 'scenarios' | 'modelcomp' | 'capacity' | 'assumptions' | 'historical' | 'calendar' | 'scheduling' | 'workforce' | 'bpo' | 'simulation' | 'import' | 'export' | 'learn';
 type Mode = 'simple' | 'advanced';
+type InitStage = 'idle' | 'loading-wasm' | 'loading-db' | 'seeding' | 'ready' | 'error';
 
 const HUB_GROUPS: Array<{ id: string; name: string; icon: string; tabs: Tab[] }> = [
   { id: 'command', name: 'Command', icon: '📊', tabs: ['dashboard'] },

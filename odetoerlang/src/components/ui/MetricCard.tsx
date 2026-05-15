@@ -1,8 +1,8 @@
 import { useAnimatedValue } from '../../hooks/useAnimatedValue';
 import { cn } from '../../utils/cn';
 
-export type MetricTrend = 'up' | 'down' | 'neutral';
-export type MetricStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info';
+type MetricTrend = 'up' | 'down' | 'neutral';
+type MetricStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info';
 
 interface MetricCardProps {
   label: string;

@@ -5,7 +5,7 @@
 /**
  * Channel types for contact center simulation
  */
-export type ChannelType = 'voice' | 'chat' | 'email' | 'video' | 'social' | 'sms';
+type ChannelType = 'voice' | 'chat' | 'email' | 'video' | 'social' | 'sms';
 
 export interface ScenarioConfig {
   arrivalRate: number;  // lambda (arrivals per time unit)

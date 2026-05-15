@@ -115,7 +115,7 @@ export function erlangC(agents: number, trafficIntensity: number): number {
  * @param threshold - Target threshold in seconds
  * @returns Probability wait exceeds threshold (0-1)
  */
-export function probabilityWaitExceedsThreshold(
+function probabilityWaitExceedsThreshold(
   agents: number,
   trafficIntensity: number,
   aht: number,

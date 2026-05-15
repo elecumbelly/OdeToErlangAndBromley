@@ -1,4 +1,4 @@
-export const INFINITY_GLYPH = '∞';
+const INFINITY_GLYPH = '∞';
 
 export const STICKY_HIDDEN_KEY = 'ode_sticky_kpi_hidden';
 

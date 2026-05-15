@@ -1,7 +1,7 @@
 import { cn } from '../../utils/cn';
 
-export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
-export type BadgeSize = 'sm' | 'md' | 'lg';
+type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+type BadgeSize = 'sm' | 'md' | 'lg';
 
 interface StatusBadgeProps {
   variant?: BadgeVariant;

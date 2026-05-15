@@ -14,7 +14,7 @@ import type Papa from 'papaparse';
 import type { CSVWorkerResponse } from '../workers/csvWorker';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-export const CSV_WORKER_TIMEOUT_MS = 10_000;
+const CSV_WORKER_TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 1;
 
 interface UseCSVWorkerReturn {
