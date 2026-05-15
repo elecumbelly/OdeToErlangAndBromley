@@ -4,70 +4,60 @@ import { FormField } from '../ui/FormField';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { getRoles, createRole, updateRole, deleteRole, type Role } from '../../lib/database/dataAccess';
 import { useToast } from '../ui/Toast';
+import { useEntityForm } from '../../hooks/useEntityForm';
+
+interface RoleFormValues extends Record<string, unknown> {
+  role_name: string;
+  role_type: string;
+  reports_to_role_id: number | null;
+}
+
+const DEFAULTS: RoleFormValues = {
+  role_name: '',
+  role_type: 'Agent',
+  reports_to_role_id: null,
+};
 
 export default function RolesConfiguration() {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
   const { addToast } = useToast();
+  const [deleteTick, setDeleteTick] = useState(0);
 
-  const roles: Role[] = useMemo(() => {
-    void refreshKey;
-    return getRoles();
-  }, [refreshKey]);
-
-  // Form state
-  const [roleName, setRoleName] = useState('');
-  const [roleType, setRoleType] = useState('Agent');
-  const [reportsTo, setReportsTo] = useState<number | null>(null);
-
-  const openModal = (role?: Role) => {
-    if (role) {
-      setEditingRole(role);
-      setRoleName(role.role_name);
-      setRoleType(role.role_type);
-      setReportsTo(role.reports_to_role_id);
-    } else {
-      setEditingRole(null);
-      setRoleName('');
-      setRoleType('Agent');
-      setReportsTo(null);
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingRole) {
-        updateRole(editingRole.id, {
-          role_name: roleName,
-          role_type: roleType,
-          reports_to_role_id: reportsTo
-        });
-        addToast('Role updated', 'success');
-      } else {
-        createRole({
-          role_name: roleName,
-          role_type: roleType,
-          reports_to_role_id: reportsTo
-        });
-        addToast('Role created', 'success');
-      }
-      setIsModalOpen(false);
-      setRefreshKey((key) => key + 1);
-    } catch (err) {
+  const form = useEntityForm<Role, RoleFormValues>({
+    defaults: DEFAULTS,
+    toFormValues: (role) => ({
+      role_name: role.role_name,
+      role_type: role.role_type,
+      reports_to_role_id: role.reports_to_role_id,
+    }),
+    createFn: (values) => createRole({
+      role_name: values.role_name,
+      role_type: values.role_type,
+      reports_to_role_id: values.reports_to_role_id,
+    }),
+    updateFn: (id, values) => updateRole(id, {
+      role_name: values.role_name,
+      role_type: values.role_type,
+      reports_to_role_id: values.reports_to_role_id,
+    }),
+    onSuccess: (mode) => addToast(mode === 'create' ? 'Role created' : 'Role updated', 'success'),
+    onError: (_mode, err) => {
       console.error(err);
       addToast('Failed to save role. Name must be unique.', 'error');
-    }
-  };
+    },
+  });
+
+  const roles: Role[] = useMemo(() => {
+    void form.refreshKey;
+    void deleteTick;
+    return getRoles();
+  }, [form.refreshKey, deleteTick]);
 
   const handleDelete = (id: number) => {
     if (confirm('Are you sure? This may affect staff assigned to this role.')) {
       try {
         deleteRole(id);
         addToast('Role deleted', 'success');
-        setRefreshKey((key) => key + 1);
+        setDeleteTick((k) => k + 1);
       } catch (err) {
         console.error(err);
         addToast('Failed to delete role. It might be in use.', 'error');
@@ -79,7 +69,7 @@ export default function RolesConfiguration() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-text-primary">Roles & Hierarchy</h3>
-        <Button onClick={() => openModal()}>+ Add Role</Button>
+        <Button onClick={() => form.open()}>+ Add Role</Button>
       </div>
 
       <div className="bg-bg-surface border border-border-subtle rounded-lg overflow-hidden">
@@ -101,13 +91,13 @@ export default function RolesConfiguration() {
                   {roles.find(r => r.id === role.reports_to_role_id)?.role_name || '-'}
                 </td>
                 <td className="px-4 py-3 text-right space-x-2">
-                  <button 
-                    onClick={() => openModal(role)}
+                  <button
+                    onClick={() => form.open(role)}
                     className="text-cyan hover:text-cyan-dim text-xs font-medium"
                   >
                     Edit
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDelete(role.id)}
                     className="text-red hover:text-red-400 text-xs font-medium"
                   >
@@ -127,18 +117,18 @@ export default function RolesConfiguration() {
         </table>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={form.isOpen} onOpenChange={(open) => (open ? form.open(form.editing ?? undefined) : form.close())}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingRole ? 'Edit Role' : 'Create Role'}</DialogTitle>
+            <DialogTitle>{form.editing ? 'Edit Role' : 'Create Role'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={form.submit} className="space-y-4">
             <FormField label="Role Name" id="roleName">
               <input
                 id="roleName"
                 type="text"
-                value={roleName}
-                onChange={(e) => setRoleName(e.target.value)}
+                value={form.values.role_name}
+                onChange={(e) => form.setField('role_name', e.target.value)}
                 className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                 required
               />
@@ -147,8 +137,8 @@ export default function RolesConfiguration() {
             <FormField label="Role Type" id="roleType">
               <select
                 id="roleType"
-                value={roleType}
-                onChange={(e) => setRoleType(e.target.value)}
+                value={form.values.role_type}
+                onChange={(e) => form.setField('role_type', e.target.value)}
                 className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
               >
                 <option value="Agent">Agent</option>
@@ -163,13 +153,13 @@ export default function RolesConfiguration() {
             <FormField label="Reports To" id="reportsTo">
               <select
                 id="reportsTo"
-                value={reportsTo || ''}
-                onChange={(e) => setReportsTo(e.target.value ? Number(e.target.value) : null)}
+                value={form.values.reports_to_role_id ?? ''}
+                onChange={(e) => form.setField('reports_to_role_id', e.target.value ? Number(e.target.value) : null)}
                 className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
               >
                 <option value="">- None -</option>
                 {roles
-                  .filter(r => r.id !== editingRole?.id) // Prevent self-reference
+                  .filter(r => r.id !== form.editing?.id)
                   .map(r => (
                     <option key={r.id} value={r.id}>{r.role_name}</option>
                   ))
@@ -178,7 +168,7 @@ export default function RolesConfiguration() {
             </FormField>
 
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+              <Button type="button" variant="secondary" onClick={form.close}>
                 Cancel
               </Button>
               <Button type="submit">

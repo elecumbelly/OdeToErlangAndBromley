@@ -18,3 +18,6 @@ pnpm-debug.log*
 odetoerlang/node_modules/
 odetoerlang/dist/
 
+# Stray vitest cache at repo root (happens when tests are run from the wrong cwd)
+node_modules/
+

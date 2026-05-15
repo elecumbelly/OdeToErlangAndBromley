@@ -4,40 +4,91 @@ import { FormField } from '../ui/FormField';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { NumberInput } from '../ui/NumberInput';
 import { PaginationControls } from '../ui/PaginationControls';
-import { 
-  getStaff, getRoles, createStaff, updateStaff, deleteStaff, 
-  type Staff, type Role 
+import {
+  getStaff, getRoles, createStaff, updateStaff, deleteStaff,
+  type Staff, type Role
 } from '../../lib/database/dataAccess';
 import { useToast } from '../ui/Toast';
 import { toLocalDateString } from '../../lib/dateUtils';
+import { useEntityForm } from '../../hooks/useEntityForm';
+
+interface StaffFormValues extends Record<string, unknown> {
+  first_name: string;
+  last_name: string;
+  employee_id: string;
+  primary_role_id: number | null;
+  start_date: string;
+  attrition_probability: number;
+}
+
+const EMPTY_DEFAULTS: StaffFormValues = {
+  first_name: '',
+  last_name: '',
+  employee_id: '',
+  primary_role_id: null,
+  start_date: '',
+  attrition_probability: 0.15,
+};
+
+const buildCreateValues = (roles: Role[]): StaffFormValues => ({
+  first_name: '',
+  last_name: '',
+  employee_id: `EMP-${Math.floor(Math.random() * 10000)}`,
+  primary_role_id: roles.length > 0 ? roles[0].id : null,
+  start_date: toLocalDateString(),
+  attrition_probability: 0.15,
+});
+
+const toPersistencePayload = (values: StaffFormValues) => ({
+  employee_id: values.employee_id,
+  first_name: values.first_name,
+  last_name: values.last_name,
+  primary_role_id: values.primary_role_id as number,
+  employment_type: 'Full-time',
+  manager_id: null,
+  start_date: values.start_date,
+  end_date: null,
+  site_id: null,
+  attrition_probability: values.attrition_probability,
+});
 
 export default function StaffManager() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const itemsPerPage = 10; // Show 10 per page
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [deleteTick, setDeleteTick] = useState(0);
+  const itemsPerPage = 10;
   const { addToast } = useToast();
 
+  const roles: Role[] = useMemo(() => {
+    void deleteTick;
+    return getRoles();
+  }, [deleteTick]);
+
+  const form = useEntityForm<Staff, StaffFormValues>({
+    defaults: EMPTY_DEFAULTS,
+    toFormValues: (staff) => ({
+      first_name: staff.first_name,
+      last_name: staff.last_name,
+      employee_id: staff.employee_id,
+      primary_role_id: staff.primary_role_id,
+      start_date: staff.start_date,
+      attrition_probability: staff.attrition_probability,
+    }),
+    createFn: (values) => createStaff(toPersistencePayload(values)),
+    updateFn: (id, values) => updateStaff(id, toPersistencePayload(values)),
+    validate: (values) => (values.primary_role_id ? null : 'Please select a role'),
+    onSuccess: (mode) => addToast(mode === 'create' ? 'Staff added' : 'Staff updated', 'success'),
+    onError: (_mode, err) => {
+      console.error(err);
+      addToast('Failed to save staff member. ID must be unique.', 'error');
+    },
+  });
+
   const { data: staffList, total: totalStaff } = useMemo(() => {
-    void refreshKey;
+    void form.refreshKey;
+    void deleteTick;
     const offset = (currentPage - 1) * itemsPerPage;
     return getStaff(false, itemsPerPage, offset);
-  }, [currentPage, itemsPerPage, refreshKey]);
-
-  const roles: Role[] = useMemo(() => {
-    void refreshKey;
-    return getRoles();
-  }, [refreshKey]);
-
-  // Form state
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
-  const [roleId, setRoleId] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState('');
-  const [attritionProb, setAttritionProb] = useState(0.15);
+  }, [currentPage, itemsPerPage, form.refreshKey, deleteTick]);
 
   const totalPages = Math.ceil(totalStaff / itemsPerPage);
 
@@ -47,61 +98,9 @@ export default function StaffManager() {
     }
   };
 
-  const openModal = (staff?: Staff) => {
-    if (staff) {
-      setEditingStaff(staff);
-      setFirstName(staff.first_name);
-      setLastName(staff.last_name);
-      setEmployeeId(staff.employee_id);
-      setRoleId(staff.primary_role_id);
-      setStartDate(staff.start_date);
-      setAttritionProb(staff.attrition_probability);
-    } else {
-      setEditingStaff(null);
-      setFirstName('');
-      setLastName('');
-      setEmployeeId(`EMP-${Math.floor(Math.random() * 10000)}`);
-      setRoleId(roles.length > 0 ? roles[0].id : null);
-      setStartDate(toLocalDateString());
-      setAttritionProb(0.15);
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!roleId) {
-      addToast('Please select a role', 'error');
-      return;
-    }
-
-    try {
-      const staffData = {
-        employee_id: employeeId,
-        first_name: firstName,
-        last_name: lastName,
-        primary_role_id: roleId,
-        employment_type: 'Full-time',
-        manager_id: null,
-        start_date: startDate,
-        end_date: null,
-        site_id: null,
-        attrition_probability: attritionProb
-      };
-
-      if (editingStaff) {
-        updateStaff(editingStaff.id, staffData);
-        addToast('Staff updated', 'success');
-      } else {
-        createStaff(staffData);
-        addToast('Staff added', 'success');
-      }
-      setIsModalOpen(false);
-      setRefreshKey((key) => key + 1);
-    } catch (err) {
-      console.error(err);
-      addToast('Failed to save staff member. ID must be unique.', 'error');
-    }
+  const openCreate = () => {
+    form.open();
+    form.setValues(buildCreateValues(roles));
   };
 
   const handleDelete = (id: number) => {
@@ -109,7 +108,7 @@ export default function StaffManager() {
       try {
         deleteStaff(id);
         addToast('Staff removed', 'success');
-        setRefreshKey((key) => key + 1);
+        setDeleteTick((k) => k + 1);
       } catch (err) {
         console.error(err);
         addToast('Failed to delete staff. It might be assigned to events.', 'error');
@@ -145,7 +144,7 @@ export default function StaffManager() {
       });
 
       addToast('Loaded 20 demo staff members', 'success');
-      setRefreshKey(k => k + 1);
+      setDeleteTick((k) => k + 1);
     } catch (err) {
       console.error(err);
       addToast('Failed to load demo data', 'error');
@@ -156,7 +155,7 @@ export default function StaffManager() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-text-primary">Staff Directory</h3>
-        <Button onClick={() => openModal()}>+ Add Staff</Button>
+        <Button onClick={openCreate}>+ Add Staff</Button>
       </div>
 
       <div className="bg-bg-surface border border-border-subtle rounded-lg overflow-hidden flex flex-col">
@@ -191,13 +190,13 @@ export default function StaffManager() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button 
-                      onClick={() => openModal(staff)}
+                    <button
+                      onClick={() => form.open(staff)}
                       className="text-cyan hover:text-cyan-dim text-xs font-medium"
                     >
                       Edit
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(staff.id)}
                       className="text-red hover:text-red-400 text-xs font-medium"
                     >
@@ -232,7 +231,7 @@ export default function StaffManager() {
             </tbody>
           </table>
         </div>
-        
+
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}
@@ -242,20 +241,19 @@ export default function StaffManager() {
         />
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={form.isOpen} onOpenChange={(open) => (open ? form.open(form.editing ?? undefined) : form.close())}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingStaff ? 'Edit Staff' : 'Add Staff Member'}</DialogTitle>
+            <DialogTitle>{form.editing ? 'Edit Staff' : 'Add Staff Member'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Form fields remain unchanged */}
+          <form onSubmit={form.submit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField label="First Name" id="firstName">
                 <input
                   id="firstName"
                   type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  value={form.values.first_name}
+                  onChange={(e) => form.setField('first_name', e.target.value)}
                   className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                   required
                 />
@@ -264,8 +262,8 @@ export default function StaffManager() {
                 <input
                   id="lastName"
                   type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  value={form.values.last_name}
+                  onChange={(e) => form.setField('last_name', e.target.value)}
                   className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                   required
                 />
@@ -276,8 +274,8 @@ export default function StaffManager() {
               <input
                 id="employeeId"
                 type="text"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
+                value={form.values.employee_id}
+                onChange={(e) => form.setField('employee_id', e.target.value)}
                 className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                 required
               />
@@ -286,8 +284,8 @@ export default function StaffManager() {
             <FormField label="Role" id="roleId">
               <select
                 id="roleId"
-                value={roleId || ''}
-                onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : null)}
+                value={form.values.primary_role_id ?? ''}
+                onChange={(e) => form.setField('primary_role_id', e.target.value ? Number(e.target.value) : null)}
                 className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                 required
               >
@@ -303,8 +301,8 @@ export default function StaffManager() {
                 <input
                   id="startDate"
                   type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  value={form.values.start_date}
+                  onChange={(e) => form.setField('start_date', e.target.value)}
                   className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                   required
                 />
@@ -315,15 +313,19 @@ export default function StaffManager() {
                   step="0.01"
                   min="0"
                   max="1"
-                  value={attritionProb}
-                  onChange={(e) => setAttritionProb(parseFloat(e.target.value))}
+                  value={form.values.attrition_probability}
+                  onChange={(e) => form.setField('attrition_probability', parseFloat(e.target.value))}
                   className="block w-full rounded-md bg-bg-surface border border-border-subtle px-3 py-2 text-sm text-text-primary focus:border-cyan focus:ring-1 focus:ring-cyan"
                 />
               </FormField>
             </div>
 
+            {form.error && (
+              <p className="text-xs text-red">{form.error}</p>
+            )}
+
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+              <Button type="button" variant="secondary" onClick={form.close}>
                 Cancel
               </Button>
               <Button type="submit">
