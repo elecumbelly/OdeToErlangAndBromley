@@ -28,37 +28,38 @@ export default {
           muted: 'var(--color-border-muted)',
           active: 'var(--color-border-active)',
         },
-        // Vivid accent colors
+        // CWF accents: primary yellow (legacy name `cyan`), supporting silver
         cyan: {
           DEFAULT: 'var(--color-cyan)',
-          dim: '#00cccc',
+          dim: '#D6C800',
         },
         magenta: {
           DEFAULT: 'var(--color-magenta)',
-          dim: '#cc00cc',
+          dim: '#B6B6B9',
         },
         green: {
           DEFAULT: 'var(--color-green)',
-          dim: '#00cc00',
+          dim: '#6FAA5C',
         },
         amber: {
           DEFAULT: 'var(--color-amber)',
-          dim: '#cc8800',
+          dim: '#D6C800',
         },
         red: {
           DEFAULT: 'var(--color-red)',
-          dim: '#cc2929',
+          dim: '#B66060',
         },
         blue: {
           DEFAULT: 'var(--color-blue)',
-          dim: '#006acc',
+          dim: '#9A9A9D',
         },
       },
 
-      // Typography - Monospace everything
+      // Typography — CWF brand: Helvetica family
       fontFamily: {
+        sans: ['Helvetica', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        // Keep mono available for tabular metrics that benefit from it
         mono: ['"JetBrains Mono"', '"IBM Plex Mono"', '"Fira Code"', '"SF Mono"', 'Consolas', 'monospace'],
-        sans: ['"JetBrains Mono"', '"IBM Plex Mono"', '"Fira Code"', 'monospace'],
       },
 
       fontSize: {
@@ -94,13 +95,13 @@ export default {
         md: '0 4px 12px rgba(0, 0, 0, 0.6)',
         lg: '0 8px 24px rgba(0, 0, 0, 0.7)',
         xl: '0 16px 48px rgba(0, 0, 0, 0.8)',
-        // Glow effects
-        'glow-cyan': '0 0 20px rgba(0, 255, 247, 0.4)',
-        'glow-magenta': '0 0 20px rgba(255, 0, 255, 0.4)',
-        'glow-green': '0 0 20px rgba(0, 255, 0, 0.4)',
-        'glow-amber': '0 0 20px rgba(255, 170, 0, 0.4)',
-        'glow-red': '0 0 20px rgba(255, 51, 51, 0.4)',
-        'glow-blue': '0 0 20px rgba(0, 136, 255, 0.4)',
+        // Glow effects — CWF: yellow-forward; silver for quieter rings
+        'glow-cyan': '0 0 20px rgba(255, 239, 0, 0.45)',
+        'glow-magenta': '0 0 20px rgba(230, 230, 233, 0.30)',
+        'glow-green': '0 0 20px rgba(143, 209, 122, 0.35)',
+        'glow-amber': '0 0 20px rgba(255, 239, 0, 0.45)',
+        'glow-red': '0 0 20px rgba(224, 122, 122, 0.35)',
+        'glow-blue': '0 0 20px rgba(230, 230, 233, 0.25)',
         // Legacy support
         apple: '0 4px 12px rgba(0, 0, 0, 0.6)',
         'apple-lg': '0 8px 24px rgba(0, 0, 0, 0.7)',

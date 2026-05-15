@@ -5,6 +5,7 @@ import StaffingModelPanel from './components/StaffingModelPanel';
 import type { InitStage } from './components/InitializationProgress';
 import AssumptionsPanel from './components/AssumptionsPanel';
 import ThemeToggle from './components/ui/ThemeToggle';
+import { CwfLogo } from './components/ui/CwfLogo';
 import MathModelSettings from './components/MathModelSettings';
 import SimpleLanding from './components/SimpleLanding';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -345,10 +346,8 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 sm:space-x-4">
-              {/* Logo Mark */}
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-bg-elevated border border-cyan/30 rounded-lg flex items-center justify-center shadow-glow-cyan">
-                <span className="text-cyan font-bold text-base sm:text-lg">E</span>
-              </div>
+              {/* CWF concentric mark */}
+              <CwfLogo size={40} className="shrink-0" />
               <div>
                 <h1 className="text-sm sm:text-xl font-bold text-text-primary tracking-tight">
                   OdeToErlangAndBromley

@@ -39,7 +39,7 @@ function withAlpha(hex: string, alpha: number): string {
 }
 
 function readTheme(): ChartTheme {
-  const cyan = readVarWithFallback('--color-cyan', '#00fff7');
+  const cyan = readVarWithFallback('--color-cyan', '#FFEF00');
   const magenta = readVarWithFallback('--color-magenta', '#ff00ff');
   const green = readVarWithFallback('--color-green', '#00ff00');
   const amber = readVarWithFallback('--color-amber', '#ffaa00');

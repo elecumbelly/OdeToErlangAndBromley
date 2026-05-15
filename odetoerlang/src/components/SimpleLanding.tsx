@@ -328,7 +328,7 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-[28px] border border-border-subtle bg-bg-surface p-6 sm:p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(0,255,247,0.16),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(0,136,255,0.1),transparent_35%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,239,0,0.16),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(230,230,233,0.08),transparent_40%)]" />
         <div className="relative grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="space-y-5">
             <div className="space-y-3">
@@ -561,7 +561,7 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
         </div>
 
         <aside className="rounded-[28px] border border-border-subtle bg-bg-surface p-5 sm:p-6">
-          <div className="rounded-[24px] border border-cyan/20 bg-[linear-gradient(180deg,rgba(0,255,247,0.08),transparent)] p-5">
+          <div className="rounded-[24px] border border-cyan/30 bg-[linear-gradient(180deg,rgba(255,239,0,0.08),transparent)] p-5">
             <p className="text-2xs uppercase tracking-[0.2em] text-cyan">Calculated result</p>
             <p className="mt-3 text-base leading-7 text-text-secondary">
               You need{' '}

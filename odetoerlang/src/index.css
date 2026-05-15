@@ -1,77 +1,87 @@
-/* Fonts: prefer local monospace; no external font fetching */
+/* CWF brand: Helvetica / Arial. No external font fetching. */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================================================
-   BASE STYLES - Scientific / Vivid on Black
+   CWF BRAND TOKENS — Collapsing Wave Functions
+   Canary Yellow #FFEF00 + Mercury Silver #E6E6E9 on black.
    ============================================================================ */
 
-/* Dark mode (default) */
+/* Dark mode (default and brand-preferred) */
 html {
-  /* Core colors */
+  /* Brand colours */
+  --cwf-yellow: #FFEF00;
+  --cwf-yellow-dim: #D6C800;
+  --cwf-silver: #E6E6E9;
+  --cwf-silver-dim: #B6B6B9;
+
+  /* Surfaces — strict black shell with restrained lifts */
   --color-bg-base: #000000;
   --color-bg-surface: #0a0a0a;
-  --color-bg-elevated: #111111;
-  --color-bg-hover: #1a1a1a;
+  --color-bg-elevated: #141414;
+  --color-bg-hover: #1c1c1c;
 
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #888888;
-  --color-text-muted: #555555;
+  /* Text — Mercury Silver on dark */
+  --color-text-primary: var(--cwf-silver);
+  --color-text-secondary: #B6B6B9;
+  --color-text-muted: #7A7A7D;
 
-  --color-border-subtle: #333333;
-  --color-border-muted: #222222;
-  --color-border-active: #00fff7;
+  /* Borders — silver linework at varying alpha */
+  --color-border-subtle: rgba(230, 230, 233, 0.18);
+  --color-border-muted: rgba(230, 230, 233, 0.10);
+  --color-border-active: var(--cwf-yellow);
 
-  /* Vivid accents */
-  --color-cyan: #00fff7;
-  --color-magenta: #ff00ff;
-  --color-green: #00ff00;
-  --color-amber: #ffaa00;
-  --color-red: #ff3333;
-  --color-blue: #0088ff;
+  /* Primary accent token (legacy name `cyan` retained so the 43 components
+     wired to bg-cyan / text-cyan / shadow-glow-cyan automatically pick up
+     the brand yellow without a sweep). */
+  --color-cyan: var(--cwf-yellow);
+  --color-magenta: var(--cwf-silver);
+  --color-green: #8FD17A;
+  --color-amber: var(--cwf-yellow);
+  --color-red: #E07A7A;
+  --color-blue: var(--cwf-silver-dim);
 
-  /* Font */
-  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
-  font-size: 13px;
-  line-height: 1.5;
+  /* Typography — Helvetica family per CWF brand */
+  font-family: 'Helvetica', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
   font-weight: 400;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 
-  /* Rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: 'liga' 1, 'calt' 1;
 
   color-scheme: dark;
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
 }
 
-/* Light mode */
+/* Light mode — kept for the existing theme toggle. Black/yellow on near-white.
+   Per brand-guide: light-bg variant swaps silver for black ring strokes; yellow
+   remains yellow. */
 html.light {
-  --color-bg-base: #f5f5f5;
-  --color-bg-surface: #ffffff;
-  --color-bg-elevated: #fafafa;
-  --color-bg-hover: #eeeeee;
+  --color-bg-base: #FFFFFF;
+  --color-bg-surface: #F5F5F5;
+  --color-bg-elevated: #FAFAFA;
+  --color-bg-hover: #ECECEC;
 
-  --color-text-primary: #111111;
-  --color-text-secondary: #555555;
-  --color-text-muted: #888888;
+  --color-text-primary: #000000;
+  --color-text-secondary: #444444;
+  --color-text-muted: #7A7A7D;
 
-  --color-border-subtle: #dddddd;
-  --color-border-muted: #eeeeee;
-  --color-border-active: #0099cc;
+  --color-border-subtle: rgba(0, 0, 0, 0.18);
+  --color-border-muted: rgba(0, 0, 0, 0.10);
+  --color-border-active: var(--cwf-yellow);
 
-  /* Adjusted vivid accents for light mode */
-  --color-cyan: #0099cc;
-  --color-magenta: #cc00cc;
-  --color-green: #00aa00;
-  --color-amber: #cc7700;
-  --color-red: #cc0000;
-  --color-blue: #0066cc;
+  --color-cyan: var(--cwf-yellow);
+  --color-magenta: #1a1a1a;
+  --color-green: #2D7A2D;
+  --color-amber: #C29400;
+  --color-red: #B23A3A;
+  --color-blue: #444444;
 
   color-scheme: light;
   background-color: var(--color-bg-base);
@@ -95,17 +105,17 @@ body {
    ============================================================================ */
 
 ::selection {
-  background-color: rgba(0, 255, 247, 0.3);
-  color: #ffffff;
+  background-color: rgba(255, 239, 0, 0.35);
+  color: var(--color-text-primary);
 }
 
 ::-moz-selection {
-  background-color: rgba(0, 255, 247, 0.3);
-  color: #ffffff;
+  background-color: rgba(255, 239, 0, 0.35);
+  color: var(--color-text-primary);
 }
 
 /* ============================================================================
-   SCROLLBAR - Thin, dark
+   SCROLLBAR
    ============================================================================ */
 
 ::-webkit-scrollbar {
@@ -123,17 +133,16 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: var(--cwf-silver-dim);
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-subtle) var(--color-bg-base);
 }
 
 /* ============================================================================
-   FOCUS STYLES - Cyan glow
+   FOCUS — Canary Yellow outline
    ============================================================================ */
 
 :focus {
@@ -141,23 +150,23 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-cyan);
+  outline: 2px solid var(--cwf-yellow);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 255, 247, 0.2);
+  box-shadow: 0 0 0 4px rgba(255, 239, 0, 0.22);
 }
 
 /* ============================================================================
-   LINKS
+   LINKS — Canary Yellow
    ============================================================================ */
 
 a {
-  color: var(--color-cyan);
+  color: var(--cwf-yellow);
   text-decoration: none;
   transition: color 100ms ease-out;
 }
 
 a:hover {
-  color: #00cccc;
+  color: var(--cwf-yellow-dim);
   text-decoration: underline;
 }
 
@@ -193,8 +202,8 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--color-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 255, 247, 0.15);
+  border-color: var(--cwf-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 239, 0, 0.18);
 }
 
 input::placeholder,
@@ -203,7 +212,7 @@ textarea::placeholder {
 }
 
 /* ============================================================================
-   BUTTONS - Base reset
+   BUTTONS — Base reset
    ============================================================================ */
 
 button {
@@ -235,52 +244,50 @@ td {
 }
 
 th {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-secondary);
   text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  letter-spacing: 0.08em;
 }
 
 /* ============================================================================
    UTILITY CLASSES
    ============================================================================ */
 
-/* Grid background overlay */
 .bg-grid {
   background-image:
-    linear-gradient(rgba(51, 51, 51, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(51, 51, 51, 0.3) 1px, transparent 1px);
+    linear-gradient(rgba(230, 230, 233, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 230, 233, 0.08) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .bg-grid-dense {
   background-image:
-    linear-gradient(rgba(51, 51, 51, 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(51, 51, 51, 0.4) 1px, transparent 1px);
+    linear-gradient(rgba(230, 230, 233, 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 230, 233, 0.10) 1px, transparent 1px);
   background-size: 10px 10px;
 }
 
-/* Tabular numbers for metrics */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Glow text effect */
+/* Glow text effects — yellow-forward */
 .text-glow-cyan {
-  text-shadow: 0 0 10px rgba(0, 255, 247, 0.5);
+  text-shadow: 0 0 10px rgba(255, 239, 0, 0.5);
 }
 
 .text-glow-green {
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  text-shadow: 0 0 10px rgba(143, 209, 122, 0.45);
 }
 
 .text-glow-amber {
-  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+  text-shadow: 0 0 10px rgba(255, 239, 0, 0.5);
 }
 
 .text-glow-red {
-  text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+  text-shadow: 0 0 10px rgba(224, 122, 122, 0.45);
 }
 
 /* Skeleton loading shimmer */
@@ -311,9 +318,9 @@ th {
   left: 50%;
   transform: translateX(-50%);
   padding: 8px 16px;
-  background: var(--color-cyan);
+  background: var(--cwf-yellow);
   color: var(--color-bg-base);
-  font-weight: 600;
+  font-weight: 700;
   z-index: 9999;
   transition: top 100ms ease-out;
 }
@@ -326,7 +333,6 @@ th {
    COMPONENT UTILITIES
    ============================================================================ */
 
-/* Card component base */
 .card {
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-subtle);
@@ -337,7 +343,6 @@ th {
   background-color: var(--color-bg-elevated);
 }
 
-/* Status indicator dots */
 .status-dot {
   width: 8px;
   height: 8px;
@@ -345,42 +350,51 @@ th {
 }
 
 .status-dot-success {
-  background-color: var(--color-green);
-  box-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+  background-color: #8FD17A;
+  box-shadow: 0 0 8px rgba(143, 209, 122, 0.4);
 }
 
 .status-dot-warning {
-  background-color: var(--color-amber);
-  box-shadow: 0 0 8px rgba(255, 170, 0, 0.5);
+  background-color: var(--cwf-yellow);
+  box-shadow: 0 0 8px rgba(255, 239, 0, 0.5);
 }
 
 .status-dot-error {
-  background-color: var(--color-red);
-  box-shadow: 0 0 8px rgba(255, 51, 51, 0.5);
+  background-color: #E07A7A;
+  box-shadow: 0 0 8px rgba(224, 122, 122, 0.4);
 }
 
 /* Label styling (uppercase, small) */
 .label {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: var(--color-text-secondary);
 }
 
 /* Large metric display */
 .metric-value {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .metric-unit {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 400;
   color: var(--color-text-secondary);
   margin-left: 4px;
+}
+
+/* ============================================================================
+   CWF Concentric mark — utility class for decorative motif use
+   ============================================================================ */
+
+.cwf-rings {
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 /* ============================================================================
@@ -425,7 +439,6 @@ th {
     margin-top: 20px !important;
   }
 
-  /* Force white background for metrics but keep layout */
   .bg-gradient-to-b, .bg-gradient-to-r {
     background: white !important;
   }

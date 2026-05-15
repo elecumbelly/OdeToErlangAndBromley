@@ -33,7 +33,7 @@ describe('useChartTheme', () => {
   it('falls back to default hex when a CSS var is missing', () => {
     document.documentElement.style.removeProperty('--color-cyan');
     const { result } = renderHook(() => useChartTheme());
-    expect(result.current.primary).toBe('#00fff7');
+    expect(result.current.primary).toBe('#FFEF00');
   });
 
   it('derives translucent fill colors from base palette', () => {
