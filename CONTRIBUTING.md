@@ -21,6 +21,7 @@ We welcome contributions! Here is how to get started.
 
 ### TypeScript
 -   **Strictness:** No `any`. All types defined in `src/types/` or local interfaces.
+-   **Strict flags on:** `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` are enabled in `tsconfig.app.json`. Indexed array reads (`arr[i]`) return `T | undefined`; either guard with a length check, use `?? fallback`, or assert with `arr[i]!` when the index is provably in-bounds. Optional properties cannot be assigned `undefined` — leave the key off or widen the type to `T | undefined`.
 -   **Naming:** `PascalCase` for components, `camelCase` for functions.
 -   **State:** Use Zustand for global state (`src/store/`), React state for local.
 
@@ -30,8 +31,8 @@ We welcome contributions! Here is how to get started.
 -   **Documentation:** Update `docs/FORMULAS.md` if you change the math.
 
 ### Database
--   **Schema:** Modify `src/lib/database/schema.sql`.
--   **Access:** Use `src/lib/database/dataAccess.ts` wrappers. **Do not** write raw SQL in UI components.
+-   **Schema:** Modify `src/lib/database/schema.sql` and bump `CURRENT_SCHEMA_VERSION` in `initDatabase.ts`.
+-   **Access:** Use the per-domain modules under `src/lib/database/dataAccess/` (re-exported via `dataAccess.ts`). **Do not** write raw SQL in UI components. Shared helpers (`execToArray`, `getScalar`, `buildUpdateClause`) live in `dataAccess/_shared.ts`.
 
 ## 🧪 CI/CD
 Every PR runs:

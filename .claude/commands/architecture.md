@@ -66,9 +66,9 @@ OdeToErlangAndBromley/
 
 **Purpose:** "Headless" backend running entirely in the browser.
 
-- `schema.sql`: Defines the 20+ table relational schema.
-- `dataAccess.ts`: Typed CRUD wrappers for the database.
-- `initDatabase.ts`: Handles WASM loading and persistence.
+- `schema.sql`: Defines the 31-table relational schema (v4).
+- `dataAccess/`: Per-domain typed CRUD modules (campaigns, scenarios, contracts, historical, staffing, etc.) plus `_shared.ts` helpers. `dataAccess.ts` is the barrel re-export — import from there.
+- `initDatabase.ts`: Handles WASM loading, schema migrations (with BEGIN/COMMIT/ROLLBACK), and IndexedDB persistence.
 
 ### 3. State Management (`src/store/`)
 
@@ -120,14 +120,15 @@ class CalculationService {
 ```
 
 ### Database Access
-Direct SQL execution via typed helpers.
+Direct SQL execution via typed helpers, organised per domain under `dataAccess/`.
 ```typescript
-// src/lib/database/dataAccess.ts
+// src/lib/database/dataAccess/campaigns.ts (re-exported via dataAccess.ts barrel)
 export function getCampaigns() {
   const db = getDatabase();
-  return db.exec('SELECT * FROM Campaigns...')[0].values...
+  return execToArray<Campaign>(db.exec('SELECT * FROM Campaigns...'));
 }
 ```
+Shared helpers (`execToArray`, `getScalar`, `buildUpdateClause`, `getLastInsertId`) live in `dataAccess/_shared.ts`.
 
 ### Error Handling
 - **UI:** React Error Boundaries wrap major tabs.

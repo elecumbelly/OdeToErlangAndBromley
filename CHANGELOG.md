@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DES-backed sanity harness replacing the fake Monte Carlo.
 
 ### Changed
+- **Brand:** in-app runtime identifiers renamed `odetoerlang` → `odetoerlangandbromley` (IndexedDB DB_NAME, BroadcastChannel name on both sites, Zustand persist store, 4 export filename prefixes, browser title, splash, README brand). Hard rename, no migration shim — existing-user local DBs are not carried across. `LEGACY_KEY = 'odetoerlang_db'` deliberately preserved in `storage.ts` as the migration-shim pointer to the historical localStorage name.
+- **TypeScript strict mode:** `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` both enabled in `tsconfig.app.json`. Fixed all 137 unique resulting errors across 25+ files using non-null assertions (`arr[i]!`) or explicit `?? 0`/`?.` fallbacks where appropriate. Math behaviour preserved (in particular Holt-Winters multiplicative-mode `prevSeasonal` fallback intentionally keeps `||` rather than `??` to guard against zero-seasonal-index divide-by-zero).
 - **Erlang B** switched to log-stable inverse recurrence (stays finite at A=5000+ where the prior iterative form underflowed past A~100). `erlangBLinear` kept as parity reference.
 - **Concurrency** now applies a configurable overhead curve (default 15%) instead of a naive linear AHT divide; `effectiveAHTForConcurrency` exposed.
 - **Occupancy penalty inverted** to `occupancyViolationSeverity` so SL falls and ASA climbs as understaffing worsens. `occupancyPenalty` remains as a deprecated alias for one release.
@@ -34,8 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All 94 outstanding `jsx-a11y` warnings; rules promoted from `warn` to `error`.
 
 ### Removed
+- 14 unused source files (~1893 LOC): `ACDImport.tsx`, `CSVImport.tsx`, `ResultsCharts.tsx`, `CampaignSelector.tsx`, `HelpTooltip.tsx`, `glossary.ts`, `ui/Alert.tsx`, `ui/Skeleton.tsx`, `ui/index.ts`, `hooks/useStatusColor.ts`, `lib/forecasting/forecastEngine.ts`, `styles/tokens.ts`, `utils/colors.ts`, `utils/formatting.ts`. All were orphans (no inbound imports). Active import flow is `SmartCSVImport`.
+- Stale path-header comments at the top of `erlangB.ts` and `erlangEngine.ts` (project convention: no self-locating path comments — they rot when the file moves).
+- Duplicate `default` export on `ui/CwfLogo.tsx` (only the named export is consumed).
+- Unused `@radix-ui/react-tooltip` dependency.
 - Unused `decimal.js` dependency.
 - Unused `@testing-library/user-event` devDependency.
+
+### Security
+- Bumped `lodash` to `^4.18.1` via npm `overrides` (was transitively pinned at `4.17.21` through `recharts` and `workbox-build`). Clears Prototype-Pollution and `_.template` code-injection advisories on the lockfile.
 
 ### Rollback note
 Reverting after a user has reached v4 schema will resurrect soft-deleted scenarios and calendar events because v3 `dataAccess` lacks the `deleted_at IS NULL` filter. No data loss; user-visible regression. Document in release notes if downgrade is ever needed.
