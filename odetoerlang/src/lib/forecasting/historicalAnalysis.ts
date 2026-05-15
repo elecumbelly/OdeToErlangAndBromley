@@ -115,8 +115,8 @@ export function calculateStats(values: number[]): StatisticalSummary {
     const idx = (p / 100) * (n - 1);
     const lower = Math.floor(idx);
     const upper = Math.ceil(idx);
-    if (lower === upper) return sorted[lower];
-    return sorted[lower] * (upper - idx) + sorted[upper] * (idx - lower);
+    if (lower === upper) return sorted[lower]!;
+    return sorted[lower]! * (upper - idx) + sorted[upper]! * (idx - lower);
   };
 
   return {
@@ -124,8 +124,8 @@ export function calculateStats(values: number[]): StatisticalSummary {
     mean,
     median: percentile(50),
     stdDev,
-    min: sorted[0],
-    max: sorted[n - 1],
+    min: sorted[0]!,
+    max: sorted[n - 1]!,
     p25: percentile(25),
     p75: percentile(75),
     p90: percentile(90),
@@ -146,7 +146,7 @@ export function linearRegression(xValues: number[], yValues: number[]): {
 
   const sumX = xValues.reduce((a, b) => a + b, 0);
   const sumY = yValues.reduce((a, b) => a + b, 0);
-  const sumXY = xValues.reduce((acc, x, i) => acc + x * yValues[i], 0);
+  const sumXY = xValues.reduce((acc, x, i) => acc + x * yValues[i]!, 0);
   const sumXX = xValues.reduce((acc, x) => acc + x * x, 0);
 
   const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
@@ -156,7 +156,7 @@ export function linearRegression(xValues: number[], yValues: number[]): {
   const yMean = sumY / n;
   const ssTot = yValues.reduce((acc, y) => acc + (y - yMean) ** 2, 0);
   const ssRes = yValues.reduce((acc, y, i) => {
-    const predicted = slope * xValues[i] + intercept;
+    const predicted = slope * xValues[i]! + intercept;
     return acc + (y - predicted) ** 2;
   }, 0);
   const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
@@ -225,7 +225,7 @@ export function analyzeDayOfWeek(dailyAggregates: DailyAggregate[]): DayOfWeekPa
     if (records.length === 0) {
       patterns.push({
         dayOfWeek: dow,
-        dayName: DAY_NAMES[dow],
+        dayName: DAY_NAMES[dow]!,
         avgVolume: 0,
         avgAht: 0,
         avgSla: 0,
@@ -236,7 +236,7 @@ export function analyzeDayOfWeek(dailyAggregates: DailyAggregate[]): DayOfWeekPa
 
     patterns.push({
       dayOfWeek: dow,
-      dayName: DAY_NAMES[dow],
+      dayName: DAY_NAMES[dow]!,
       avgVolume: records.reduce((sum, r) => sum + r.totalVolume, 0) / records.length,
       avgAht: records.reduce((sum, r) => sum + r.avgAht, 0) / records.length,
       avgSla: records.reduce((sum, r) => sum + r.avgSla, 0) / records.length,
@@ -267,7 +267,7 @@ export function analyzeMonthly(dailyAggregates: DailyAggregate[]): MonthlyPatter
     if (records.length === 0) {
       patterns.push({
         month,
-        monthName: MONTH_NAMES[month - 1],
+        monthName: MONTH_NAMES[month - 1]!,
         avgVolume: 0,
         avgAht: 0,
         avgSla: 0,
@@ -278,7 +278,7 @@ export function analyzeMonthly(dailyAggregates: DailyAggregate[]): MonthlyPatter
 
     patterns.push({
       month,
-      monthName: MONTH_NAMES[month - 1],
+      monthName: MONTH_NAMES[month - 1]!,
       avgVolume: records.reduce((sum, r) => sum + r.totalVolume, 0) / records.length,
       avgAht: records.reduce((sum, r) => sum + r.avgAht, 0) / records.length,
       avgSla: records.reduce((sum, r) => sum + r.avgSla, 0) / records.length,
@@ -308,8 +308,8 @@ export function analyzeTrend(values: number[]): TrendAnalysis {
   const xValues = values.map((_, i) => i);
   const { slope, intercept, rSquared } = linearRegression(xValues, values);
 
-  const startValue = values[0];
-  const endValue = values[values.length - 1];
+  const startValue = values[0]!;
+  const endValue = values[values.length - 1]!;
   const percentChange = startValue !== 0 ? ((endValue - startValue) / startValue) * 100 : 0;
 
   // Determine direction based on slope significance
@@ -350,8 +350,8 @@ export function analyzeHistoricalData(data: HistoricalData[]): HistoricalInsight
 
   // Date range
   const dateRange = {
-    start: sorted[0].date,
-    end: sorted[sorted.length - 1].date
+    start: sorted[0]!.date,
+    end: sorted[sorted.length - 1]!.date
   };
 
   // Daily aggregates

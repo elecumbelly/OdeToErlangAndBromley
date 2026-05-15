@@ -72,7 +72,7 @@ describe('calculatorStore - Initial State', () => {
     expect(state.staffingModel.totalHeadcount).toBe(0);
     expect(state.staffingModel.operatingHoursPerDay).toBe(12);
     expect(state.staffingModel.shiftTypes).toHaveLength(3);
-    expect(state.staffingModel.shiftTypes[0].hours).toBe(8);
+    expect(state.staffingModel.shiftTypes[0]!.hours).toBe(8);
     expect(state.staffingModel.useAsConstraint).toBe(false);
   });
 });

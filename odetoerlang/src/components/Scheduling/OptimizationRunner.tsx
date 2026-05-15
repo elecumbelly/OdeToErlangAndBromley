@@ -38,16 +38,16 @@ export function OptimizationRunner({
 
   useEffect(() => {
     if (!templateId && shiftTemplates.length > 0) {
-      setTemplateId(shiftTemplates[0].id);
+      setTemplateId(shiftTemplates[0]!.id);
     }
   }, [shiftTemplates, templateId]);
 
   useEffect(() => {
     if (!methodAId && optimizationMethods.length > 0) {
-      setMethodAId(optimizationMethods[0].id);
+      setMethodAId(optimizationMethods[0]!.id);
     }
     if (!methodBId && optimizationMethods.length > 1) {
-      setMethodBId(optimizationMethods[1].id);
+      setMethodBId(optimizationMethods[1]!.id);
     }
   }, [optimizationMethods, methodAId, methodBId]);
 

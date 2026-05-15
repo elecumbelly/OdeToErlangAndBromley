@@ -308,7 +308,7 @@ describe('SimulationEngine - Contact Records', () => {
     const records = engine.getContactRecords();
     expect(records.length).toBeGreaterThan(0);
 
-    const record = records[0];
+    const record = records[0]!;
     expect(record).toHaveProperty('customerId');
     expect(record).toHaveProperty('arrivalTime');
     expect(record).toHaveProperty('queueJoinTime');
@@ -518,7 +518,7 @@ describe('SimulationEngine - Snapshots', () => {
 
     const snapshot = engine.getSnapshot();
     for (let i = 1; i < snapshot.timeSeries.length; i++) {
-      expect(snapshot.timeSeries[i].time).toBeGreaterThanOrEqual(snapshot.timeSeries[i - 1].time);
+      expect(snapshot.timeSeries[i]!.time).toBeGreaterThanOrEqual(snapshot.timeSeries[i - 1]!.time);
     }
   });
 });
@@ -586,8 +586,8 @@ describe('SimulationEngine - Waiting Queue', () => {
       // For same server, service end times should respect arrival order
       const serverRecords = records.filter(r => r.serverId === 0);
       for (let i = 1; i < serverRecords.length; i++) {
-        expect(serverRecords[i].serviceStartTime).toBeGreaterThanOrEqual(
-          serverRecords[i - 1].serviceEndTime - 0.001 // Small tolerance
+        expect(serverRecords[i]!.serviceStartTime).toBeGreaterThanOrEqual(
+          serverRecords[i - 1]!.serviceEndTime - 0.001 // Small tolerance
         );
       }
     }
@@ -882,7 +882,7 @@ describe('SimulationEngine - Statistical Properties', () => {
     if (records.length > 1) {
       const arrivals = records.map(r => r.arrivalTime).sort((a, b) => a - b);
       for (let i = 1; i < arrivals.length; i++) {
-        expect(arrivals[i]).toBeGreaterThanOrEqual(arrivals[i - 1]);
+        expect(arrivals[i]!).toBeGreaterThanOrEqual(arrivals[i - 1]!);
       }
     }
   });

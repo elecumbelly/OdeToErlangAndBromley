@@ -36,7 +36,7 @@ describe('Erlang B - Basic behavior', () => {
       [3, 10],
     ];
     for (const [agents, traffic] of testCases) {
-      const result = erlangB(agents, traffic);
+      const result = erlangB(agents!, traffic!);
       expect(result).toBeGreaterThanOrEqual(0);
       expect(result).toBeLessThanOrEqual(1);
     }
@@ -177,7 +177,7 @@ describe('Erlang B - Numerical stability', () => {
       [1, 100],
     ];
     for (const [agents, traffic] of edgeCases) {
-      const result = erlangB(agents, traffic);
+      const result = erlangB(agents!, traffic!);
       expect(Number.isNaN(result)).toBe(false);
       expect(Number.isFinite(result) || result === 1 || result === 0).toBe(true);
     }

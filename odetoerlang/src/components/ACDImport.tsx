@@ -54,9 +54,9 @@ export default function ACDImport() {
     const parts = timeStr.split(':');
     if (parts.length !== 3) return 0;
 
-    const hours = parseInt(parts[0], 10) || 0;
-    const minutes = parseInt(parts[1], 10) || 0;
-    const seconds = parseInt(parts[2], 10) || 0;
+    const hours = parseInt(parts[0]!, 10) || 0;
+    const minutes = parseInt(parts[1]!, 10) || 0;
+    const seconds = parseInt(parts[2]!, 10) || 0;
 
     return hours * 3600 + minutes * 60 + seconds;
   };

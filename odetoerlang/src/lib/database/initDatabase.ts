@@ -86,8 +86,8 @@ function getSchemaVersion(): number {
 
   try {
     const result = db.exec('SELECT MAX(version) as version FROM schema_version');
-    if (result.length > 0 && result[0].values.length > 0) {
-      return (result[0].values[0][0] as number) || 0;
+    if (result.length > 0 && result[0]!.values.length > 0) {
+      return (result[0]!.values[0]![0] as number) || 0;
     }
   } catch {
     // Table doesn't exist - legacy database

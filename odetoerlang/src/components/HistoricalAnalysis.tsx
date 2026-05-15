@@ -481,7 +481,7 @@ export default function HistoricalAnalysis() {
                         stroke={index === 0 ? CHART_THEME.colors.green : CHART_THEME.colors.cyan}
                         fill={`url(#colorForecast${index})`}
                       />
-                      {forecast.forecasts[0].lower !== undefined && (
+                      {forecast.forecasts[0]?.lower !== undefined && (
                         <Area
                           type="monotone"
                           dataKey="lower"

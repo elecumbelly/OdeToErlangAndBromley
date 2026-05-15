@@ -34,7 +34,7 @@ const buildCreateValues = (roles: Role[]): StaffFormValues => ({
   first_name: '',
   last_name: '',
   employee_id: `EMP-${Math.floor(Math.random() * 10000)}`,
-  primary_role_id: roles.length > 0 ? roles[0].id : null,
+  primary_role_id: roles.length > 0 ? roles[0]!.id : null,
   start_date: toLocalDateString(),
   attrition_probability: 0.15,
 });
@@ -126,13 +126,13 @@ export default function StaffManager() {
         ['Julie', 'Mao'], ['Anderson', 'Dawes'], ['Solomon', 'Epstein'], ['Winston', 'Duarte']
       ];
 
-      const defaultRoleId = roles.length > 0 ? roles[0].id : 1;
+      const defaultRoleId = roles.length > 0 ? roles[0]!.id : 1;
 
       demoNames.forEach(([first, last], index) => {
         createStaff({
           employee_id: `DEMO-${100 + index}`,
-          first_name: first,
-          last_name: last,
+          first_name: first!,
+          last_name: last!,
           primary_role_id: defaultRoleId,
           employment_type: 'Full-time',
           manager_id: null,

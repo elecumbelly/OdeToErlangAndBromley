@@ -69,8 +69,8 @@ describe('dataAccess - Campaigns', () => {
       'SELECT * FROM Campaigns WHERE active = 1 ORDER BY campaign_name'
     );
     expect(campaigns).toHaveLength(2);
-    expect(campaigns[0].id).toBe(1);
-    expect(campaigns[0].campaign_name).toBe('Campaign A');
+    expect(campaigns[0]!.id).toBe(1);
+    expect(campaigns[0]!.campaign_name).toBe('Campaign A');
   });
 
   test('getCampaigns with activeOnly=false returns all campaigns', () => {
@@ -166,7 +166,7 @@ describe('dataAccess - Campaigns', () => {
     });
 
     expect(mockRun).toHaveBeenCalled();
-    const [sql, values] = mockRun.mock.calls[0];
+    const [sql, values] = mockRun.mock.calls[0]!;
     expect(sql).toContain('campaign_name = ?');
     // Extract the SET clause (between SET and WHERE) and verify id/created_at not in it
     const setClause = sql.match(/SET (.+) WHERE/)?.[1] || '';
@@ -260,9 +260,9 @@ describe('dataAccess - Scenarios', () => {
     createScenario('New Baseline', 'Description', true);
 
     // First call should clear existing baseline
-    expect(mockRun.mock.calls[0][0]).toContain('UPDATE Scenarios SET is_baseline = 0');
+    expect(mockRun.mock.calls[0]![0]!).toContain('UPDATE Scenarios SET is_baseline = 0');
     // Second call should insert new scenario
-    expect(mockRun.mock.calls[1][0]).toContain('INSERT INTO Scenarios');
+    expect(mockRun.mock.calls[1]![0]!).toContain('INSERT INTO Scenarios');
   });
 
   test('createScenario does not clear baseline when isBaseline=false', () => {
@@ -272,7 +272,7 @@ describe('dataAccess - Scenarios', () => {
 
     // Should only have one call (INSERT)
     expect(mockRun).toHaveBeenCalledTimes(1);
-    expect(mockRun.mock.calls[0][0]).toContain('INSERT INTO Scenarios');
+    expect(mockRun.mock.calls[0]![0]!).toContain('INSERT INTO Scenarios');
   });
 
   test('deleteScenario soft-deletes scenario by setting deleted_at', () => {
@@ -288,10 +288,10 @@ describe('dataAccess - Scenarios', () => {
     setBaselineScenario(2);
 
     // First clears existing baseline
-    expect(mockRun.mock.calls[0][0]).toContain('SET is_baseline = 0');
+    expect(mockRun.mock.calls[0]![0]!).toContain('SET is_baseline = 0');
     // Then sets new baseline
-    expect(mockRun.mock.calls[1][0]).toContain('SET is_baseline = 1');
-    expect(mockRun.mock.calls[1][1]).toContain(2);
+    expect(mockRun.mock.calls[1]![0]!).toContain('SET is_baseline = 1');
+    expect(mockRun.mock.calls[1]![1]!).toContain(2);
   });
 });
 
@@ -380,7 +380,7 @@ describe('dataAccess - Assumptions', () => {
     expect(mockPrepare).toHaveBeenCalled();
     expect(mockBind).toHaveBeenCalledWith(['shrinkage', null, 1, '2024-01-01']);
     expect(mockRun).toHaveBeenCalled();
-    expect(mockRun.mock.calls[0][0]).toContain('INSERT INTO Assumptions');
+    expect(mockRun.mock.calls[0]![0]!).toContain('INSERT INTO Assumptions');
     expect(id).toBe(10);
   });
 
@@ -402,7 +402,7 @@ describe('dataAccess - Assumptions', () => {
 
     expect(mockPrepare).toHaveBeenCalled();
     expect(mockRun).toHaveBeenCalled();
-    expect(mockRun.mock.calls[0][0]).toContain('UPDATE Assumptions');
+    expect(mockRun.mock.calls[0]![0]!).toContain('UPDATE Assumptions');
     expect(id).toBe(5);
   });
 });
@@ -462,7 +462,7 @@ describe('dataAccess - Clients', () => {
 
     createClient('Client Without Industry');
 
-    expect(mockRun.mock.calls[0][1]).toEqual(['Client Without Industry', null]);
+    expect(mockRun.mock.calls[0]![1]!).toEqual(['Client Without Industry', null]);
   });
 });
 
@@ -524,7 +524,7 @@ describe('dataAccess - Forecasts', () => {
     });
 
     expect(mockRun).toHaveBeenCalled();
-    expect(mockRun.mock.calls[0][0]).toContain('INSERT INTO Forecasts');
+    expect(mockRun.mock.calls[0]![0]!).toContain('INSERT INTO Forecasts');
     expect(id).toBe(100);
   });
 });
@@ -592,7 +592,7 @@ describe('dataAccess - Helper Functions', () => {
     const assumptions = getAssumptions(1);
 
     expect(assumptions).toHaveLength(2);
-    expect(assumptions[0].id).toBe(1);
-    expect(assumptions[1].id).toBe(2);
+    expect(assumptions[0]!.id).toBe(1);
+    expect(assumptions[1]!.id).toBe(2);
   });
 });

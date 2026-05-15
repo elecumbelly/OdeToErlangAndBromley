@@ -307,7 +307,7 @@ function SimpleLanding({ onOpenAdvanced }: SimpleLandingProps) {
     state.setInput('solveFor', 'agents');
     state.setInput('concurrency', 1);
     if (isPristineDefault(state.inputs)) {
-      applyPreset(presets[0]);
+      applyPreset(presets[0]!);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -168,14 +168,14 @@ export default function SmartCSVImport() {
     if (str.includes(':')) {
       const parts = str.split(':');
       if (parts.length === 3) {
-        const hours = parseInt(parts[0], 10) || 0;
-        const minutes = parseInt(parts[1], 10) || 0;
-        const seconds = parseInt(parts[2], 10) || 0;
+        const hours = parseInt(parts[0]!, 10) || 0;
+        const minutes = parseInt(parts[1]!, 10) || 0;
+        const seconds = parseInt(parts[2]!, 10) || 0;
         return hours * 3600 + minutes * 60 + seconds;
       }
       if (parts.length === 2) {
-        const minutes = parseInt(parts[0], 10) || 0;
-        const seconds = parseInt(parts[1], 10) || 0;
+        const minutes = parseInt(parts[0]!, 10) || 0;
+        const seconds = parseInt(parts[1]!, 10) || 0;
         return minutes * 60 + seconds;
       }
     }
@@ -331,11 +331,11 @@ export default function SmartCSVImport() {
                 } else if (valueStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
                   // MM/DD/YYYY (Avaya, US-style)
                   const [mm, dd, yyyy] = valueStr.split('/');
-                  parsedDate = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                  parsedDate = `${yyyy}-${mm!.padStart(2, '0')}-${dd!.padStart(2, '0')}`;
                 } else if (valueStr.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
                   // MM-DD-YYYY
                   const [mm, dd, yyyy] = valueStr.split('-');
-                  parsedDate = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                  parsedDate = `${yyyy}-${mm!.padStart(2, '0')}-${dd!.padStart(2, '0')}`;
                 }
                 // Validate date is real (rejects Feb 31, Apr 31, etc.)
                 if (parsedDate) {

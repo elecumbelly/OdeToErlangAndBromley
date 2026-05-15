@@ -91,7 +91,7 @@ export class SimulationEngine {
     // Clamp to simulation horizon
     const targetTime = Math.min(tMax, this.config.maxTime);
 
-    while (this.eventQueue.length > 0 && this.eventQueue[0].time <= targetTime) {
+    while (this.eventQueue.length > 0 && this.eventQueue[0]!.time <= targetTime) {
       const event = this.popNextEvent();
       if (!event) break;
 
@@ -105,14 +105,14 @@ export class SimulationEngine {
 
       // Record time series snapshot (sample every so often to avoid too many points)
       if (this.stats.timeSeries.length === 0 ||
-          this.now - this.stats.timeSeries[this.stats.timeSeries.length - 1].time >= 0.5) {
+          this.now - this.stats.timeSeries[this.stats.timeSeries.length - 1]!.time >= 0.5) {
         this.recordTimeSeriesPoint();
       }
     }
 
     // If we've advanced time, record final snapshot
     if (this.now === targetTime && this.stats.timeSeries.length > 0) {
-      const last = this.stats.timeSeries[this.stats.timeSeries.length - 1];
+      const last = this.stats.timeSeries[this.stats.timeSeries.length - 1]!;
       if (last.time < this.now) {
         this.recordTimeSeriesPoint();
       }

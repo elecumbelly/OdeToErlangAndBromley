@@ -127,7 +127,7 @@ export function generateCoverageRequirements(
     for (let i = 0; i < intervalsPerDay; i += 1) {
       const intervalStartMin = DEFAULT_SHIFT_START_MIN + i * intervalMinutes;
       const intervalEndMin = intervalStartMin + intervalMinutes;
-      const intervalVolume = dailyVolume * intervalPattern[i];
+      const intervalVolume = dailyVolume * intervalPattern[i]!;
       const volumePerSkill = planSkills.length > 0 ? intervalVolume / planSkills.length : 0;
 
       planSkills.forEach((skill) => {

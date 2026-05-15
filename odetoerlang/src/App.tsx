@@ -262,7 +262,7 @@ function App() {
     const next = tourStep + 1;
     if (next < tourSteps.length) {
       setTourStep(next);
-      tourSteps[next].action();
+      tourSteps[next]!.action();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       dismissTour();
@@ -272,7 +272,7 @@ function App() {
   const handleTourBack = () => {
     const prev = Math.max(0, tourStep - 1);
     setTourStep(prev);
-    tourSteps[prev].action();
+    tourSteps[prev]!.action();
   };
 
   const enterAdvanced = (tab?: Tab) => {
@@ -287,7 +287,7 @@ function App() {
     setShowTour(false);
   };
 
-  const currentGroup = HUB_GROUPS.find(g => g.tabs.includes(activeTab)) ?? HUB_GROUPS[0];
+  const currentGroup = HUB_GROUPS.find(g => g.tabs.includes(activeTab)) ?? HUB_GROUPS[0]!;
   const activeGroup = currentGroup.id;
   const visibleSubTabs = ALL_TABS.filter(t => currentGroup.tabs.includes(t.id));
 
@@ -405,7 +405,7 @@ function App() {
                 {HUB_GROUPS.map((group) => (
                   <button
                     key={group.id}
-                    onClick={() => setActiveTab(group.tabs[0])}
+                    onClick={() => setActiveTab(group.tabs[0]!)}
                     className={`
                       px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-fast rounded-lg
                       flex items-center gap-2 uppercase tracking-widest
@@ -597,7 +597,7 @@ function App() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-3xs text-text-muted uppercase tracking-widest">Quick Tour</p>
-                <h3 className="text-lg font-semibold text-text-primary">{tourSteps[tourStep].title}</h3>
+                <h3 className="text-lg font-semibold text-text-primary">{tourSteps[tourStep]!.title}</h3>
               </div>
               <button
                 onClick={dismissTour}
@@ -606,12 +606,12 @@ function App() {
                 Skip
               </button>
             </div>
-            <p className="text-sm text-text-secondary leading-relaxed">{tourSteps[tourStep].body}</p>
+            <p className="text-sm text-text-secondary leading-relaxed">{tourSteps[tourStep]!.body}</p>
             <button
-              onClick={tourSteps[tourStep].action}
+              onClick={tourSteps[tourStep]!.action}
               className="text-2xs font-semibold text-cyan uppercase tracking-widest underline"
             >
-              {tourSteps[tourStep].cta}
+              {tourSteps[tourStep]!.cta}
             </button>
             <div className="flex items-center justify-between text-2xs text-text-muted">
               <span>Step {tourStep + 1} / {tourSteps.length}</span>

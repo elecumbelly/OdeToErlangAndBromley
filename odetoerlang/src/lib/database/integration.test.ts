@@ -133,19 +133,19 @@ describe('Integration - Schema Validation', () => {
     tables.forEach(table => {
       const result = db.exec(`SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'`);
       expect(result.length).toBe(1);
-      expect(result[0].values[0][0]).toBe(table);
+      expect(result[0]!.values[0]![0]!).toBe(table);
     });
   });
 
   test('schema_version is initialized', () => {
     const result = db.exec('SELECT version, description FROM schema_version ORDER BY version DESC LIMIT 1');
     expect(result.length).toBe(1);
-    expect(result[0].values[0][0]).toBe(1);
+    expect(result[0]!.values[0]![0]!).toBe(1);
   });
 
   test('foreign key constraints are defined', () => {
     const result = db.exec("SELECT sql FROM sqlite_master WHERE type='table' AND name='Campaigns'");
-    const createSql = result[0].values[0][0] as string;
+    const createSql = result[0]!.values[0]![0]! as string;
     expect(createSql).toContain('FOREIGN KEY');
     expect(createSql).toContain('client_id');
   });
@@ -156,23 +156,23 @@ describe('Integration - Client CRUD', () => {
     db.run("INSERT INTO Clients (client_name, industry) VALUES ('Acme Corp', 'Technology')");
 
     const result = db.exec('SELECT * FROM Clients WHERE client_name = ?', ['Acme Corp']);
-    expect(result[0].values.length).toBe(1);
-    expect(result[0].values[0][1]).toBe('Acme Corp');
-    expect(result[0].values[0][2]).toBe('Technology');
+    expect(result[0]!.values.length).toBe(1);
+    expect(result[0]!.values[0]![1]!).toBe('Acme Corp');
+    expect(result[0]!.values[0]![2]!).toBe('Technology');
   });
 
   test('client active defaults to 1', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('Test Client')");
 
     const result = db.exec('SELECT active FROM Clients WHERE client_name = ?', ['Test Client']);
-    expect(result[0].values[0][0]).toBe(1);
+    expect(result[0]!.values[0]![0]!).toBe(1);
   });
 
   test('created_at is automatically set', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('Timestamp Test')");
 
     const result = db.exec('SELECT created_at FROM Clients WHERE client_name = ?', ['Timestamp Test']);
-    const timestamp = result[0].values[0][0] as string;
+    const timestamp = result[0]!.values[0]![0]! as string;
     expect(timestamp).toBeTruthy();
     // Should be a valid date string
     expect(new Date(timestamp).getTime()).not.toBeNaN();
@@ -184,17 +184,17 @@ describe('Integration - Client CRUD', () => {
     db.run("UPDATE Clients SET client_name = 'Updated', industry = 'Finance' WHERE client_name = 'Original'");
 
     const result = db.exec("SELECT client_name, industry FROM Clients WHERE client_name = 'Updated'");
-    expect(result[0].values[0][0]).toBe('Updated');
-    expect(result[0].values[0][1]).toBe('Finance');
+    expect(result[0]!.values[0]![0]!).toBe('Updated');
+    expect(result[0]!.values[0]![1]!).toBe('Finance');
   });
 
   test('deletes client', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('To Delete')");
-    const beforeCount = db.exec('SELECT COUNT(*) FROM Clients')[0].values[0][0];
+    const beforeCount = db.exec('SELECT COUNT(*) FROM Clients')[0]!.values[0]![0]!;
 
     db.run("DELETE FROM Clients WHERE client_name = 'To Delete'");
 
-    const afterCount = db.exec('SELECT COUNT(*) FROM Clients')[0].values[0][0];
+    const afterCount = db.exec('SELECT COUNT(*) FROM Clients')[0]!.values[0]![0]!;
     expect(afterCount).toBe((beforeCount as number) - 1);
   });
 });
@@ -203,7 +203,7 @@ describe('Integration - Campaign CRUD with Foreign Keys', () => {
   test('creates campaign with valid client_id', () => {
     // First create a client
     db.run("INSERT INTO Clients (client_name) VALUES ('Parent Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     // Create campaign referencing the client
     db.run(
@@ -213,13 +213,13 @@ describe('Integration - Campaign CRUD with Foreign Keys', () => {
     );
 
     const result = db.exec('SELECT * FROM Campaigns WHERE campaign_name = ?', ['Test Campaign']);
-    expect(result[0].values.length).toBe(1);
-    expect(result[0].values[0][2]).toBe(clientId); // client_id column
+    expect(result[0]!.values.length).toBe(1);
+    expect(result[0]!.values[0]![2]!).toBe(clientId); // client_id column
   });
 
   test('campaign defaults are applied', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('Default Test Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run(
       `INSERT INTO Campaigns (campaign_name, client_id, start_date)
@@ -232,7 +232,7 @@ describe('Integration - Campaign CRUD with Foreign Keys', () => {
       FROM Campaigns WHERE campaign_name = 'Defaults Campaign'
     `);
 
-    const [channelType, slaTarget, slaThreshold, concurrency, active] = result[0].values[0];
+    const [channelType, slaTarget, slaThreshold, concurrency, active] = result[0]!.values[0]!;
     expect(channelType).toBe('voice');
     expect(slaTarget).toBe(80);
     expect(slaThreshold).toBe(20);
@@ -242,7 +242,7 @@ describe('Integration - Campaign CRUD with Foreign Keys', () => {
 
   test('retrieves campaigns with JOIN to clients', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('Joined Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run(
       `INSERT INTO Campaigns (campaign_name, client_id, start_date)
@@ -257,8 +257,8 @@ describe('Integration - Campaign CRUD with Foreign Keys', () => {
       WHERE c.campaign_name = 'Joined Campaign'
     `);
 
-    expect(result[0].values[0][0]).toBe('Joined Campaign');
-    expect(result[0].values[0][1]).toBe('Joined Client');
+    expect(result[0]!.values[0]![0]!).toBe('Joined Campaign');
+    expect(result[0]!.values[0]![1]!).toBe('Joined Client');
   });
 });
 
@@ -270,7 +270,7 @@ describe('Integration - Scenario Management', () => {
     );
 
     const result = db.exec('SELECT * FROM Scenarios WHERE scenario_name = ?', ['Test Scenario']);
-    expect(result[0].values.length).toBe(1);
+    expect(result[0]!.values.length).toBe(1);
   });
 
   test('only one baseline scenario at a time', () => {
@@ -283,11 +283,11 @@ describe('Integration - Scenario Management', () => {
 
     // Check only one baseline exists
     const result = db.exec('SELECT COUNT(*) FROM Scenarios WHERE is_baseline = 1');
-    expect(result[0].values[0][0]).toBe(1);
+    expect(result[0]!.values[0]![0]!).toBe(1);
 
     // Verify it's the second one
     const baseline = db.exec('SELECT scenario_name FROM Scenarios WHERE is_baseline = 1');
-    expect(baseline[0].values[0][0]).toBe('Baseline 2');
+    expect(baseline[0]!.values[0]![0]!).toBe('Baseline 2');
   });
 
   test('scenario updated_at changes on update', () => {
@@ -298,7 +298,7 @@ describe('Integration - Scenario Management', () => {
     db.run("UPDATE Scenarios SET description = 'Updated', updated_at = CURRENT_TIMESTAMP WHERE scenario_name = 'Update Test'");
 
     const afterUpdate = db.exec('SELECT updated_at FROM Scenarios WHERE scenario_name = ?', ['Update Test']);
-    const after = afterUpdate[0].values[0][0];
+    const after = afterUpdate[0]!.values[0]![0]!;
 
     // Timestamps should differ (or at least after should exist)
     expect(after).toBeTruthy();
@@ -321,21 +321,21 @@ describe('Integration - Assumptions', () => {
       WHERE assumption_type = 'shrinkage'
     `);
 
-    expect(result[0].values[0][0]).toBe('shrinkage');
-    expect(result[0].values[0][1]).toBe(25);
-    expect(result[0].values[0][2]).toBeNull();
+    expect(result[0]!.values[0]![0]!).toBe('shrinkage');
+    expect(result[0]!.values[0]![1]!).toBe(25);
+    expect(result[0]!.values[0]![2]).toBeNull();
   });
 
   test('creates campaign-specific assumption', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('Assumption Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run(
       `INSERT INTO Campaigns (campaign_name, client_id, start_date)
        VALUES ('Assumption Campaign', ?, '2024-01-01')`,
       [clientId]
     );
-    const campaignId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const campaignId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run(
       `INSERT INTO Assumptions (assumption_type, value, unit, valid_from, campaign_id)
@@ -349,7 +349,7 @@ describe('Integration - Assumptions', () => {
       WHERE assumption_type = 'aht'
     `);
 
-    expect(result[0].values[0][1]).toBe(campaignId);
+    expect(result[0]!.values[0]![1]!).toBe(campaignId);
   });
 
   test('date range filtering works', () => {
@@ -369,7 +369,7 @@ describe('Integration - Assumptions', () => {
         AND valid_from <= '2024-05-15'
         AND (valid_to IS NULL OR valid_to >= '2024-05-15')
     `);
-    expect(mayResult[0].values[0][0]).toBe(20);
+    expect(mayResult[0]!.values[0]![0]!).toBe(20);
 
     // Query for August 2024 - should get 25%
     const augResult = db.exec(`
@@ -378,7 +378,7 @@ describe('Integration - Assumptions', () => {
         AND valid_from <= '2024-08-15'
         AND (valid_to IS NULL OR valid_to >= '2024-08-15')
     `);
-    expect(augResult[0].values[0][0]).toBe(25);
+    expect(augResult[0]!.values[0]![0]!).toBe(25);
   });
 });
 
@@ -389,18 +389,18 @@ describe('Integration - Forecasts with Relationships', () => {
   beforeEach(() => {
     // Setup scenario
     db.run("INSERT INTO Scenarios (scenario_name) VALUES ('Forecast Test Scenario')");
-    scenarioId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    scenarioId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     // Setup client and campaign
     db.run("INSERT INTO Clients (client_name) VALUES ('Forecast Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run(
       `INSERT INTO Campaigns (campaign_name, client_id, start_date)
        VALUES ('Forecast Campaign', ?, '2024-01-01')`,
       [clientId]
     );
-    campaignId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    campaignId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
   });
 
   test('creates forecast with all metrics', () => {
@@ -417,11 +417,11 @@ describe('Integration - Forecasts with Relationships', () => {
     );
 
     const result = db.exec('SELECT * FROM Forecasts WHERE forecast_name = ?', ['Test Forecast']);
-    expect(result[0].values.length).toBe(1);
+    expect(result[0]!.values.length).toBe(1);
 
     // Verify all values stored correctly
-    const forecast = result[0].values[0];
-    const columns = result[0].columns;
+    const forecast = result[0]!.values[0]!;
+    const columns = result[0]!.columns;
 
     const getValue = (col: string) => forecast[columns.indexOf(col)];
 
@@ -455,9 +455,9 @@ describe('Integration - Forecasts with Relationships', () => {
       ORDER BY forecast_date
     `, [scenarioId]);
 
-    expect(result[0].values[0][0]).toBe('January');
-    expect(result[0].values[1][0]).toBe('February');
-    expect(result[0].values[2][0]).toBe('March');
+    expect(result[0]!.values[0]![0]!).toBe('January');
+    expect(result[0]!.values[1]![0]!).toBe('February');
+    expect(result[0]!.values[2]![0]!).toBe('March');
   });
 
   test('joins forecast with scenario and campaign', () => {
@@ -479,10 +479,10 @@ describe('Integration - Forecasts with Relationships', () => {
       WHERE f.forecast_name = 'Joined Forecast'
     `);
 
-    expect(result[0].values[0][0]).toBe('Joined Forecast');
-    expect(result[0].values[0][1]).toBe('Forecast Test Scenario');
-    expect(result[0].values[0][2]).toBe('Forecast Campaign');
-    expect(result[0].values[0][3]).toBe('erlangA');
+    expect(result[0]!.values[0]![0]!).toBe('Joined Forecast');
+    expect(result[0]!.values[0]![1]!).toBe('Forecast Test Scenario');
+    expect(result[0]!.values[0]![2]!).toBe('Forecast Campaign');
+    expect(result[0]!.values[0]![3]!).toBe('erlangA');
   });
 });
 
@@ -495,7 +495,7 @@ describe('Integration - SQL Injection Prevention', () => {
 
     // Verify the malicious string was stored as data, not executed
     const result = db.exec("SELECT client_name FROM Clients WHERE client_name = ?", [maliciousInput]);
-    expect(result[0].values[0][0]).toBe(maliciousInput);
+    expect(result[0]!.values[0]![0]!).toBe(maliciousInput);
 
     // Verify Clients table still exists
     const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='Clients'");
@@ -508,7 +508,7 @@ describe('Integration - SQL Injection Prevention', () => {
     db.run("INSERT INTO Clients (client_name) VALUES (?)", [specialChars]);
 
     const result = db.exec("SELECT client_name FROM Clients WHERE id = last_insert_rowid()");
-    expect(result[0].values[0][0]).toBe(specialChars);
+    expect(result[0]!.values[0]![0]!).toBe(specialChars);
   });
 });
 
@@ -517,13 +517,13 @@ describe('Integration - Transaction Simulation', () => {
     // Simulate a transaction-like sequence
     try {
       db.run("INSERT INTO Clients (client_name) VALUES ('Transaction Client')");
-      const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+      const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
       db.run(
         "INSERT INTO Campaigns (campaign_name, client_id, start_date) VALUES ('Transaction Campaign', ?, '2024-01-01')",
         [clientId]
       );
-      const campaignId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+      const campaignId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
       db.run(
         `INSERT INTO Assumptions (assumption_type, value, unit, valid_from, campaign_id)
@@ -540,9 +540,9 @@ describe('Integration - Transaction Simulation', () => {
         WHERE a.assumption_type = 'aht'
       `);
 
-      expect(result[0].values[0][0]).toBe('Transaction Client');
-      expect(result[0].values[0][1]).toBe('Transaction Campaign');
-      expect(result[0].values[0][2]).toBe(200);
+      expect(result[0]!.values[0]![0]!).toBe('Transaction Client');
+      expect(result[0]!.values[0]![1]!).toBe('Transaction Campaign');
+      expect(result[0]!.values[0]![2]!).toBe(200);
     } catch (error) {
       // This shouldn't happen in happy path
       expect(error).toBeUndefined();
@@ -558,13 +558,13 @@ describe('Integration - Aggregation Queries', () => {
     db.run("INSERT INTO Clients (client_name) VALUES ('Client 3')");
 
     const result = db.exec('SELECT COUNT(*) FROM Clients');
-    expect(result[0].values[0][0]).toBe(3);
+    expect(result[0]!.values[0]![0]!).toBe(3);
   });
 
   test('groups and counts campaigns by client', () => {
     // Create two clients
     db.run("INSERT INTO Clients (client_name) VALUES ('Multi Campaign Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     // Create multiple campaigns for this client
     db.run("INSERT INTO Campaigns (campaign_name, client_id, start_date) VALUES ('Camp 1', ?, '2024-01-01')", [clientId]);
@@ -579,18 +579,18 @@ describe('Integration - Aggregation Queries', () => {
       GROUP BY cl.id
     `, [clientId]);
 
-    expect(result[0].values[0][1]).toBe(3);
+    expect(result[0]!.values[0]![1]!).toBe(3);
   });
 
   test('calculates averages', () => {
     db.run("INSERT INTO Scenarios (scenario_name) VALUES ('Avg Test')");
-    const scenarioId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const scenarioId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run("INSERT INTO Clients (client_name) VALUES ('Avg Client')");
-    const clientId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const clientId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     db.run("INSERT INTO Campaigns (campaign_name, client_id, start_date) VALUES ('Avg Campaign', ?, '2024-01-01')", [clientId]);
-    const campaignId = db.exec('SELECT last_insert_rowid()')[0].values[0][0] as number;
+    const campaignId = db.exec('SELECT last_insert_rowid()')[0]!.values[0]![0]! as number;
 
     // Insert forecasts with different volumes
     db.run(
@@ -612,7 +612,7 @@ describe('Integration - Aggregation Queries', () => {
       WHERE scenario_id = ?
     `, [scenarioId]);
 
-    expect(result[0].values[0][0]).toBe(200); // Average of 100, 200, 300
-    expect(result[0].values[0][1]).toBe(600); // Sum of 100, 200, 300
+    expect(result[0]!.values[0]![0]!).toBe(200); // Average of 100, 200, 300
+    expect(result[0]!.values[0]![1]!).toBe(600); // Sum of 100, 200, 300
   });
 });

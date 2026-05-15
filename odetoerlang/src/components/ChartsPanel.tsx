@@ -107,7 +107,7 @@ export default memo(function ChartsPanel() {
     const targetSL = inputs.targetSLPercent / 100;
 
     INTRADAY_LABELS.forEach((time, idx) => {
-      const volume = Math.round(inputs.volume * INTRADAY_VOLUME_PATTERN[idx]);
+      const volume = Math.round(inputs.volume * INTRADAY_VOLUME_PATTERN[idx]!);
       const trafficIntensity = trafficIntensityOf(volume, inputs.aht, inputs.intervalMinutes);
       const minAgents = Math.ceil(trafficIntensity);
 

@@ -13,7 +13,7 @@ import ContactRecordsPanel from './ContactRecordsPanel';
 
 export default function SimulationTab() {
   // Configuration state
-  const [config, setConfig] = useState<ScenarioConfig>(PRESET_SCENARIOS[1].config); // Start with "Balanced"
+  const [config, setConfig] = useState<ScenarioConfig>(PRESET_SCENARIOS[1]!.config); // Start with "Balanced"
 
   // Simulation state
   const [snapshot, setSnapshot] = useState<Snapshot>({

@@ -52,7 +52,7 @@ describe('weightedMovingAverage', () => {
     const sma = simpleMovingAverage(values, 3);
 
     // WMA should be closer to recent values than SMA
-    expect(wma[4]).toBeGreaterThan(sma[4]);
+    expect(wma[4]!).toBeGreaterThan(sma[4]!);
   });
 
   test('calculates correctly', () => {
@@ -153,7 +153,7 @@ describe('decomposeSeasonality', () => {
     const seasonalPattern = [1.2, 1.1, 1.0, 0.9, 0.8, 0.5, 0.5];
     const values: number[] = [];
     for (let i = 0; i < 28; i++) {
-      values.push(100 * seasonalPattern[i % period]);
+      values.push(100 * seasonalPattern[i % period]!);
     }
 
     const decomp = decomposeSeasonality(values, period, true);
@@ -194,8 +194,8 @@ describe('forecastWithMovingAverage', () => {
 
     const result = forecastWithMovingAverage(values, dates, 7, 3);
 
-    expect(result.forecasts[0].date).toBe('2024-01-04');
-    expect(result.forecasts[6].date).toBe('2024-01-10');
+    expect(result.forecasts[0]!.date).toBe('2024-01-04');
+    expect(result.forecasts[6]!.date).toBe('2024-01-10');
   });
 
   test('includes confidence intervals', () => {
@@ -222,7 +222,7 @@ describe('forecastWithExponentialSmoothing', () => {
 
     expect(result.method).toBe('Double Exponential Smoothing (Holt)');
     // Forecasts should continue the upward trend
-    expect(result.forecasts[0].value).toBeGreaterThan(values[values.length - 1] - 50);
+    expect(result.forecasts[0]!.value).toBeGreaterThan(values[values.length - 1]! - 50);
   });
 
   test('captures seasonality (triple)', () => {
@@ -250,7 +250,7 @@ describe('forecastWithRegression', () => {
     expect(result.method).toBe('Linear Regression');
     expect(result.parameters.slope).toBeCloseTo(10, 0);
     // Next value should be around 150
-    expect(result.forecasts[0].value).toBeCloseTo(150, -1);
+    expect(result.forecasts[0]!.value).toBeCloseTo(150, -1);
   });
 
   test('includes r-squared in parameters', () => {

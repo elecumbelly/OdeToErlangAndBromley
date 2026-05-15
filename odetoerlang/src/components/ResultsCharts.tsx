@@ -63,8 +63,8 @@ const ResultsCharts: React.FC = () => {
     const H = 140;
     const PAD = 10;
 
-    const minY = Math.min(...data, target ?? data[0]);
-    const maxY = Math.max(...data, target ?? data[0]);
+    const minY = Math.min(...data, target ?? data[0]!);
+    const maxY = Math.max(...data, target ?? data[0]!);
     const range = maxY - minY || 1;
     const lastIndex = Math.max(1, data.length - 1);
 

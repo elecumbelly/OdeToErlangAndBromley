@@ -57,11 +57,11 @@ export default function ScenarioComparison() {
       const [baseline, ...rest] = prev;
       const nextInputs = { ...currentInputs };
       const keys = Object.keys(nextInputs) as Array<keyof CalculationInputs>;
-      const hasChanges = keys.some((key) => baseline.inputs[key] !== nextInputs[key]);
+      const hasChanges = keys.some((key) => baseline!.inputs[key] !== nextInputs[key]);
 
       if (!hasChanges) return prev;
 
-      return [{ ...baseline, inputs: nextInputs, results: null }, ...rest];
+      return [{ ...baseline!, inputs: nextInputs, results: null }, ...rest];
     });
   }, [currentInputs]);
 

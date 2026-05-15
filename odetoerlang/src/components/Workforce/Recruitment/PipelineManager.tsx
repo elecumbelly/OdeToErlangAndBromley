@@ -85,7 +85,7 @@ export default function PipelineManager() {
   const getCumulativeRate = (index: number): number => {
     let cumulative = 1;
     for (let i = 0; i <= index; i++) {
-      cumulative *= stages[i].pass_rate;
+      cumulative *= stages[i]!.pass_rate;
     }
     return cumulative;
   };

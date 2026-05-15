@@ -101,7 +101,7 @@ export default function RequestsManager() {
     form.open();
     form.setValues({
       ...REQUEST_EMPTY_DEFAULTS,
-      role_id: roles.length > 0 ? roles[0].id : null,
+      role_id: roles.length > 0 ? roles[0]!.id : null,
       requested_date: toLocalDateString(),
     });
   };

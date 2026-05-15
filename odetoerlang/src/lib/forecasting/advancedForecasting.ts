@@ -97,11 +97,11 @@ export function weightedMovingAverage(
       const slice = values.slice(0, i + 1);
       const w = weights.slice(windowSize - i - 1);
       const ws = w.reduce((a, b) => a + b, 0);
-      const weighted = slice.reduce((sum, v, j) => sum + v * w[j], 0);
+      const weighted = slice.reduce((sum, v, j) => sum + v * (w[j] ?? 0), 0);
       result.push(weighted / ws);
     } else {
       const slice = values.slice(i - windowSize + 1, i + 1);
-      const weighted = slice.reduce((sum, v, j) => sum + v * weights[j], 0);
+      const weighted = slice.reduce((sum, v, j) => sum + v * (weights[j] ?? 0), 0);
       result.push(weighted / weightSum);
     }
   }
@@ -123,9 +123,9 @@ export function simpleExponentialSmoothing(
 ): number[] {
   if (values.length === 0) return [];
 
-  const result: number[] = [values[0]];
+  const result: number[] = [values[0]!];
   for (let i = 1; i < values.length; i++) {
-    const smoothed = alpha * values[i] + (1 - alpha) * result[i - 1];
+    const smoothed = alpha * values[i]! + (1 - alpha) * result[i - 1]!;
     result.push(smoothed);
   }
   return result;
@@ -151,16 +151,16 @@ export function doubleExponentialSmoothing(
   }
 
   // Initialize
-  const level: number[] = [values[0]];
-  const trend: number[] = [values[1] - values[0]];
-  const fitted: number[] = [values[0]];
+  const level: number[] = [values[0]!];
+  const trend: number[] = [values[1]! - values[0]!];
+  const fitted: number[] = [values[0]!];
 
   for (let i = 1; i < values.length; i++) {
-    const prevLevel = level[i - 1];
-    const prevTrend = trend[i - 1];
+    const prevLevel = level[i - 1]!;
+    const prevTrend = trend[i - 1]!;
 
     // Update level
-    const newLevel = alpha * values[i] + (1 - alpha) * (prevLevel + prevTrend);
+    const newLevel = alpha * values[i]! + (1 - alpha) * (prevLevel + prevTrend);
     level.push(newLevel);
 
     // Update trend
@@ -205,44 +205,47 @@ export function tripleExponentialSmoothing(
   const initialSeasonal: number[] = [];
   for (let i = 0; i < seasonLength; i++) {
     if (additive) {
-      initialSeasonal.push(values[i] - firstSeasonAvg);
+      initialSeasonal.push(values[i]! - firstSeasonAvg);
     } else {
-      initialSeasonal.push(values[i] / firstSeasonAvg);
+      initialSeasonal.push(values[i]! / firstSeasonAvg);
     }
   }
 
   // Initialize level and trend
   const level: number[] = [firstSeasonAvg];
-  const trend: number[] = [(values[seasonLength] - values[0]) / seasonLength];
+  const trend: number[] = [(values[seasonLength]! - values[0]!) / seasonLength];
   const seasonal: number[] = [...initialSeasonal];
   const fitted: number[] = [];
+  const level0 = level[0]!;
+  const trend0 = trend[0]!;
 
   // First season uses initial values
   for (let i = 0; i < seasonLength; i++) {
     if (additive) {
-      fitted.push(level[0] + trend[0] * i + seasonal[i]);
+      fitted.push(level0 + trend0 * i + seasonal[i]!);
     } else {
-      fitted.push((level[0] + trend[0] * i) * seasonal[i]);
+      fitted.push((level0 + trend0 * i) * seasonal[i]!);
     }
   }
 
   // Process remaining values
   for (let i = seasonLength; i < values.length; i++) {
-    const prevLevel = level[level.length - 1];
-    const prevTrend = trend[trend.length - 1];
+    const prevLevel = level[level.length - 1]!;
+    const prevTrend = trend[trend.length - 1]!;
     const seasonIdx = i % seasonLength;
-    const prevSeasonal = seasonal[seasonal.length - seasonLength + seasonIdx] ||
-                         initialSeasonal[seasonIdx];
+    const prevSeasonal = (seasonal[seasonal.length - seasonLength + seasonIdx] ??
+                          initialSeasonal[seasonIdx]!) ||
+                         initialSeasonal[seasonIdx]!;
 
     let newLevel: number;
     let newSeasonal: number;
 
     if (additive) {
-      newLevel = alpha * (values[i] - prevSeasonal) + (1 - alpha) * (prevLevel + prevTrend);
-      newSeasonal = gamma * (values[i] - newLevel) + (1 - gamma) * prevSeasonal;
+      newLevel = alpha * (values[i]! - prevSeasonal) + (1 - alpha) * (prevLevel + prevTrend);
+      newSeasonal = gamma * (values[i]! - newLevel) + (1 - gamma) * prevSeasonal;
     } else {
-      newLevel = alpha * (values[i] / prevSeasonal) + (1 - alpha) * (prevLevel + prevTrend);
-      newSeasonal = gamma * (values[i] / newLevel) + (1 - gamma) * prevSeasonal;
+      newLevel = alpha * (values[i]! / prevSeasonal) + (1 - alpha) * (prevLevel + prevTrend);
+      newSeasonal = gamma * (values[i]! / newLevel) + (1 - gamma) * prevSeasonal;
     }
 
     const newTrend = beta * (newLevel - prevLevel) + (1 - beta) * prevTrend;
@@ -281,10 +284,11 @@ export function decomposeSeasonality(
 
   // Step 2: Remove trend to get seasonal + residual
   const detrended: number[] = values.map((v, i) => {
+    const t = trend[i]!;
     if (additive) {
-      return v - trend[i];
+      return v - t;
     } else {
-      return trend[i] !== 0 ? v / trend[i] : 1;
+      return t !== 0 ? v / t : 1;
     }
   });
 
@@ -294,36 +298,39 @@ export function decomposeSeasonality(
 
   for (let i = 0; i < n; i++) {
     const idx = i % seasonLength;
-    seasonalSums[idx] += detrended[i];
-    seasonalCounts[idx]++;
+    seasonalSums[idx] = seasonalSums[idx]! + detrended[i]!;
+    seasonalCounts[idx] = seasonalCounts[idx]! + 1;
   }
 
-  const seasonalIndices = seasonalSums.map((sum, i) =>
-    seasonalCounts[i] > 0 ? sum / seasonalCounts[i] : (additive ? 0 : 1)
-  );
+  const seasonalIndices = seasonalSums.map((sum, i) => {
+    const count = seasonalCounts[i]!;
+    return count > 0 ? sum / count : (additive ? 0 : 1);
+  });
 
   // Normalize seasonal indices (for additive: sum to 0, for multiplicative: average to 1)
   if (additive) {
     const seasonalMean = seasonalIndices.reduce((a, b) => a + b, 0) / seasonLength;
     for (let i = 0; i < seasonLength; i++) {
-      seasonalIndices[i] -= seasonalMean;
+      seasonalIndices[i] = seasonalIndices[i]! - seasonalMean;
     }
   } else {
     const seasonalMean = seasonalIndices.reduce((a, b) => a + b, 0) / seasonLength;
     for (let i = 0; i < seasonLength; i++) {
-      seasonalIndices[i] /= seasonalMean;
+      seasonalIndices[i] = seasonalIndices[i]! / seasonalMean;
     }
   }
 
   // Step 4: Apply seasonal pattern to all observations
-  const seasonal: number[] = values.map((_, i) => seasonalIndices[i % seasonLength]);
+  const seasonal: number[] = values.map((_, i) => seasonalIndices[i % seasonLength]!);
 
   // Step 5: Calculate residuals
   const residual: number[] = values.map((v, i) => {
+    const t = trend[i]!;
+    const s = seasonal[i]!;
     if (additive) {
-      return v - trend[i] - seasonal[i];
+      return v - t - s;
     } else {
-      return trend[i] * seasonal[i] !== 0 ? v / (trend[i] * seasonal[i]) : 1;
+      return t * s !== 0 ? v / (t * s) : 1;
     }
   });
 
@@ -349,7 +356,7 @@ export function forecastWithMovingAverage(
     : simpleMovingAverage(values, windowSize);
 
   // Last smoothed value is our base forecast
-  const baseValue = smoothed[smoothed.length - 1];
+  const baseValue = smoothed[smoothed.length - 1] ?? 0;
   const stats = calculateStats(values.slice(-windowSize * 2));
   const margin = stats.stdDev * 1.96; // 95% confidence
 
@@ -396,17 +403,17 @@ export function forecastWithExponentialSmoothing(
 
   if (method === 'single') {
     fitted = simpleExponentialSmoothing(values, 0.3);
-    lastLevel = fitted[fitted.length - 1];
+    lastLevel = fitted[fitted.length - 1] ?? 0;
   } else if (method === 'double') {
     const des = doubleExponentialSmoothing(values, 0.3, 0.1);
     fitted = des.fitted;
-    lastLevel = des.level[des.level.length - 1];
-    lastTrend = des.trend[des.trend.length - 1];
+    lastLevel = des.level[des.level.length - 1] ?? 0;
+    lastTrend = des.trend[des.trend.length - 1] ?? 0;
   } else {
     const tes = tripleExponentialSmoothing(values, seasonLength, 0.3, 0.1, 0.1);
     fitted = tes.fitted;
-    lastLevel = tes.level[tes.level.length - 1];
-    lastTrend = tes.trend[tes.trend.length - 1];
+    lastLevel = tes.level[tes.level.length - 1] ?? 0;
+    lastTrend = tes.trend[tes.trend.length - 1] ?? 0;
     seasonalIndices = tes.seasonal.slice(-seasonLength);
   }
 
@@ -424,7 +431,7 @@ export function forecastWithExponentialSmoothing(
 
     if (method === 'triple' && seasonalIndices.length > 0) {
       const seasonIdx = (values.length + i - 1) % seasonLength;
-      forecast += seasonalIndices[seasonIdx];
+      forecast += seasonalIndices[seasonIdx] ?? 0;
     }
 
     forecasts.push({
@@ -468,7 +475,7 @@ export function forecastWithRegression(
   const { slope, intercept, rSquared } = linearRegression(xValues, values);
 
   const fitted = xValues.map(x => slope * x + intercept);
-  const stats = calculateStats(values.map((v, i) => v - fitted[i]));
+  const stats = calculateStats(values.map((v, i) => v - fitted[i]!));
   const margin = stats.stdDev * 1.96;
 
   const lastDate = new Date(`${dates[dates.length - 1]}T00:00:00`);
@@ -518,12 +525,14 @@ export function calculateAccuracy(
   let countMape = 0;
 
   for (let i = 0; i < n; i++) {
-    const error = actual[i] - predicted[i];
+    const a = actual[i]!;
+    const p = predicted[i]!;
+    const error = a - p;
     sumAbsError += Math.abs(error);
     sumSquaredError += error * error;
 
-    if (actual[i] !== 0) {
-      sumAbsPercentError += Math.abs(error / actual[i]);
+    if (a !== 0) {
+      sumAbsPercentError += Math.abs(error / a);
       countMape++;
     }
   }

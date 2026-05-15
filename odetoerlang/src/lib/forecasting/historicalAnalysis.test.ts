@@ -24,11 +24,11 @@ function createMockHistoricalData(
   return dates.map((date, i) => ({
     campaign_id: 1,
     date,
-    volume: volumes[i],
+    volume: volumes[i]!,
     aht,
     sla_achieved: 0.85,
     asa: 15,
-    abandons: Math.round(volumes[i] * 0.05)
+    abandons: Math.round(volumes[i]! * 0.05)
   }));
 }
 
@@ -123,10 +123,10 @@ describe('aggregateByDay', () => {
     const aggregates = aggregateByDay(data);
 
     expect(aggregates).toHaveLength(2);
-    expect(aggregates[0].date).toBe('2024-01-15');
-    expect(aggregates[0].totalVolume).toBe(250);
-    expect(aggregates[0].avgAht).toBe(225);
-    expect(aggregates[0].recordCount).toBe(2);
+    expect(aggregates[0]!.date).toBe('2024-01-15');
+    expect(aggregates[0]!.totalVolume).toBe(250);
+    expect(aggregates[0]!.avgAht).toBe(225);
+    expect(aggregates[0]!.recordCount).toBe(2);
   });
 
   test('sorts by date', () => {
@@ -138,9 +138,9 @@ describe('aggregateByDay', () => {
 
     const aggregates = aggregateByDay(data);
 
-    expect(aggregates[0].date).toBe('2024-01-15');
-    expect(aggregates[1].date).toBe('2024-01-16');
-    expect(aggregates[2].date).toBe('2024-01-17');
+    expect(aggregates[0]!.date).toBe('2024-01-15');
+    expect(aggregates[1]!.date).toBe('2024-01-16');
+    expect(aggregates[2]!.date).toBe('2024-01-17');
   });
 
   test('calculates abandon rate', () => {
@@ -149,7 +149,7 @@ describe('aggregateByDay', () => {
     ];
 
     const aggregates = aggregateByDay(data);
-    expect(aggregates[0].abandonRate).toBe(0.1);
+    expect(aggregates[0]!.abandonRate).toBe(0.1);
   });
 });
 
