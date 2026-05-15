@@ -1,4 +1,3 @@
-// odetoerlang/src/lib/calculations/erlangEngine.ts
 import type { ErlangVariant } from '../../types';
 import {
   calculateStaffingMetrics,

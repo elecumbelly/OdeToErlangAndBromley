@@ -225,7 +225,7 @@ export const useCalculatorStore = create<CalculatorState>()(
       }
     }),
     {
-      name: 'odetoerlang_math_model',
+      name: 'odetoerlangandbromley_math_model',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         inputs: state.inputs,

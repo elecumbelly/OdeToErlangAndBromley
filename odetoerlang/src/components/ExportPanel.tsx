@@ -66,7 +66,7 @@ export default function ExportPanel() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `odetoerlang-results-${toLocalDateString()}.csv`;
+    a.download = `odetoerlangandbromley-results-${toLocalDateString()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -88,7 +88,7 @@ export default function ExportPanel() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `odetoerlang-config-${toLocalDateString()}.json`;
+    a.download = `odetoerlangandbromley-config-${toLocalDateString()}.json`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -194,7 +194,7 @@ A tribute to A.K. Erlang and the mathematical foundations of queuing theory
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `odetoerlang-report-${toLocalDateString()}.txt`;
+    a.download = `odetoerlangandbromley-report-${toLocalDateString()}.txt`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -300,7 +300,7 @@ A tribute to A.K. Erlang and the mathematical foundations of queuing theory
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `odetoerlang-db-${toLocalDateString()}.sqlite`;
+                a.download = `odetoerlangandbromley-db-${toLocalDateString()}.sqlite`;
                 a.click();
                 window.URL.revokeObjectURL(url);
                 addToast('Database exported (browser file)', 'success');

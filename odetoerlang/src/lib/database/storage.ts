@@ -10,7 +10,7 @@
 
 import { openDB, type IDBPDatabase } from 'idb';
 
-const DB_NAME = 'odetoerlang';
+const DB_NAME = 'odetoerlangandbromley';
 const DB_VERSION = 1;
 const STORE_NAME = 'database';
 const DB_KEY = 'sqlite_binary';

@@ -1,8 +1,8 @@
-# 📊 OdeToErlang
+# 📊 OdeToErlangAndBromley
 
 > **The Unified Open-Source Workforce Management (WFM) Platform**
 
-OdeToErlang is a comprehensive, professional-grade browser-based platform for contact centre capacity planning and scheduling. It combines the rigorous mathematics of **A.K. Erlang** with a modern, high-performance UI to manage every stage of the WFM lifecycle—from historical analysis and forecasting to automated shift scheduling.
+OdeToErlangAndBromley is a comprehensive, professional-grade browser-based platform for contact centre capacity planning and scheduling. It combines the rigorous mathematics of **A.K. Erlang** with a modern, high-performance UI to manage every stage of the WFM lifecycle—from historical analysis and forecasting to automated shift scheduling.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -11,11 +11,11 @@ OdeToErlang is a comprehensive, professional-grade browser-based platform for co
 
 ---
 
-## ✨ Why OdeToErlang?
+## ✨ Why OdeToErlangAndBromley?
 
 **Problem:** Standard WFM tools are either prohibitively expensive enterprise suites or simplistic spreadsheets that fail in multi-channel environments. Most require uploading sensitive PII (Personally Identifiable Information) to third-party clouds.
 
-**Solution:** OdeToErlang is a **Local-First** platform. It runs a full SQLite database in your browser. All your staff data, historical volumes, and schedules stay on your device. It is mathematically precise, visually stunning, and 100% private.
+**Solution:** OdeToErlangAndBromley is a **Local-First** platform. It runs a full SQLite database in your browser. All your staff data, historical volumes, and schedules stay on your device. It is mathematically precise, visually stunning, and 100% private.
 
 ---
 
@@ -50,7 +50,7 @@ OdeToErlang is a comprehensive, professional-grade browser-based platform for co
 
 ## 🏗️ Technology Stack: The "Local-First" Architecture
 
-OdeToErlang represents a new breed of web application:
+OdeToErlangAndBromley represents a new breed of web application:
 - **Database:** `sql.js` (SQLite compiled to WebAssembly) providing a 31-table relational schema in-browser.
 - **Persistence:** SQLite binary is persisted to **IndexedDB**—your data survives browser refreshes and works offline.
 - **Logic:** Complex math and optimization engines written in pure TypeScript.

@@ -146,7 +146,7 @@ let broadcastChannel: BroadcastChannel | null = null;
 function getBroadcastChannel(): BroadcastChannel | null {
   if (typeof BroadcastChannel === 'undefined') return null;
   if (!broadcastChannel) {
-    broadcastChannel = new BroadcastChannel('odetoerlang');
+    broadcastChannel = new BroadcastChannel('odetoerlangandbromley');
   }
   return broadcastChannel;
 }

@@ -1,5 +1,3 @@
-// odetoerlang/src/lib/calculations/erlangB.ts
-
 /**
  * Calculates the Erlang B probability of blocking (GoS).
  *

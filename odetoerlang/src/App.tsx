@@ -205,7 +205,7 @@ function App() {
   // cache and re-run the calculator. originTabId guards against self-echo.
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
-    const channel = new BroadcastChannel('odetoerlang');
+    const channel = new BroadcastChannel('odetoerlangandbromley');
     const onMessage = (event: MessageEvent) => {
       const msg = event.data as { type?: string; table?: string; originTabId?: string };
       if (msg?.type !== 'invalidate') return;
