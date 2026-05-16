@@ -65,7 +65,7 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
             />
           </FormField>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Type" id="type">
               <select 
                 id="type" 
@@ -100,7 +100,7 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
           </div>
 
           {!allDay && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Start" id="start">
                 <input 
                   type="datetime-local" 
@@ -125,7 +125,7 @@ export const EventModal: React.FC<EventModalProps> = ({ isOpen, onClose, onSave,
           )}
 
           {allDay && (
-             <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Start Date" id="startDate">
                 <input 
                   type="date" 

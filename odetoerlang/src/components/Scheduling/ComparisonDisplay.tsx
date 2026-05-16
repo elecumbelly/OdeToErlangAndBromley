@@ -28,15 +28,15 @@ export const ComparisonDisplay = memo(({ comparisonGroup, metricsByRunId }: Comp
           compareMetric('Cost', metricA?.cost_estimate, metricB?.cost_estimate),
         ];
         return (
-          <div className="space-y-3 text-xs text-text-secondary">
-            <div className="grid grid-cols-4 gap-2 text-2xs uppercase tracking-widest text-text-muted">
+          <div className="space-y-3 text-xs text-text-secondary overflow-x-auto">
+            <div className="grid grid-cols-4 gap-2 text-2xs uppercase tracking-widest text-text-muted min-w-[24rem]">
               <span>Metric</span>
               <span>Method A</span>
               <span>Method B</span>
               <span>Delta</span>
             </div>
             {metrics.map((metric) => (
-              <div key={metric.label} className="grid grid-cols-4 gap-2">
+              <div key={metric.label} className="grid grid-cols-4 gap-2 min-w-[24rem]">
                 <span>{metric.label}</span>
                 <span>{metric.valueA}</span>
                 <span>{metric.valueB}</span>

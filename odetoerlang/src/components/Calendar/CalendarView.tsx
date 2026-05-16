@@ -97,7 +97,7 @@ export default function CalendarView() {
   }));
 
   return (
-    <div className="bg-bg-surface border border-border-subtle rounded-lg p-6 h-[800px] flex flex-col">
+    <div className="bg-bg-surface border border-border-subtle rounded-lg p-6 h-[80vh] min-h-[500px] max-h-[800px] flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Calendar & Scheduling</h2>

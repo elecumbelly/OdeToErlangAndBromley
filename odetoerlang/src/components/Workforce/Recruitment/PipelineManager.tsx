@@ -197,7 +197,7 @@ export default function PipelineManager() {
               />
             </FormField>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FormField label="Order" id="stageOrder">
                 <NumberInput
                   id="stageOrder"
