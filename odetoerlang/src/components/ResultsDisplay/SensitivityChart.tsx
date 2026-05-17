@@ -53,7 +53,7 @@ export const SensitivityChart = memo(() => {
             <Tooltip
               contentStyle={{ fontSize: '12px', background: '#0b1322', border: '1px solid #1f2937', borderRadius: '8px' }}
               labelFormatter={(label) => `Agents: ${label}`}
-              formatter={(value: number) => [`${value}%`, 'SL']}
+              formatter={(value) => [`${value}%`, 'SL']}
             />
             <ReferenceLine x={results.requiredAgents} stroke="#06b6d4" strokeDasharray="3 3" />
             <Line type="monotone" dataKey="sl" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3 }} />
