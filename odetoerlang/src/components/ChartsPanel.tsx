@@ -148,7 +148,7 @@ export default memo(function ChartsPanel() {
             <YAxis stroke={theme.axis} label={{ value: 'Service Level (%)', angle: -90, position: 'insideLeft', fill: theme.axis }} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(value: number) => `${value.toFixed(1)}%`}
+              formatter={(value) => `${Number(value).toFixed(1)}%`}
               labelFormatter={(label) => `${label} agents`}
             />
             <Legend />
@@ -182,7 +182,7 @@ export default memo(function ChartsPanel() {
               <CartesianGrid strokeDasharray="3 3" stroke={theme.grid} />
               <XAxis dataKey="agents" stroke={theme.axis} />
               <YAxis stroke={theme.axis} domain={[0, 100]} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value) => `${Number(value).toFixed(1)}%`} />
               <Legend />
               <Line type="monotone" dataKey="occupancy" stroke={theme.success} strokeWidth={2} name="Occupancy %" />
               <Line
@@ -207,7 +207,7 @@ export default memo(function ChartsPanel() {
               <CartesianGrid strokeDasharray="3 3" stroke={theme.grid} />
               <XAxis dataKey="agents" stroke={theme.axis} />
               <YAxis stroke={theme.axis} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => `${value.toFixed(0)}s`} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value) => `${Number(value).toFixed(0)}s`} />
               <Legend />
               <Bar dataKey="asa" fill={theme.secondary} name="ASA (seconds)" />
             </BarChart>

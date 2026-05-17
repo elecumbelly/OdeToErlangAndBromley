@@ -42,9 +42,14 @@ import {
   Area,
   LineChart,
   Line,
-  type TooltipProps
 } from 'recharts';
-import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+
+type TooltipEntry = { name?: string | number; value?: number | string; color?: string };
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: string | number;
+};
 
 // ============================================================================
 // HELPERS
@@ -76,7 +81,7 @@ const trendDirectionToIndicator = (direction: string): 'up' | 'down' | 'neutral'
   }
 };
 
-const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-bg-elevated border border-border-subtle rounded-lg p-3 shadow-xl">
