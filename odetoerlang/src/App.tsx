@@ -344,8 +344,8 @@ function App() {
       {/* Header */}
       <header className="bg-bg-surface border-b border-border-subtle">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 sm:space-x-4">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
+            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
               {/* CWF concentric mark */}
               <CwfLogo size={40} className="shrink-0" />
               <div>
@@ -400,8 +400,8 @@ function App() {
         <>
           {/* Hub Navigation */}
           <nav className="bg-bg-surface border-b border-border-subtle sticky top-0 z-20" role="navigation" aria-label="Hub navigation">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex space-x-1 overflow-x-auto py-2 scrollbar-none" role="tablist">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-none">
+              <div className="flex space-x-1 py-2 min-w-max" role="tablist">
                 {HUB_GROUPS.map((group) => (
                   <button
                     key={group.id}
@@ -426,8 +426,8 @@ function App() {
           {/* Sub-Tab Navigation (Only if group has > 1 tab) */}
           {visibleSubTabs.length > 1 && (
             <nav className="bg-bg-base border-b border-border-muted sticky top-[49px] z-10" role="navigation" aria-label="Sub-tab navigation">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex space-x-4 overflow-x-auto py-2 scrollbar-none" role="tablist">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-none">
+                <div className="flex space-x-4 py-2 min-w-max" role="tablist">
                   {visibleSubTabs.map((tab) => (
                     <button
                       key={tab.id}
