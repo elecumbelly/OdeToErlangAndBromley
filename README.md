@@ -68,10 +68,10 @@ git clone https://github.com/elecumbelly/OdeToErlangAndBromley.git
 cd OdeToErlangAndBromley/odetoerlang
 
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm dev
 ```
 
 Open **http://localhost:5173** in your browser.

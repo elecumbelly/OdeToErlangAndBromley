@@ -5,15 +5,15 @@ We welcome contributions! Here is how to get started.
 ## 🛠️ Development Setup
 
 1.  **Clone:** `git clone ...`
-2.  **Install:** `npm install` (Node 18+)
-3.  **Dev Server:** `npm run dev` (http://localhost:5173)
-4.  **Test:** `npm test`
+2.  **Install:** `pnpm install` (Node 18+, pnpm 10+)
+3.  **Dev Server:** `pnpm dev` (http://localhost:5173)
+4.  **Test:** `pnpm test`
 
 ## 🔄 Workflow
 
 1.  **Branch:** Create a feature branch (`feature/my-feature` or `fix/my-bug`).
 2.  **Code:** Write clean, typed code.
-3.  **Verify:** Run `npm run build` and `npm test` **before** committing.
+3.  **Verify:** Run `pnpm build` and `pnpm test` **before** committing.
 4.  **Commit:** Use conventional commits (e.g., `feat: add erlang b model`).
 5.  **PR:** Open a Pull Request against `main`.
 

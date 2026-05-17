@@ -40,8 +40,8 @@ A comprehensive, professional-grade browser-based platform for contact centre ca
 ## 🧪 Testing
 
 ```bash
-npm run test:run      # Run all tests
-npm run test:coverage # Check mathematical accuracy coverage
+pnpm test:run         # Run all tests
+pnpm test:coverage    # Check mathematical accuracy coverage
 ```
 
 ## License
