@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg', 'sql-wasm.wasm'],
+      includeAssets: ['vite.svg', 'sql-wasm-browser.wasm'],
       manifest: {
         name: 'OdeToErlang WFM Calculator',
         short_name: 'OdeToErlang',

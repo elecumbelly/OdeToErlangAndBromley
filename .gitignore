@@ -18,6 +18,10 @@ pnpm-debug.log*
 odetoerlang/node_modules/
 odetoerlang/dist/
 
+# Playwright
+odetoerlang/playwright-report/
+odetoerlang/test-results/
+
 # Stray vitest cache at repo root (happens when tests are run from the wrong cwd)
 node_modules/
 

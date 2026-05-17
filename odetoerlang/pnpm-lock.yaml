@@ -50,6 +50,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.4
         version: 9.39.4
+      '@playwright/test':
+        specifier: 1.60.0
+        version: 1.60.0
       '@tailwindcss/postcss':
         specifier: 4.3.0
         version: 4.3.0
@@ -80,9 +83,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.6
         version: 4.1.6(vitest@4.1.6)
-      autoprefixer:
-        specifier: ^10.5.0
-        version: 10.5.0(postcss@8.5.14)
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)
@@ -808,6 +808,11 @@ packages:
   '@oxc-project/types@0.129.0':
     resolution: {integrity: sha512-3oz8m3FGdr2nDXVqmFUw7jolKliC4MoyXYIG2c7gpjBnzUWQpUGIYcXYKxTdTi+N2jusvt610ckTMkxdwHkYEg==}
 
+  '@playwright/test@1.60.0':
+    resolution: {integrity: sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   '@reduxjs/toolkit@2.11.2':
     resolution: {integrity: sha512-Kd6kAHTA6/nUpp8mySPqj3en3dm0tdMIgbttnQ1xFMVpufoj+ADi8pXLBsd4xzTRHQa7t/Jv8W5UnCuW4kuWMQ==}
     peerDependencies:
@@ -1512,13 +1517,6 @@ packages:
     resolution: {integrity: sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==}
     engines: {node: '>= 4.0.0'}
 
-  autoprefixer@10.5.0:
-    resolution: {integrity: sha512-FMhOoZV4+qR6aTUALKX2rEqGG+oyATvwBt9IIzVR5rMa2HRWPkxf+P+PAJLD1I/H5/II+HuZcBJYEFBpq39ong==}
-    engines: {node: ^10 || ^12 || >=14}
-    hasBin: true
-    peerDependencies:
-      postcss: ^8.1.0
-
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
@@ -1982,12 +1980,14 @@ packages:
     resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
     engines: {node: '>= 6'}
 
-  fraction.js@5.3.4:
-    resolution: {integrity: sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==}
-
   fs-extra@9.1.0:
     resolution: {integrity: sha512-hcg3ZmepS30/7BSFqRvoo3DOMQu7IjqxO5nCDt+zM9XWjb33Wg7ziNT+Qvqbuc3+gWpzO02JubVyk2G4Zvo1OQ==}
     engines: {node: '>=10'}
+
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -2638,12 +2638,19 @@ packages:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
+  playwright-core@1.60.0:
+    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.60.0:
+    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
-
-  postcss-value-parser@4.2.0:
-    resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
 
   postcss@8.5.14:
     resolution: {integrity: sha512-SoSL4+OSEtR99LHFZQiJLkT59C5B1amGO1NzTwj7TT1qCUgUO6hxOvzkOYxD+vMrXBM3XJIKzokoERdqQq/Zmg==}
@@ -4238,6 +4245,10 @@ snapshots:
 
   '@oxc-project/types@0.129.0': {}
 
+  '@playwright/test@1.60.0':
+    dependencies:
+      playwright: 1.60.0
+
   '@reduxjs/toolkit@2.11.2(react-redux@9.2.0(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1))(react@19.2.6)':
     dependencies:
       '@standard-schema/spec': 1.1.0
@@ -4876,15 +4887,6 @@ snapshots:
 
   at-least-node@1.0.0: {}
 
-  autoprefixer@10.5.0(postcss@8.5.14):
-    dependencies:
-      browserslist: 4.28.2
-      caniuse-lite: 1.0.30001792
-      fraction.js: 5.3.4
-      picocolors: 1.1.1
-      postcss: 8.5.14
-      postcss-value-parser: 4.2.0
-
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.1.0
@@ -5458,14 +5460,15 @@ snapshots:
       hasown: 2.0.2
       mime-types: 2.1.35
 
-  fraction.js@5.3.4: {}
-
   fs-extra@9.1.0:
     dependencies:
       at-least-node: 1.0.0
       graceful-fs: 4.2.11
       jsonfile: 6.2.1
       universalify: 2.0.1
+
+  fsevents@2.3.2:
+    optional: true
 
   fsevents@2.3.3:
     optional: true
@@ -6086,9 +6089,15 @@ snapshots:
 
   picomatch@4.0.4: {}
 
-  possible-typed-array-names@1.1.0: {}
+  playwright-core@1.60.0: {}
 
-  postcss-value-parser@4.2.0: {}
+  playwright@1.60.0:
+    dependencies:
+      playwright-core: 1.60.0
+    optionalDependencies:
+      fsevents: 2.3.2
+
+  possible-typed-array-names@1.1.0: {}
 
   postcss@8.5.14:
     dependencies:
